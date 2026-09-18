@@ -18,14 +18,46 @@ CLIENT_PLATFORM = (
     "IjogIlVua25vd24iDQp9"
 )
 
+# Riot's storefront ItemTypeID values, used to tell bundle/offer items apart.
+ITEM_TYPE_SKIN = "e7c63390-eda7-46e0-bb7a-a6abdacd2433"
+ITEM_TYPE_BUDDY = "dd3bf334-87f3-40bd-b043-682a57a8dc3a"
+ITEM_TYPE_SPRAY = "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475"
+ITEM_TYPE_PLAYER_CARD = "3f296c07-64c3-494c-923b-fe692a4fa1bd"
+ITEM_TYPE_TITLE = "de7caa6b-adf7-4588-bbd1-143831e786c6"
+
 # Module-level caches
 _skins: dict[str, dict] = {}
 _skin_levels_to_skin: dict[str, dict] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
+_buddies: dict[str, dict] = {}
+_buddy_levels_to_buddy: dict[str, dict] = {}
+_sprays: dict[str, dict] = {}
+_spray_levels_to_spray: dict[str, dict] = {}
+_player_cards: dict[str, dict] = {}
+_titles: dict[str, dict] = {}
 _client_version: str = ""
 _last_refresh: float = 0.0
 _refresh_lock = asyncio.Lock()
+
+
+def _index_with_levels(
+    entries: list[dict],
+    store: dict[str, dict],
+    levels_store: dict[str, dict],
+    icon_field: str = "displayIcon",
+) -> None:
+    """Index cosmetic entries by UUID, and their nested levels (if any) to the parent entry."""
+    for entry in entries:
+        uuid = entry["uuid"].lower()
+        parsed = {
+            "uuid": uuid,
+            "displayName": entry.get("displayName", ""),
+            "displayIcon": entry.get(icon_field, "") or "",
+        }
+        store[uuid] = parsed
+        for level in entry.get("levels", []):
+            levels_store[level["uuid"].lower()] = parsed
 
 
 async def initialize() -> None:
@@ -33,7 +65,16 @@ async def initialize() -> None:
     global _client_version, _last_refresh
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        skins_resp, tiers_resp, version_resp, bundles_resp = await _fetch_all(client)
+        (
+            skins_resp,
+            tiers_resp,
+            version_resp,
+            bundles_resp,
+            buddies_resp,
+            sprays_resp,
+            player_cards_resp,
+            titles_resp,
+        ) = await _fetch_all(client)
 
     # Skins: index by skin UUID and build level -> skin reverse map
     for skin in skins_resp:
@@ -71,44 +112,72 @@ async def initialize() -> None:
             "description": bundle.get("description", ""),
         }
 
+    # Other cosmetics that can appear as bundle items alongside skins
+    _index_with_levels(buddies_resp, _buddies, _buddy_levels_to_buddy)
+    _index_with_levels(sprays_resp, _sprays, _spray_levels_to_spray)
+
+    for card in player_cards_resp:
+        uuid = card["uuid"].lower()
+        _player_cards[uuid] = {
+            "uuid": uuid,
+            "displayName": card.get("displayName", ""),
+            "displayIcon": card.get("displayIcon") or card.get("largeArt", "") or "",
+        }
+
+    for title in titles_resp:
+        uuid = title["uuid"].lower()
+        _titles[uuid] = {
+            "uuid": uuid,
+            # Titles are text-only cosmetics: no displayIcon exists for them.
+            "displayName": title.get("displayName") or title.get("titleText", ""),
+            "displayIcon": "",
+        }
+
     # Client version
     _client_version = version_resp.get("riotClientVersion", "")
     _last_refresh = time.monotonic()
 
     logger.info(
-        "Asset cache initialized: %d skins, %d levels, %d tiers, %d bundles, version=%s",
+        "Asset cache initialized: %d skins, %d levels, %d tiers, %d bundles, "
+        "%d buddies, %d sprays, %d cards, %d titles, version=%s",
         len(_skins),
         len(_skin_levels_to_skin),
         len(_content_tiers),
         len(_bundles),
+        len(_buddies),
+        len(_sprays),
+        len(_player_cards),
+        len(_titles),
         _client_version,
     )
 
 
-async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list]:
+async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list, list, list, list, list]:
     """Fetch all endpoints concurrently."""
-    skins_req = client.get(f"{BASE_URL}/weapons/skins")
-    tiers_req = client.get(f"{BASE_URL}/contenttiers")
-    version_req = client.get(f"{BASE_URL}/version")
-    bundles_req = client.get(f"{BASE_URL}/bundles")
+    requests = {
+        "skins": client.get(f"{BASE_URL}/weapons/skins"),
+        "tiers": client.get(f"{BASE_URL}/contenttiers"),
+        "version": client.get(f"{BASE_URL}/version"),
+        "bundles": client.get(f"{BASE_URL}/bundles"),
+        "buddies": client.get(f"{BASE_URL}/buddies"),
+        "sprays": client.get(f"{BASE_URL}/sprays"),
+        "player_cards": client.get(f"{BASE_URL}/playercards"),
+        "titles": client.get(f"{BASE_URL}/playertitles"),
+    }
+    responses = dict(zip(requests.keys(), await asyncio.gather(*requests.values())))
 
-    skins_resp, tiers_resp, version_resp, bundles_resp = (
-        await skins_req,
-        await tiers_req,
-        await version_req,
-        await bundles_req,
-    )
-
-    skins_resp.raise_for_status()
-    tiers_resp.raise_for_status()
-    version_resp.raise_for_status()
-    bundles_resp.raise_for_status()
+    for resp in responses.values():
+        resp.raise_for_status()
 
     return (
-        skins_resp.json()["data"],
-        tiers_resp.json()["data"],
-        version_resp.json()["data"],
-        bundles_resp.json()["data"],
+        responses["skins"].json()["data"],
+        responses["tiers"].json()["data"],
+        responses["version"].json()["data"],
+        responses["bundles"].json()["data"],
+        responses["buddies"].json()["data"],
+        responses["sprays"].json()["data"],
+        responses["player_cards"].json()["data"],
+        responses["titles"].json()["data"],
     )
 
 
@@ -130,6 +199,34 @@ def get_bundle_info(uuid: str) -> dict | None:
     return _bundles.get(uuid.lower())
 
 
+def get_buddy(uuid: str) -> dict | None:
+    key = uuid.lower()
+    return _buddies.get(key) or _buddy_levels_to_buddy.get(key)
+
+
+def get_spray(uuid: str) -> dict | None:
+    key = uuid.lower()
+    return _sprays.get(key) or _spray_levels_to_spray.get(key)
+
+
+def get_player_card(uuid: str) -> dict | None:
+    return _player_cards.get(uuid.lower())
+
+
+def get_title(uuid: str) -> dict | None:
+    return _titles.get(uuid.lower())
+
+
+# Item type -> plain (non-refreshing) lookup, used to resolve bundle/offer items generically.
+_LOOKUP_BY_ITEM_TYPE = {
+    ITEM_TYPE_SKIN: get_skin,
+    ITEM_TYPE_BUDDY: get_buddy,
+    ITEM_TYPE_SPRAY: get_spray,
+    ITEM_TYPE_PLAYER_CARD: get_player_card,
+    ITEM_TYPE_TITLE: get_title,
+}
+
+
 async def _refresh_if_due() -> None:
     """Re-fetch the asset catalog, unless it was already refreshed recently."""
     async with _refresh_lock:
@@ -141,19 +238,30 @@ async def _refresh_if_due() -> None:
             logger.exception("Failed to refresh asset cache")
 
 
+async def _ensure(getter, uuid: str) -> dict | None:
+    """Look up via `getter`, refreshing the cache once if the entry is missing."""
+    entry = getter(uuid)
+    if entry is not None:
+        return entry
+    await _refresh_if_due()
+    return getter(uuid)
+
+
 async def get_skin_ensured(uuid: str) -> dict | None:
     """Lookup a skin, refreshing the cache once if it's missing (e.g. a newly added skin)."""
-    skin = get_skin(uuid)
-    if skin is not None:
-        return skin
-    await _refresh_if_due()
-    return get_skin(uuid)
+    return await _ensure(get_skin, uuid)
 
 
 async def get_bundle_info_ensured(uuid: str) -> dict | None:
     """Lookup bundle info, refreshing the cache once if it's missing (e.g. a newly added bundle)."""
-    bundle = get_bundle_info(uuid)
-    if bundle is not None:
-        return bundle
-    await _refresh_if_due()
-    return get_bundle_info(uuid)
+    return await _ensure(get_bundle_info, uuid)
+
+
+async def get_item_ensured(item_type_id: str, uuid: str) -> dict | None:
+    """Lookup a bundle/offer item of any cosmetic type by its Riot ItemTypeID.
+
+    Falls back to treating it as a skin for unrecognized types, since skins are
+    by far the most common bundle/offer item.
+    """
+    getter = _LOOKUP_BY_ITEM_TYPE.get(item_type_id.lower(), get_skin)
+    return await _ensure(getter, uuid)

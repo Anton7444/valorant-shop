@@ -15,6 +15,7 @@ from app.services.asset_cache import (
     get_bundle_info_ensured,
     get_client_version,
     get_content_tier,
+    get_item_ensured,
     get_skin_ensured,
 )
 
@@ -128,14 +129,16 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
         total_discounted = 0
 
         for raw_item in raw_bundle.get("Items", []):
-            item_uuid = raw_item.get("Item", {}).get("ItemID", "")
+            raw_item_ref = raw_item.get("Item", {})
+            item_uuid = raw_item_ref.get("ItemID", "")
+            item_type_id = raw_item_ref.get("ItemTypeID", "")
             base_price = raw_item.get("BasePrice", 0)
             discounted_price = raw_item.get("DiscountedPrice", base_price)
             discount_pct = raw_item.get("DiscountPercent", 0.0)
 
-            skin = await get_skin_ensured(item_uuid)
-            item_name = skin["displayName"] if skin else "Unknown"
-            item_icon = (skin.get("displayIcon", "") if skin else "") or ""
+            item = await get_item_ensured(item_type_id, item_uuid)
+            item_name = item["displayName"] if item else "Unknown"
+            item_icon = (item.get("displayIcon", "") if item else "") or ""
 
             items.append(BundleItem(
                 uuid=item_uuid,
