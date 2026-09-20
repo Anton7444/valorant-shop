@@ -7,10 +7,12 @@ import CountdownTimer from '../components/CountdownTimer';
 import WalletDisplay from '../components/WalletDisplay';
 import SkinCard from '../components/SkinCard';
 import BundleCard from '../components/BundleCard';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ShopPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
+  const { language, setLanguage } = useLanguage();
 
   const [offers, setOffers] = useState<SkinOffer[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -78,6 +80,16 @@ export default function ShopPage() {
 
           <div className="flex items-center gap-4">
             {wallet && <WalletDisplay wallet={wallet} />}
+            <label className="sr-only" htmlFor="language-select">Skin and bundle language</label>
+            <select
+              id="language-select"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as typeof language)}
+              className="rounded border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text-secondary"
+            >
+              <option value="en-US">EN</option>
+              <option value="zh-TW">繁中</option>
+            </select>
             <button
               onClick={handleLogout}
               className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"

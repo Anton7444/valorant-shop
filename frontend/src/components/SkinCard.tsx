@@ -1,4 +1,5 @@
 import type { SkinOffer } from '../types';
+import { localizedName, useLanguage } from '../context/LanguageContext';
 
 const TIER_COLOR_MAP: Record<string, string> = {
   select: 'var(--color-tier-select)',
@@ -18,6 +19,8 @@ interface SkinCardProps {
 }
 
 export default function SkinCard({ skin }: SkinCardProps) {
+  const { localizedNames } = useLanguage();
+  const name = localizedName(skin.uuid, skin.name, localizedNames);
   const tierColor = getTierColor(skin.content_tier_name, skin.content_tier_color);
 
   return (
@@ -35,7 +38,7 @@ export default function SkinCard({ skin }: SkinCardProps) {
         {skin.display_icon ? (
           <img
             src={skin.display_icon}
-            alt={skin.name}
+            alt={name}
             className="h-full w-full object-contain drop-shadow-lg transition-transform duration-200 group-hover:scale-105"
           />
         ) : (
@@ -50,7 +53,7 @@ export default function SkinCard({ skin }: SkinCardProps) {
             className="truncate text-base text-text-primary"
             style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
           >
-            {skin.name}
+            {name}
           </h3>
           {/* Tier badge */}
           <span

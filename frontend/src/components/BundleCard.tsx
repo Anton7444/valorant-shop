@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Bundle } from '../types';
+import { localizedName, useLanguage } from '../context/LanguageContext';
 
 interface BundleCardProps {
   bundle: Bundle;
@@ -15,6 +16,8 @@ function formatTime(totalSecs: number): string {
 }
 
 export default function BundleCard({ bundle }: BundleCardProps) {
+  const { localizedNames } = useLanguage();
+  const bundleName = localizedName(bundle.uuid, bundle.name, localizedNames);
   const [remaining, setRemaining] = useState(bundle.duration_remaining_secs);
   const [prevSecs, setPrevSecs] = useState(bundle.duration_remaining_secs);
 
@@ -43,7 +46,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
           className="text-xl text-text-primary"
           style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
         >
-          {bundle.name}
+          {bundleName}
         </h3>
         <div className="flex items-center gap-2 text-sm text-accent-teal">
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -59,7 +62,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
         <div className="flex justify-center bg-bg-primary/50 p-4">
           <img
             src={bundle.display_icon}
-            alt={bundle.name}
+            alt={bundleName}
             className="max-h-40 object-contain"
           />
         </div>
@@ -75,7 +78,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
             {item.display_icon ? (
               <img
                 src={item.display_icon}
-                alt={item.name}
+                alt={localizedName(item.uuid, item.name, localizedNames)}
                 className="mb-2 h-16 w-full object-contain"
               />
             ) : (
@@ -83,7 +86,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
                 No image
               </div>
             )}
-            <p className="line-clamp-1 text-center text-xs text-text-primary">{item.name}</p>
+            <p className="line-clamp-1 text-center text-xs text-text-primary">{localizedName(item.uuid, item.name, localizedNames)}</p>
             <div className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
               <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
