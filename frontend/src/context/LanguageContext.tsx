@@ -10,10 +10,14 @@ function getInitialLanguage(): ShopLanguage {
   return localStorage.getItem(STORAGE_KEY) === 'zh-TW' ? 'zh-TW' : 'en-US';
 }
 
-function indexCatalog(data: Array<{ uuid: string; displayName?: string; titleText?: string }>) {
+function indexCatalog(data: Array<{ uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> }>) {
   return data.reduce<Record<string, string>>((names, entry) => {
     const name = entry.displayName || entry.titleText;
-    if (name) names[entry.uuid.toLowerCase()] = name;
+    if (!name) return names;
+    names[entry.uuid.toLowerCase()] = name;
+    entry.levels?.forEach((level) => {
+      names[level.uuid.toLowerCase()] = name;
+    });
     return names;
   }, {});
 }
@@ -35,7 +39,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       CATALOGS.map(async (catalog) => {
         const response = await fetch(`https://valorant-api.com/v1/${catalog}?language=zh-TW`);
         if (!response.ok) throw new Error(`Localized catalog request failed: ${response.status}`);
-        const payload = await response.json() as { data: Array<{ uuid: string; displayName?: string; titleText?: string }> };
+        const payload = await response.json() as { data: Array<{ uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> }> };
         return indexCatalog(payload.data);
       }),
     ).then((catalogs) => {
