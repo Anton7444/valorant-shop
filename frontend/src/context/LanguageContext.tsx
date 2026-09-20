@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type ShopLanguage = 'en-US' | 'zh-TW';
 
@@ -11,7 +11,7 @@ type LanguageContextValue = {
   localizedNames: Record<string, string>;
 };
 
-const LanguageContext = createContext<LanguageContextValue | null>(null);
+export const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function getInitialLanguage(): ShopLanguage {
   return localStorage.getItem(STORAGE_KEY) === 'zh-TW' ? 'zh-TW' : 'en-US';
@@ -35,10 +35,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (language !== 'zh-TW') {
-      setLocalizedNames({});
-      return;
-    }
+    if (language !== 'zh-TW') return;
 
     let cancelled = false;
     Promise.all(
@@ -57,16 +54,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [language]);
 
-  const value = useMemo(() => ({ language, setLanguage, localizedNames }), [language, localizedNames]);
+  const value = useMemo(
+    () => ({ language, setLanguage, localizedNames: language === 'zh-TW' ? localizedNames : {} }),
+    [language, localizedNames],
+  );
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
-
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguage must be used inside LanguageProvider');
-  return context;
-}
-
-export function localizedName(uuid: string, englishName: string, names: Record<string, string>) {
-  return names[uuid.toLowerCase()] || englishName;
 }

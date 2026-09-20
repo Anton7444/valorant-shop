@@ -7,7 +7,7 @@ import CountdownTimer from '../components/CountdownTimer';
 import WalletDisplay from '../components/WalletDisplay';
 import SkinCard from '../components/SkinCard';
 import BundleCard from '../components/BundleCard';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
 
 export default function ShopPage() {
   const { state, dispatch } = useAuth();

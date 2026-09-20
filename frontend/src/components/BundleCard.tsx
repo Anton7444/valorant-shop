@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Bundle } from '../types';
-import { localizedName, useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
+import { localizedName } from '../context/languageNames';
 
 interface BundleCardProps {
   bundle: Bundle;

@@ -1,5 +1,6 @@
 import type { SkinOffer } from '../types';
-import { localizedName, useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/useLanguage';
+import { localizedName } from '../context/languageNames';
 
 const TIER_COLOR_MAP: Record<string, string> = {
   select: 'var(--color-tier-select)',
