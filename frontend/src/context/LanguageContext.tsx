@@ -1,17 +1,10 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { LanguageContext } from './languageContextDef';
 
 export type ShopLanguage = 'en-US' | 'zh-TW';
 
 const STORAGE_KEY = 'valorant-shop-language';
 const CATALOGS = ['weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
-
-type LanguageContextValue = {
-  language: ShopLanguage;
-  setLanguage: (language: ShopLanguage) => void;
-  localizedNames: Record<string, string>;
-};
-
-export const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function getInitialLanguage(): ShopLanguage {
   return localStorage.getItem(STORAGE_KEY) === 'zh-TW' ? 'zh-TW' : 'en-US';
