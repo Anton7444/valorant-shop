@@ -5,12 +5,13 @@ export type ShopLanguage = 'en-US' | 'zh-TW';
 
 const STORAGE_KEY = 'valorant-shop-language';
 const CATALOGS = ['weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
+type CatalogEntry = { uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> };
 
 function getInitialLanguage(): ShopLanguage {
   return localStorage.getItem(STORAGE_KEY) === 'zh-TW' ? 'zh-TW' : 'en-US';
 }
 
-function indexCatalog(data: Array<{ uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> }>) {
+function indexCatalog(data: CatalogEntry[]) {
   return data.reduce<Record<string, string>>((names, entry) => {
     const name = entry.displayName || entry.titleText;
     if (!name) return names;
@@ -18,6 +19,16 @@ function indexCatalog(data: Array<{ uuid: string; displayName?: string; titleTex
     entry.levels?.forEach((level) => {
       names[level.uuid.toLowerCase()] = name;
     });
+    return names;
+  }, {});
+}
+
+function indexEnglishNames(data: CatalogEntry[]) {
+  return data.reduce<Record<string, string>>((names, entry) => {
+    const name = entry.displayName || entry.titleText;
+    if (!name) return names;
+    names[name.toLowerCase()] = entry.uuid.toLowerCase();
+    entry.levels?.forEach((level) => { names[`${name}:${level.uuid}`.toLowerCase()] = entry.uuid.toLowerCase(); });
     return names;
   }, {});
 }
@@ -37,13 +48,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     Promise.all(
       CATALOGS.map(async (catalog) => {
-        const response = await fetch(`https://valorant-api.com/v1/${catalog}?language=zh-TW`);
-        if (!response.ok) throw new Error(`Localized catalog request failed: ${response.status}`);
-        const payload = await response.json() as { data: Array<{ uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> }> };
-        return indexCatalog(payload.data);
+        const [localizedResponse, englishResponse] = await Promise.all([
+          fetch(`https://valorant-api.com/v1/${catalog}?language=zh-TW`),
+          fetch(`https://valorant-api.com/v1/${catalog}?language=en-US`),
+        ]);
+        if (!localizedResponse.ok || !englishResponse.ok) throw new Error('Localized catalog request failed');
+        const localized = await localizedResponse.json() as { data: CatalogEntry[] };
+        const english = await englishResponse.json() as { data: CatalogEntry[] };
+        return { names: indexCatalog(localized.data), englishNames: indexEnglishNames(english.data) };
       }),
     ).then((catalogs) => {
-      if (!cancelled) setLocalizedNames(Object.assign({}, ...catalogs));
+      if (!cancelled) {
+        const names = Object.assign({}, ...catalogs.map((catalog) => catalog.names));
+        const englishNames = Object.assign({}, ...catalogs.map((catalog) => catalog.englishNames)) as Record<string, string>;
+        Object.entries(englishNames).forEach(([englishName, uuid]) => {
+          if (names[uuid]) names[englishName] = names[uuid];
+        });
+        setLocalizedNames(names);
+      }
     }).catch(() => {
       if (!cancelled) setLocalizedNames({});
     });
