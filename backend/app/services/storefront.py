@@ -119,6 +119,8 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
     for raw_bundle in raw_bundles:
         bundle_uuid = raw_bundle.get("DataAssetID", "")
         bundle_info = await get_bundle_info_ensured(bundle_uuid)
+        if not bundle_info:
+            logger.warning("Unknown bundle UUID: %s", bundle_uuid)
         bundle_name = bundle_info["displayName"] if bundle_info else "Unknown Bundle"
         bundle_icon = (bundle_info.get("displayIcon", "") if bundle_info else "") or None
 
@@ -137,6 +139,11 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
             discount_pct = raw_item.get("DiscountPercent", 0.0)
 
             item = await get_item_ensured(item_type_id, item_uuid)
+            if not item:
+                logger.warning(
+                    "Unknown bundle item: uuid=%s item_type=%s (bundle %s)",
+                    item_uuid, item_type_id, bundle_uuid,
+                )
             item_name = item["displayName"] if item else "Unknown"
             item_icon = (item.get("displayIcon", "") if item else "") or ""
 
