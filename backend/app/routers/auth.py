@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 import time
@@ -76,9 +77,13 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
         access_token = tokens["access_token"]
         id_token = tokens.get("id_token", "")
 
-        entitlements = await riot_auth.get_entitlements(access_token)
-        puuid = await riot_auth.get_player_info(access_token)
-        region, shard = await riot_auth.get_region(access_token, id_token)
+        # These three calls hit independent Riot endpoints, so run them
+        # concurrently instead of paying for three sequential round-trips.
+        entitlements, puuid, (region, shard) = await asyncio.gather(
+            riot_auth.get_entitlements(access_token),
+            riot_auth.get_player_info(access_token),
+            riot_auth.get_region(access_token, id_token),
+        )
 
         session_data = SessionData(
             access_token=access_token,
