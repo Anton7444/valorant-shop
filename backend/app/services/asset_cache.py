@@ -20,14 +20,17 @@ CLIENT_PLATFORM = (
 
 # Riot's storefront ItemTypeID values, used to tell bundle/offer items apart.
 ITEM_TYPE_SKIN = "e7c63390-eda7-46e0-bb7a-a6abdacd2433"
+ITEM_TYPE_SKIN_VARIANT = "3ad1b2b2-acdb-4524-852f-954a76ddae0a"  # chromas
 ITEM_TYPE_BUDDY = "dd3bf334-87f3-40bd-b043-682a57a8dc3a"
 ITEM_TYPE_SPRAY = "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475"
 ITEM_TYPE_PLAYER_CARD = "3f296c07-64c3-494c-923b-fe692a4fa1bd"
 ITEM_TYPE_TITLE = "de7caa6b-adf7-4588-bbd1-143831e786c6"
+ITEM_TYPE_AGENT = "01bb38e1-da47-4e6a-9b3d-945fe4655707"
 
 # Module-level caches
 _skins: dict[str, dict] = {}
 _skin_levels_to_skin: dict[str, dict] = {}
+_skin_chromas_to_skin: dict[str, dict] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
 _buddies: dict[str, dict] = {}
@@ -36,6 +39,7 @@ _sprays: dict[str, dict] = {}
 _spray_levels_to_spray: dict[str, dict] = {}
 _player_cards: dict[str, dict] = {}
 _titles: dict[str, dict] = {}
+_agents: dict[str, dict] = {}
 _client_version: str = ""
 _last_refresh: float = 0.0
 _refresh_lock = asyncio.Lock()
@@ -74,6 +78,7 @@ async def initialize() -> None:
             sprays_resp,
             player_cards_resp,
             titles_resp,
+            agents_resp,
         ) = await _fetch_all(client)
 
     # Skins: index by skin UUID and build level -> skin reverse map
@@ -92,6 +97,18 @@ async def initialize() -> None:
         for level in skin.get("levels", []):
             level_uuid = level["uuid"].lower()
             _skin_levels_to_skin[level_uuid] = skin_entry
+
+        # Map each chroma (color variant) UUID to the parent skin. Bundles very
+        # commonly reference a specific chroma rather than the base skin level,
+        # and chroma UUIDs are distinct from both the skin and its level UUIDs.
+        for chroma in skin.get("chromas", []):
+            chroma_uuid = chroma["uuid"].lower()
+            _skin_chromas_to_skin[chroma_uuid] = {
+                "uuid": chroma_uuid,
+                "displayName": skin.get("displayName", ""),
+                "displayIcon": chroma.get("fullRender") or chroma.get("displayIcon") or skin_entry["displayIcon"],
+                "contentTierUuid": skin_entry["contentTierUuid"],
+            }
 
     # Content tiers
     for tier in tiers_resp:
@@ -133,26 +150,36 @@ async def initialize() -> None:
             "displayIcon": "",
         }
 
+    for agent in agents_resp:
+        uuid = agent["uuid"].lower()
+        _agents[uuid] = {
+            "uuid": uuid,
+            "displayName": agent.get("displayName", ""),
+            "displayIcon": agent.get("displayIcon") or agent.get("fullPortrait", "") or "",
+        }
+
     # Client version
     _client_version = version_resp.get("riotClientVersion", "")
     _last_refresh = time.monotonic()
 
     logger.info(
-        "Asset cache initialized: %d skins, %d levels, %d tiers, %d bundles, "
-        "%d buddies, %d sprays, %d cards, %d titles, version=%s",
+        "Asset cache initialized: %d skins, %d levels, %d chromas, %d tiers, %d bundles, "
+        "%d buddies, %d sprays, %d cards, %d titles, %d agents, version=%s",
         len(_skins),
         len(_skin_levels_to_skin),
+        len(_skin_chromas_to_skin),
         len(_content_tiers),
         len(_bundles),
         len(_buddies),
         len(_sprays),
         len(_player_cards),
         len(_titles),
+        len(_agents),
         _client_version,
     )
 
 
-async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list, list, list, list, list]:
+async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list, list, list, list, list, list]:
     """Fetch all endpoints concurrently."""
     requests = {
         "skins": client.get(f"{BASE_URL}/weapons/skins"),
@@ -163,6 +190,7 @@ async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list,
         "sprays": client.get(f"{BASE_URL}/sprays"),
         "player_cards": client.get(f"{BASE_URL}/playercards"),
         "titles": client.get(f"{BASE_URL}/playertitles"),
+        "agents": client.get(f"{BASE_URL}/agents", params={"isPlayableCharacter": "true"}),
     }
     responses = dict(zip(requests.keys(), await asyncio.gather(*requests.values())))
 
@@ -178,13 +206,18 @@ async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list,
         responses["sprays"].json()["data"],
         responses["player_cards"].json()["data"],
         responses["titles"].json()["data"],
+        responses["agents"].json()["data"],
     )
 
 
 def get_skin(uuid: str) -> dict | None:
-    """Lookup skin by skin UUID or skin level UUID."""
+    """Lookup skin by skin UUID, skin level UUID, or chroma (variant) UUID."""
     key = uuid.lower()
-    return _skins.get(key) or _skin_levels_to_skin.get(key)
+    return _skins.get(key) or _skin_levels_to_skin.get(key) or _skin_chromas_to_skin.get(key)
+
+
+def get_agent(uuid: str) -> dict | None:
+    return _agents.get(uuid.lower())
 
 
 def get_content_tier(uuid: str) -> dict | None:
@@ -220,10 +253,12 @@ def get_title(uuid: str) -> dict | None:
 # Item type -> plain (non-refreshing) lookup, used to resolve bundle/offer items generically.
 _LOOKUP_BY_ITEM_TYPE = {
     ITEM_TYPE_SKIN: get_skin,
+    ITEM_TYPE_SKIN_VARIANT: get_skin,
     ITEM_TYPE_BUDDY: get_buddy,
     ITEM_TYPE_SPRAY: get_spray,
     ITEM_TYPE_PLAYER_CARD: get_player_card,
     ITEM_TYPE_TITLE: get_title,
+    ITEM_TYPE_AGENT: get_agent,
 }
 
 
