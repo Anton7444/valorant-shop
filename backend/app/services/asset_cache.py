@@ -269,7 +269,9 @@ async def _refresh_if_due() -> None:
             return
         try:
             await initialize()
-        except httpx.HTTPError:
+        except Exception:
+            # A bad refresh (network hiccup or an unexpected response shape)
+            # must never crash the caller -- just keep serving the old cache.
             logger.exception("Failed to refresh asset cache")
 
 
