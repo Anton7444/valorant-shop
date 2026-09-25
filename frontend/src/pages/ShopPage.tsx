@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { Bundle, SkinOffer, Wallet } from '../types';
@@ -12,6 +12,7 @@ import { useLanguage } from '../context/useLanguage';
 export default function ShopPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { language, setLanguage } = useLanguage();
 
   const [offers, setOffers] = useState<SkinOffer[]>([]);
@@ -20,6 +21,9 @@ export default function ShopPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cookiesValid, setCookiesValid] = useState<boolean | null>(
+    () => (location.state as { cookiesValid?: boolean | null } | null)?.cookiesValid ?? null
+  );
 
   const fetchStoreData = useCallback(async () => {
     setLoading(true);
@@ -53,6 +57,14 @@ export default function ShopPage() {
     fetchStoreData();
   }, [fetchStoreData]);
 
+  useEffect(() => {
+    if (location.state) {
+      // Clear so the banner doesn't reappear on refresh/back-navigation.
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleLogout() {
     await api.logout().catch(() => {});
     dispatch({ type: 'LOGOUT' });
@@ -61,6 +73,27 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-svh bg-bg-primary">
+      {cookiesValid !== null && (
+        <div
+          className={`flex items-center justify-between gap-3 px-4 py-2.5 text-xs sm:text-sm ${
+            cookiesValid ? 'bg-accent-teal/15 text-accent-teal' : 'bg-accent-red/15 text-accent-red'
+          }`}
+        >
+          <span className="mx-auto text-center">
+            {cookiesValid
+              ? "✓ Persistent login confirmed — you won't need to log in again for ~2 weeks."
+              : "Those pasted cookies didn't work, so you're only logged in for a few hours this time. Try re-copying them next time you log in."}
+          </span>
+          <button
+            onClick={() => setCookiesValid(null)}
+            aria-label="Dismiss"
+            className="shrink-0 text-current opacity-70 hover:opacity-100"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-bg-secondary/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
