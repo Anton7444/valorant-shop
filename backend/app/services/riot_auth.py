@@ -11,6 +11,7 @@ access_token obtained from the redirect.
 """
 
 import logging
+import re
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -59,14 +60,25 @@ def get_auth_url() -> str:
     return AUTH_URL
 
 
-def parse_cookie_header(raw: str) -> dict[str, str]:
-    """Parse a pasted `document.cookie`-style string into a dict.
+_CURL_COOKIE_RE = re.compile(r"-H\s+['\"]cookie:\s*(.*?)['\"]", re.IGNORECASE)
 
-    Accepts either a raw `name=value; name2=value2` header or a full
-    `Cookie:` line copied from devtools.
+
+def parse_cookie_header(raw: str) -> dict[str, str]:
+    """Parse a pasted cookie string into a dict.
+
+    Accepts, in order of preference:
+    - A full "Copy as cURL" command from devtools (easiest for users —
+      right-click a request → Copy → Copy as cURL). The Cookie header
+      is extracted out of it automatically.
+    - A raw `Cookie:` header line.
+    - A bare `name=value; name2=value2` string.
     """
     raw = raw.strip()
-    if raw.lower().startswith("cookie:"):
+
+    curl_match = _CURL_COOKIE_RE.search(raw)
+    if curl_match:
+        raw = curl_match.group(1)
+    elif raw.lower().startswith("cookie:"):
         raw = raw[len("cookie:") :].strip()
 
     cookies: dict[str, str] = {}

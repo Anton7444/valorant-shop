@@ -148,17 +148,16 @@ export default function LoginPage() {
                       you can always add this later.
                     </p>
                     <ol className="list-inside list-decimal space-y-1">
-                      <li>On the same Riot tab: devtools (F12) → <span className="text-text-primary">Network</span> tab (not Application — that list mixes in cookies from ads/analytics you don't need)</li>
-                      <li>Reload the page, then click any request to <span className="text-text-primary">auth.riotgames.com</span> in the list</li>
-                      <li>In the <span className="text-text-primary">Headers</span> panel, find <span className="text-text-primary">Request Headers → cookie</span></li>
-                      <li>Hover it and click the copy icon (copies the whole value in one go)</li>
-                      <li>Paste that below</li>
+                      <li>On the same Riot tab: devtools (F12) → <span className="text-text-primary">Network</span> tab, then log in</li>
+                      <li>Find the row named <span className="text-text-primary">login</span> (Type: fetch, around 200 status)</li>
+                      <li>Right-click it → <span className="text-text-primary">Copy → Copy as cURL</span></li>
+                      <li>Paste the whole thing below — it's parsed automatically, no need to trim it</li>
                     </ol>
                     <textarea
                       value={pastedCookies}
                       onChange={(e) => setPastedCookies(e.target.value)}
-                      placeholder="Paste Riot session cookies here (leave blank to skip)"
-                      rows={2}
+                      placeholder="Paste the copied cURL command here (leave blank to skip)"
+                      rows={3}
                       className="w-full resize-none rounded border border-border bg-bg-secondary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
                     />
                   </div>
