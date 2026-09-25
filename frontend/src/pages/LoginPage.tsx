@@ -148,9 +148,11 @@ export default function LoginPage() {
                       you can always add this later.
                     </p>
                     <ol className="list-inside list-decimal space-y-1">
-                      <li>On the same Riot tab: devtools (F12) → Application → Cookies → <span className="text-text-primary">auth.riotgames.com</span></li>
-                      <li>Copy the cookie values (or the <span className="text-text-primary">Cookie</span> request header from the Network tab)</li>
-                      <li>Paste them below</li>
+                      <li>On the same Riot tab: devtools (F12) → <span className="text-text-primary">Network</span> tab (not Application — that list mixes in cookies from ads/analytics you don't need)</li>
+                      <li>Reload the page, then click any request to <span className="text-text-primary">auth.riotgames.com</span> in the list</li>
+                      <li>In the <span className="text-text-primary">Headers</span> panel, find <span className="text-text-primary">Request Headers → cookie</span></li>
+                      <li>Hover it and click the copy icon (copies the whole value in one go)</li>
+                      <li>Paste that below</li>
                     </ol>
                     <textarea
                       value={pastedCookies}
