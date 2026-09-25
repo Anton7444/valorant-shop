@@ -48,6 +48,7 @@ export interface LoginResponse {
   session_token?: string | null;
   puuid?: string | null;
   error?: string | null;
+  cookies_valid?: boolean | null;
 }
 
 export function getAuthUrl(): Promise<{ auth_url: string }> {

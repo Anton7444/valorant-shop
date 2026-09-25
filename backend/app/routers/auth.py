@@ -58,6 +58,7 @@ class LoginResponse(BaseModel):
     session_token: str | None = None
     puuid: str | None = None
     error: str | None = None
+    cookies_valid: bool | None = None  # None = no cookies were pasted
 
 
 # --- Endpoints ---
@@ -86,17 +87,38 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
             riot_auth.get_region(access_token, id_token),
         )
 
+        parsed_cookies = riot_auth.parse_cookie_header(body.cookies)
+
+        # If the user pasted cookies, actually exercise the silent-reauth
+        # path right now instead of only finding out it's broken hours
+        # later. A failure here doesn't block login — it just means the
+        # session falls back to expiring normally in ACCESS_TOKEN_TTL.
+        cookies_valid: bool | None = None
+        if parsed_cookies:
+            try:
+                reauth_result = await riot_auth.reauth(parsed_cookies)
+                parsed_cookies = reauth_result["cookies"]
+                cookies_valid = True
+            except Exception:
+                logger.info("Pasted cookies failed validation at login")
+                cookies_valid = False
+
         session_data = SessionData(
             access_token=access_token,
             entitlements_token=entitlements,
             puuid=puuid,
             shard=shard,
             region=region,
-            riot_cookies=riot_auth.parse_cookie_header(body.cookies),
+            riot_cookies=parsed_cookies if cookies_valid else {},
         )
         session_token = store.create(session_data)
 
-        return LoginResponse(status="success", session_token=session_token, puuid=puuid)
+        return LoginResponse(
+            status="success",
+            session_token=session_token,
+            puuid=puuid,
+            cookies_valid=cookies_valid,
+        )
 
     except riot_auth.AuthenticationError as e:
         return LoginResponse(status="error", error=str(e))

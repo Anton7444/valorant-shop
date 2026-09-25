@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [pastedCookies, setPastedCookies] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cookieResult, setCookieResult] = useState<'valid' | 'invalid' | null>(null);
 
   if (state.status === 'authenticated') {
     return <Navigate to="/shop" replace />;
@@ -51,7 +52,18 @@ export default function LoginPage() {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
-        navigate('/shop');
+
+        if (res.cookies_valid === true) {
+          setCookieResult('valid');
+          setTimeout(() => navigate('/shop'), 1400);
+        } else if (res.cookies_valid === false) {
+          setCookieResult('invalid');
+          setLoading(false);
+          // Let them read the warning instead of yanking them away immediately.
+          setTimeout(() => navigate('/shop'), 2200);
+        } else {
+          navigate('/shop');
+        }
       } else {
         setError(res.error ?? 'Authentication failed');
         setLoading(false);
@@ -176,6 +188,18 @@ export default function LoginPage() {
 
               {error && (
                 <p className="text-center text-sm text-accent-red">{error}</p>
+              )}
+
+              {cookieResult === 'valid' && (
+                <p className="text-center text-sm text-accent-teal">
+                  ✓ Persistent login confirmed — you won't need to log in again for ~2 weeks.
+                </p>
+              )}
+              {cookieResult === 'invalid' && (
+                <p className="text-center text-sm text-accent-red">
+                  You're logged in, but those cookies didn't work — you'll still need to log
+                  in again in a few hours. Try re-copying them, or skip this next time.
+                </p>
               )}
 
               <button
