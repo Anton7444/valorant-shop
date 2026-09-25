@@ -60,26 +60,27 @@ def get_auth_url() -> str:
     return AUTH_URL
 
 
-_CURL_COOKIE_RE = re.compile(r"-H\s+['\"]cookie:\s*(.*?)['\"]", re.IGNORECASE)
+# Matches the cookie header however devtools formatted it when copied:
+#   -H 'cookie: a=b; c=d'          (Copy as cURL, bash)
+#   -H "cookie: a=b; c=d"          (Copy as cURL, cmd/PowerShell)
+#   "cookie": "a=b; c=d"           (Copy as fetch)
+#   Cookie: a=b; c=d               (Copy request headers / raw headers)
+_COOKIE_HEADER_RE = re.compile(r"cookie[\"']?\s*[:=]\s*[\"']?([^\"'\n\r]+)", re.IGNORECASE)
 
 
 def parse_cookie_header(raw: str) -> dict[str, str]:
     """Parse a pasted cookie string into a dict.
 
-    Accepts, in order of preference:
-    - A full "Copy as cURL" command from devtools (easiest for users —
-      right-click a request → Copy → Copy as cURL). The Cookie header
-      is extracted out of it automatically.
-    - A raw `Cookie:` header line.
-    - A bare `name=value; name2=value2` string.
+    Accepts a full "Copy as ..." command/headers block from devtools
+    (cURL, fetch, raw/request headers — whichever the browser offers)
+    and pulls the cookie header out of it, or a bare
+    `name=value; name2=value2` string on its own.
     """
     raw = raw.strip()
 
-    curl_match = _CURL_COOKIE_RE.search(raw)
-    if curl_match:
-        raw = curl_match.group(1)
-    elif raw.lower().startswith("cookie:"):
-        raw = raw[len("cookie:") :].strip()
+    match = _COOKIE_HEADER_RE.search(raw)
+    if match:
+        raw = match.group(1).strip()
 
     cookies: dict[str, str] = {}
     for part in raw.split(";"):

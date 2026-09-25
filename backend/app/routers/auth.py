@@ -94,7 +94,7 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
         # later. A failure here doesn't block login — it just means the
         # session falls back to expiring normally in ACCESS_TOKEN_TTL.
         cookies_valid: bool | None = None
-        if parsed_cookies:
+        if body.cookies.strip():
             try:
                 reauth_result = await riot_auth.reauth(parsed_cookies)
                 parsed_cookies = reauth_result["cookies"]
