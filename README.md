@@ -13,6 +13,8 @@ A web app that lets Valorant players view their personalized daily shop rotation
 
 > **Disclaimer:** This application is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
+> **Credit:** This project is a fork of [victorxia18/valorant-shop-checker](https://github.com/victorxia18/valorant-shop-checker), the original creator. All credit for the initial design and implementation goes to them.
+
 ## What It Does
 
 - **Daily Store** — View your 4 daily rotating skin offers with content-tier indicators and VP prices
