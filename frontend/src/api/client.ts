@@ -48,17 +48,16 @@ export interface LoginResponse {
   session_token?: string | null;
   puuid?: string | null;
   error?: string | null;
-  cookies_valid?: boolean | null;
 }
 
 export function getAuthUrl(): Promise<{ auth_url: string }> {
   return request('/api/auth/url');
 }
 
-export function submitToken(url: string, cookies: string): Promise<LoginResponse> {
+export function submitToken(url: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
-    body: JSON.stringify({ url, cookies }),
+    body: JSON.stringify({ url }),
   });
 }
 

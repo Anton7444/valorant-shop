@@ -13,7 +13,6 @@ export default function LoginPage() {
     () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
   );
   const [pastedUrl, setPastedUrl] = useState('');
-  const [pastedCookies, setPastedCookies] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,14 +44,13 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await api.submitToken(pastedUrl.trim(), pastedCookies.trim());
+      const res = await api.submitToken(pastedUrl.trim());
 
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
-
-        navigate('/shop', { state: { cookiesValid: res.cookies_valid ?? null } });
+        navigate('/shop');
       } else {
         setError(res.error ?? 'Authentication failed');
         setLoading(false);
@@ -67,7 +65,6 @@ export default function LoginPage() {
     sessionStorage.removeItem('login_stage');
     setStage('start');
     setPastedUrl('');
-    setPastedCookies('');
     setError(null);
   }
 
@@ -136,33 +133,6 @@ export default function LoginPage() {
                   rows={3}
                   className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
                 />
-
-                <details className="group rounded border border-border bg-bg-primary open:pb-3">
-                  <summary className="cursor-pointer select-none list-none px-3 py-2.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary">
-                    <span className="mr-1.5 inline-block transition-transform group-open:rotate-90">▸</span>
-                    Stay signed in for 2 weeks instead of 3 hours <span className="text-text-secondary/50">(optional)</span>
-                  </summary>
-                  <div className="space-y-2 px-3 pt-1 text-xs leading-relaxed text-text-secondary">
-                    <p>
-                      By default you'll need to repeat this whole process every few hours.
-                      To skip that, also paste your Riot session cookies — completely optional,
-                      you can always add this later.
-                    </p>
-                    <ol className="list-inside list-decimal space-y-1">
-                      <li>On the same Riot tab: devtools (F12) → <span className="text-text-primary">Network</span> tab, then log in</li>
-                      <li>Find the row named <span className="text-text-primary">login</span> (Type: fetch, around 200 status)</li>
-                      <li>Right-click it → <span className="text-text-primary">Copy → Copy as cURL</span></li>
-                      <li>Paste the whole thing below — it's parsed automatically, no need to trim it</li>
-                    </ol>
-                    <textarea
-                      value={pastedCookies}
-                      onChange={(e) => setPastedCookies(e.target.value)}
-                      placeholder="Paste the copied cURL command here (leave blank to skip)"
-                      rows={3}
-                      className="w-full resize-none rounded border border-border bg-bg-secondary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
-                    />
-                  </div>
-                </details>
 
                 <button
                   type="submit"
