@@ -127,15 +127,6 @@ export default function LoginPage() {
                 </ol>
               </div>
 
-              <div className="rounded border border-border bg-bg-primary p-4 text-sm text-text-secondary">
-                <p className="mb-3 font-medium text-text-primary">Optional — stay signed in longer:</p>
-                <ol className="list-inside list-decimal space-y-1.5 text-xs leading-relaxed">
-                  <li>On that same Riot tab, open devtools (F12) → Application/Storage → Cookies → <span className="text-text-primary">auth.riotgames.com</span></li>
-                  <li>Copy all cookie values (or the request's <span className="text-text-primary">Cookie</span> header from the Network tab)</li>
-                  <li>Paste below — without this, you'll need to log in again every few hours</li>
-                </ol>
-              </div>
-
               <form onSubmit={handleSubmitUrl} className="space-y-3">
                 <textarea
                   value={pastedUrl}
@@ -144,13 +135,33 @@ export default function LoginPage() {
                   rows={3}
                   className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
                 />
-                <textarea
-                  value={pastedCookies}
-                  onChange={(e) => setPastedCookies(e.target.value)}
-                  placeholder="Optional: paste Riot session cookies here to stay signed in longer"
-                  rows={2}
-                  className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
-                />
+
+                <details className="group rounded border border-border bg-bg-primary open:pb-3">
+                  <summary className="cursor-pointer select-none list-none px-3 py-2.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary">
+                    <span className="mr-1.5 inline-block transition-transform group-open:rotate-90">▸</span>
+                    Stay signed in for 2 weeks instead of 3 hours <span className="text-text-secondary/50">(optional)</span>
+                  </summary>
+                  <div className="space-y-2 px-3 pt-1 text-xs leading-relaxed text-text-secondary">
+                    <p>
+                      By default you'll need to repeat this whole process every few hours.
+                      To skip that, also paste your Riot session cookies — completely optional,
+                      you can always add this later.
+                    </p>
+                    <ol className="list-inside list-decimal space-y-1">
+                      <li>On the same Riot tab: devtools (F12) → Application → Cookies → <span className="text-text-primary">auth.riotgames.com</span></li>
+                      <li>Copy the cookie values (or the <span className="text-text-primary">Cookie</span> request header from the Network tab)</li>
+                      <li>Paste them below</li>
+                    </ol>
+                    <textarea
+                      value={pastedCookies}
+                      onChange={(e) => setPastedCookies(e.target.value)}
+                      placeholder="Paste Riot session cookies here (leave blank to skip)"
+                      rows={2}
+                      className="w-full resize-none rounded border border-border bg-bg-secondary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
+                    />
+                  </div>
+                </details>
+
                 <button
                   type="submit"
                   disabled={loading || !pastedUrl.trim()}
