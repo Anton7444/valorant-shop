@@ -152,6 +152,14 @@ async def reauth(cookies: dict[str, str]) -> dict:
 
         location = resp.headers.get("location", "")
         if resp.status_code not in (301, 302, 303, 307, 308) or "access_token" not in location:
+            body_snippet = resp.text[:300] if resp.status_code == 200 else ""
+            logger.info(
+                "Riot reauth rejected: status=%s location=%r cookie_names=%s body=%r",
+                resp.status_code,
+                location,
+                sorted(cookies.keys()),
+                body_snippet,
+            )
             raise AuthenticationError("Stored Riot session has expired; please log in again")
 
         tokens = extract_tokens(location)

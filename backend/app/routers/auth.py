@@ -99,8 +99,8 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
                 reauth_result = await riot_auth.reauth(parsed_cookies)
                 parsed_cookies = reauth_result["cookies"]
                 cookies_valid = True
-            except Exception:
-                logger.info("Pasted cookies failed validation at login")
+            except Exception as exc:
+                logger.info("Pasted cookies failed validation at login: %s", exc)
                 cookies_valid = False
 
         session_data = SessionData(
