@@ -28,6 +28,20 @@ AUTH_URL = (
     "&prompt=login"
 )
 
+# Same authorize call, minus prompt=login. That flag forces Riot to show
+# the login page unconditionally, even with a valid session cookie jar —
+# it's correct for the initial browser login (we want an explicit login
+# there) but defeats silent reauth entirely, since it always redirects to
+# /login instead of honoring existing cookies.
+REAUTH_URL = (
+    "https://auth.riotgames.com/authorize"
+    "?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect"
+    "&client_id=riot-client"
+    "&response_type=token%20id_token"
+    "&nonce=1"
+    "&scope=openid%20link%20ban%20lol_region%20account"
+)
+
 ENTITLEMENTS_URL = "https://entitlements.auth.riotgames.com/api/token/v1"
 USERINFO_URL = "https://auth.riotgames.com/userinfo"
 GEO_URL = "https://riot-geo.pas.si.riotgames.com/pas/v1/product/valorant"
@@ -147,7 +161,7 @@ async def reauth(cookies: dict[str, str]) -> dict:
         raise AuthenticationError("No stored Riot cookies available for reauth")
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
-        resp = await client.get(AUTH_URL, cookies=cookies)
+        resp = await client.get(REAUTH_URL, cookies=cookies)
         _check_rate_limit(resp)
 
         location = resp.headers.get("location", "")
