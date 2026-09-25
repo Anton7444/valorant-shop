@@ -61,26 +61,37 @@ def get_auth_url() -> str:
 
 
 # Matches the cookie header however devtools formatted it when copied:
-#   -H 'cookie: a=b; c=d'          (Copy as cURL, bash)
-#   -H "cookie: a=b; c=d"          (Copy as cURL, cmd/PowerShell)
+#   -H 'cookie: a=b; c=d'          (Copy as cURL, bash, header form)
+#   -H "cookie: a=b; c=d"          (Copy as cURL, cmd/PowerShell, header form)
 #   "cookie": "a=b; c=d"           (Copy as fetch)
 #   Cookie: a=b; c=d               (Copy request headers / raw headers)
 _COOKIE_HEADER_RE = re.compile(r"cookie[\"']?\s*[:=]\s*[\"']?([^\"'\n\r]+)", re.IGNORECASE)
+
+# Chrome's Windows "Copy as cURL (cmd)" sends cookies via curl's -b/--cookie
+# flag instead of a -H header, and caret-escapes every special character
+# (^" ^% ^& ^$ ...) for cmd.exe. Neither form contains the word "cookie".
+_CURL_B_FLAG_RE = re.compile(r"(?:-b|--cookie)\s+\^?[\"']([^\"']+)\^?[\"']", re.IGNORECASE)
 
 
 def parse_cookie_header(raw: str) -> dict[str, str]:
     """Parse a pasted cookie string into a dict.
 
     Accepts a full "Copy as ..." command/headers block from devtools
-    (cURL, fetch, raw/request headers — whichever the browser offers)
-    and pulls the cookie header out of it, or a bare
-    `name=value; name2=value2` string on its own.
+    (cURL bash/cmd — including the -b/--cookie flag form, fetch,
+    raw/request headers — whichever the browser offers) and pulls the
+    cookies out of it, or a bare `name=value; name2=value2` string.
     """
     raw = raw.strip()
+    # cmd.exe caret-escaping: strip bare carets, they never appear inside
+    # real cookie values (base64/JWT alphabets don't include '^').
+    raw = raw.replace("^", "")
 
-    match = _COOKIE_HEADER_RE.search(raw)
-    if match:
-        raw = match.group(1).strip()
+    flag_match = _CURL_B_FLAG_RE.search(raw)
+    header_match = _COOKIE_HEADER_RE.search(raw)
+    if flag_match:
+        raw = flag_match.group(1).strip()
+    elif header_match:
+        raw = header_match.group(1).strip()
 
     cookies: dict[str, str] = {}
     for part in raw.split(";"):
