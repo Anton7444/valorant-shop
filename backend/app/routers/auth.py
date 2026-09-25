@@ -50,6 +50,7 @@ class AuthUrlResponse(BaseModel):
 
 class TokenSubmitRequest(BaseModel):
     url: str
+    cookies: str = ""
 
 
 class LoginResponse(BaseModel):
@@ -91,6 +92,7 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
             puuid=puuid,
             shard=shard,
             region=region,
+            riot_cookies=riot_auth.parse_cookie_header(body.cookies),
         )
         session_token = store.create(session_data)
 
@@ -125,7 +127,7 @@ async def check_session(request: Request) -> dict:
     if not token:
         return {"valid": False}
 
-    session = store.get_or_reauth(token)
+    session = await store.get_or_reauth(token)
     if not session:
         return {"valid": False}
 

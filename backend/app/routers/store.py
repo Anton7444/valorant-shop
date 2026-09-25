@@ -21,7 +21,7 @@ async def get_session(request: Request) -> SessionData:
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session = store.get_or_reauth(session_token)
+    session = await store.get_or_reauth(session_token)
     if session:
         return session
 

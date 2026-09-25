@@ -13,6 +13,7 @@ export default function LoginPage() {
     () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
   );
   const [pastedUrl, setPastedUrl] = useState('');
+  const [pastedCookies, setPastedCookies] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +45,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await api.submitToken(pastedUrl.trim());
+      const res = await api.submitToken(pastedUrl.trim(), pastedCookies.trim());
 
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
@@ -65,6 +66,7 @@ export default function LoginPage() {
     sessionStorage.removeItem('login_stage');
     setStage('start');
     setPastedUrl('');
+    setPastedCookies('');
     setError(null);
   }
 
@@ -125,12 +127,28 @@ export default function LoginPage() {
                 </ol>
               </div>
 
+              <div className="rounded border border-border bg-bg-primary p-4 text-sm text-text-secondary">
+                <p className="mb-3 font-medium text-text-primary">Optional — stay signed in longer:</p>
+                <ol className="list-inside list-decimal space-y-1.5 text-xs leading-relaxed">
+                  <li>On that same Riot tab, open devtools (F12) → Application/Storage → Cookies → <span className="text-text-primary">auth.riotgames.com</span></li>
+                  <li>Copy all cookie values (or the request's <span className="text-text-primary">Cookie</span> header from the Network tab)</li>
+                  <li>Paste below — without this, you'll need to log in again every few hours</li>
+                </ol>
+              </div>
+
               <form onSubmit={handleSubmitUrl} className="space-y-3">
                 <textarea
                   value={pastedUrl}
                   onChange={(e) => setPastedUrl(e.target.value)}
                   placeholder="Paste the URL here (starts with http://localhost/redirect#...)"
                   rows={3}
+                  className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
+                />
+                <textarea
+                  value={pastedCookies}
+                  onChange={(e) => setPastedCookies(e.target.value)}
+                  placeholder="Optional: paste Riot session cookies here to stay signed in longer"
+                  rows={2}
                   className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
                 />
                 <button

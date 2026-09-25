@@ -54,10 +54,10 @@ export function getAuthUrl(): Promise<{ auth_url: string }> {
   return request('/api/auth/url');
 }
 
-export function submitToken(url: string): Promise<LoginResponse> {
+export function submitToken(url: string, cookies: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, cookies }),
   });
 }
 

@@ -59,6 +59,29 @@ def get_auth_url() -> str:
     return AUTH_URL
 
 
+def parse_cookie_header(raw: str) -> dict[str, str]:
+    """Parse a pasted `document.cookie`-style string into a dict.
+
+    Accepts either a raw `name=value; name2=value2` header or a full
+    `Cookie:` line copied from devtools.
+    """
+    raw = raw.strip()
+    if raw.lower().startswith("cookie:"):
+        raw = raw[len("cookie:") :].strip()
+
+    cookies: dict[str, str] = {}
+    for part in raw.split(";"):
+        part = part.strip()
+        if not part or "=" not in part:
+            continue
+        name, value = part.split("=", 1)
+        name = name.strip()
+        value = value.strip()
+        if name:
+            cookies[name] = value
+    return cookies
+
+
 def extract_tokens(url: str) -> dict[str, str]:
     """Extract access_token and id_token from a pasted redirect URL.
 
@@ -87,6 +110,33 @@ def extract_tokens(url: str) -> dict[str, str]:
         )
 
     return {"access_token": access_token, "id_token": id_token}
+
+
+async def reauth(cookies: dict[str, str]) -> dict:
+    """Silently refresh tokens using stored Riot session cookies.
+
+    Mirrors what Riot's own client does for silent reauth: hitting
+    /authorize with a valid session cookie jar redirects straight to
+    redirect_uri with fresh tokens instead of showing a login page.
+    """
+    if not cookies:
+        raise AuthenticationError("No stored Riot cookies available for reauth")
+
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
+        resp = await client.get(AUTH_URL, cookies=cookies)
+        _check_rate_limit(resp)
+
+        location = resp.headers.get("location", "")
+        if resp.status_code not in (301, 302, 303, 307, 308) or "access_token" not in location:
+            raise AuthenticationError("Stored Riot session has expired; please log in again")
+
+        tokens = extract_tokens(location)
+
+        # Riot may rotate cookies on each reauth; merge any refreshed ones in.
+        refreshed_cookies = dict(cookies)
+        refreshed_cookies.update(dict(resp.cookies))
+        tokens["cookies"] = refreshed_cookies
+        return tokens
 
 
 # --- Downstream API calls ---
