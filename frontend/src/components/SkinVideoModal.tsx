@@ -124,8 +124,17 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
               className="h-full w-full bg-black object-contain"
               autoPlay
               loop
-              muted
+              controls
               playsInline
+              // Opened by a click, so sound is usually allowed; if the browser
+              // still blocks unmuted autoplay, fall back to muted playback.
+              onCanPlay={(event) => {
+                const video = event.currentTarget;
+                if (video.paused) video.play().catch(() => {
+                  video.muted = true;
+                  video.play().catch(() => {});
+                });
+              }}
             />
           ) : (
             <img
