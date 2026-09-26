@@ -17,7 +17,9 @@ interface SkinVideoModalProps {
   onClose: () => void;
 }
 
-const TRANSITION_MS = 380;
+const OPEN_MS = 380;
+const CLOSE_MS = 200;
+const CLOSE_FADE_MS = 120;
 const THUMB_STRIP_HEIGHT = 52;
 
 export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
@@ -67,21 +69,24 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
 
   function requestClose() {
     setPhase('closing');
-    window.setTimeout(onClose, TRANSITION_MS);
+    window.setTimeout(onClose, CLOSE_MS);
   }
 
+  const isClosing = phase === 'closing';
+  const transformMs = isClosing ? CLOSE_MS : OPEN_MS;
   const panelTransform = phase === 'open' ? 'translate(0, 0) scale(1, 1)' : originTransform;
   const backdropOpacity = phase === 'open' ? 1 : 0;
-  // Fade the panel out as it shrinks back down on close, so it's already
-  // invisible by the time it reaches the card's exact size/position --
-  // otherwise it pops away abruptly while still sitting right on top of it.
-  const panelOpacity = phase === 'closing' ? 0 : 1;
+  // On close, fade the panel out much faster than it shrinks, so it's fully
+  // invisible well before it nears the card's exact size/position -- avoids
+  // any window where it visibly overlaps the real card underneath.
+  const panelOpacity = isClosing ? 0 : 1;
+  const opacityMs = isClosing ? CLOSE_FADE_MS : OPEN_MS;
 
   return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`${name} preview`}>
       <div
         className="absolute inset-0 bg-bg-primary/80 backdrop-blur-xl"
-        style={{ opacity: backdropOpacity, transition: `opacity ${TRANSITION_MS}ms ease` }}
+        style={{ opacity: backdropOpacity, transition: `opacity ${opacityMs}ms ease` }}
         onClick={requestClose}
       />
 
@@ -94,7 +99,7 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
           height: panelHeight,
           transform: panelTransform,
           opacity: panelOpacity,
-          transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${TRANSITION_MS}ms ease`,
+          transition: `transform ${transformMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${opacityMs}ms ease`,
         }}
       >
         <div className="relative min-h-0 flex-1 bg-black">
