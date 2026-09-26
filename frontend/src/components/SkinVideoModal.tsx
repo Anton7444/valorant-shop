@@ -19,9 +19,9 @@ interface SkinVideoModalProps {
   onClose: () => void;
 }
 
-const OPEN_MS = 380;
-const CLOSE_MS = 200;
-const CLOSE_FADE_MS = 120;
+const OPEN_MS = 500;
+const CLOSE_MS = 300;
+const CLOSE_FADE_MS = 180;
 const THUMB_STRIP_HEIGHT = 52;
 
 export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, getOriginRect, onClose }: SkinVideoModalProps) {
