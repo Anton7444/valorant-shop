@@ -14,6 +14,8 @@ interface SkinVideoModalProps {
   fallbackIcon: string;
   name: string;
   originRect: OriginRect;
+  /** Re-measures the card at close time, since the page may have scrolled/resized while open. */
+  getOriginRect?: () => OriginRect | null;
   onClose: () => void;
 }
 
@@ -22,7 +24,8 @@ const CLOSE_MS = 200;
 const CLOSE_FADE_MS = 120;
 const THUMB_STRIP_HEIGHT = 52;
 
-export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
+export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, getOriginRect, onClose }: SkinVideoModalProps) {
+  const [rect, setRect] = useState<OriginRect>(originRect);
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const firstWithVideo = levels.findIndex((level) => level.video_url);
@@ -41,9 +44,11 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
   // Uniform scale (not separate X/Y factors) so the panel grows proportionally
   // instead of stretching/skewing, since the origin card and the target panel
   // don't share the same aspect ratio (the panel is taller, for the LV strip).
-  const scale = originRect.width / videoWidth;
-  const translateX = originRect.left + originRect.width / 2 - (targetLeft + videoWidth / 2);
-  const translateY = originRect.top + originRect.height / 2 - (targetTop + panelHeight / 2);
+  // The transform origin is the center of the video area (not the whole panel),
+  // so the video lands exactly on the card image and the LV strip hangs below it.
+  const scale = rect.width / videoWidth;
+  const translateX = rect.left + rect.width / 2 - (targetLeft + videoWidth / 2);
+  const translateY = rect.top + rect.height / 2 - (targetTop + videoHeight / 2);
   const originTransform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
 
   useEffect(() => {
@@ -68,6 +73,8 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
   }, []);
 
   function requestClose() {
+    const fresh = getOriginRect?.();
+    if (fresh) setRect(fresh);
     setPhase('closing');
     window.setTimeout(onClose, CLOSE_MS);
   }
@@ -91,13 +98,14 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
       />
 
       <div
-        className="absolute flex flex-col overflow-hidden rounded-xl border border-border bg-bg-card shadow-2xl [transform-origin:center]"
+        className="absolute flex flex-col overflow-hidden rounded-xl border border-border bg-bg-card shadow-2xl"
         style={{
           top: targetTop,
           left: targetLeft,
           width: videoWidth,
           height: panelHeight,
           transform: panelTransform,
+          transformOrigin: `50% ${videoHeight / 2}px`,
           opacity: panelOpacity,
           transition: `transform ${transformMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${opacityMs}ms ease`,
         }}
