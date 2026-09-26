@@ -14,18 +14,16 @@ interface SkinVideoModalProps {
   fallbackIcon: string;
   name: string;
   originRect: OriginRect;
-  /** Re-measures the card at close time, since the page may have scrolled/resized while open. */
-  getOriginRect?: () => OriginRect | null;
   onClose: () => void;
 }
 
 const OPEN_MS = 500;
 const CLOSE_MS = 300;
-const CLOSE_FADE_MS = 180;
+const CLOSE_FADE_MS = 300;
 const THUMB_STRIP_HEIGHT = 52;
 
-export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, getOriginRect, onClose }: SkinVideoModalProps) {
-  const [rect, setRect] = useState<OriginRect>(originRect);
+export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
+  const rect = originRect;
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const firstWithVideo = levels.findIndex((level) => level.video_url);
@@ -73,19 +71,16 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
   }, []);
 
   function requestClose() {
-    const fresh = getOriginRect?.();
-    if (fresh) setRect(fresh);
     setPhase('closing');
     window.setTimeout(onClose, CLOSE_MS);
   }
 
   const isClosing = phase === 'closing';
   const transformMs = isClosing ? CLOSE_MS : OPEN_MS;
-  const panelTransform = phase === 'open' ? 'translate(0, 0) scale(1, 1)' : originTransform;
+  // Closing fades out in place (with a slight shrink) instead of flying back to the card.
+  const panelTransform =
+    phase === 'open' ? 'translate(0, 0) scale(1)' : isClosing ? 'translate(0, 0) scale(0.95)' : originTransform;
   const backdropOpacity = phase === 'open' ? 1 : 0;
-  // On close, fade the panel out much faster than it shrinks, so it's fully
-  // invisible well before it nears the card's exact size/position -- avoids
-  // any window where it visibly overlaps the real card underneath.
   const panelOpacity = isClosing ? 0 : 1;
   const opacityMs = isClosing ? CLOSE_FADE_MS : OPEN_MS;
 

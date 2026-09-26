@@ -186,7 +186,6 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
           fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
-          getOriginRect={() => imageWrapRef.current?.getBoundingClientRect() ?? null}
           onClose={() => setVideoOrigin(null)}
         />
       )}
