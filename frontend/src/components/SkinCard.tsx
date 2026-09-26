@@ -18,14 +18,15 @@ function getTierColor(tierName: string, apiColor: string): string {
 
 interface SkinCardProps {
   skin: SkinOffer;
+  startRevealed?: boolean;
 }
 
-export default function SkinCard({ skin }: SkinCardProps) {
+export default function SkinCard({ skin, startRevealed = false }: SkinCardProps) {
   const { localizedNames } = useLanguage();
   const name = localizedName(skin.uuid, skin.name, localizedNames);
   const tierColor = getTierColor(skin.content_tier_name, skin.content_tier_color);
 
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(startRevealed);
   const [bursting, setBursting] = useState(false);
 
   function handleReveal() {

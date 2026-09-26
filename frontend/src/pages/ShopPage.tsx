@@ -9,6 +9,8 @@ import SkinCard from '../components/SkinCard';
 import BundleCard from '../components/BundleCard';
 import { useLanguage } from '../context/useLanguage';
 
+const STORE_SEEN_KEY = 'valshop:lastSeenStoreKey';
+
 export default function ShopPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export default function ShopPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewStore, setIsNewStore] = useState(true);
 
   const fetchStoreData = useCallback(async () => {
     setLoading(true);
@@ -31,6 +34,13 @@ export default function ShopPage() {
         api.getBundles(),
         api.getWallet(),
       ]);
+
+      const storeKey = dailyRes.offers.map((offer) => offer.uuid).sort().join(',');
+      const lastSeenKey = localStorage.getItem(STORE_SEEN_KEY);
+      setIsNewStore(storeKey !== lastSeenKey);
+      if (storeKey) {
+        localStorage.setItem(STORE_SEEN_KEY, storeKey);
+      }
 
       setOffers(dailyRes.offers);
       setSecondsRemaining(dailyRes.seconds_remaining);
@@ -134,7 +144,7 @@ export default function ShopPage() {
               </h2>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {offers.map((skin) => (
-                  <SkinCard key={skin.uuid} skin={skin} />
+                  <SkinCard key={skin.uuid} skin={skin} startRevealed={!isNewStore} />
                 ))}
               </div>
             </section>
