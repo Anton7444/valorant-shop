@@ -36,11 +36,13 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
   const targetTop = (window.innerHeight - panelHeight) / 2;
   const targetLeft = (window.innerWidth - videoWidth) / 2;
 
-  const scaleX = originRect.width / videoWidth;
-  const scaleY = originRect.height / panelHeight;
+  // Uniform scale (not separate X/Y factors) so the panel grows proportionally
+  // instead of stretching/skewing, since the origin card and the target panel
+  // don't share the same aspect ratio (the panel is taller, for the LV strip).
+  const scale = originRect.width / videoWidth;
   const translateX = originRect.left + originRect.width / 2 - (targetLeft + videoWidth / 2);
   const translateY = originRect.top + originRect.height / 2 - (targetTop + panelHeight / 2);
-  const originTransform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`;
+  const originTransform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -107,8 +109,7 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
             <video
               key={selected.video_url}
               src={selected.video_url}
-              poster={selected.display_icon || fallbackIcon}
-              className="h-full w-full object-contain"
+              className="h-full w-full bg-black object-contain"
               autoPlay
               loop
               muted
