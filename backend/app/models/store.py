@@ -9,6 +9,7 @@ class SkinOffer(BaseModel):
     content_tier_name: str
     content_tier_color: str
     cost: int
+    video_url: str | None = None
 
 
 class BundleItem(BaseModel):

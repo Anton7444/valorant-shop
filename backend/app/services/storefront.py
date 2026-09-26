@@ -17,6 +17,7 @@ from app.services.asset_cache import (
     get_content_tier,
     get_item_ensured,
     get_skin_ensured,
+    get_skin_video,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
         content_tier_name=tier_name,
         content_tier_color=tier_color,
         cost=cost,
+        video_url=get_skin_video(item_uuid, offer_id, skin["uuid"]),
     )
 
 

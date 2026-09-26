@@ -31,6 +31,7 @@ ITEM_TYPE_AGENT = "01bb38e1-da47-4e6a-9b3d-945fe4655707"
 _skins: dict[str, dict] = {}
 _skin_levels_to_skin: dict[str, dict] = {}
 _skin_chromas_to_skin: dict[str, dict] = {}
+_skin_video_by_uuid: dict[str, str] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
 _buddies: dict[str, dict] = {}
@@ -93,10 +94,16 @@ async def initialize() -> None:
         }
         _skins[uuid] = skin_entry
 
-        # Map each level UUID to the parent skin
+        # Map each level UUID to the parent skin, and each level's own demo
+        # video (if Riot has one for that level) by its exact UUID.
         for level in skin.get("levels", []):
             level_uuid = level["uuid"].lower()
             _skin_levels_to_skin[level_uuid] = skin_entry
+            if level.get("streamedVideo"):
+                _skin_video_by_uuid[level_uuid] = level["streamedVideo"]
+                # First level with a video also becomes the skin's default video,
+                # for when an offer references the parent skin UUID directly.
+                _skin_video_by_uuid.setdefault(uuid, level["streamedVideo"])
 
         # Map each chroma (color variant) UUID to the parent skin. Bundles very
         # commonly reference a specific chroma rather than the base skin level,
@@ -109,6 +116,8 @@ async def initialize() -> None:
                 "displayIcon": chroma.get("fullRender") or chroma.get("displayIcon") or skin_entry["displayIcon"],
                 "contentTierUuid": skin_entry["contentTierUuid"],
             }
+            if chroma.get("streamedVideo"):
+                _skin_video_by_uuid[chroma_uuid] = chroma["streamedVideo"]
 
     # Content tiers
     for tier in tiers_resp:
@@ -214,6 +223,15 @@ def get_skin(uuid: str) -> dict | None:
     """Lookup skin by skin UUID, skin level UUID, or chroma (variant) UUID."""
     key = uuid.lower()
     return _skins.get(key) or _skin_levels_to_skin.get(key) or _skin_chromas_to_skin.get(key)
+
+
+def get_skin_video(*uuids: str) -> str | None:
+    """Lookup a skin demo video by the first matching UUID (level, chroma, or skin)."""
+    for uuid in uuids:
+        video = _skin_video_by_uuid.get(uuid.lower())
+        if video:
+            return video
+    return None
 
 
 def get_agent(uuid: str) -> dict | None:

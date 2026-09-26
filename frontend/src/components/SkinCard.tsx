@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SkinOffer } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
+import SkinVideoModal from './SkinVideoModal';
 
 const TIER_COLOR_MAP: Record<string, string> = {
   select: 'var(--color-tier-select)',
@@ -28,12 +29,19 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
 
   const [revealed, setRevealed] = useState(startRevealed);
   const [bursting, setBursting] = useState(false);
+  const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
+  const imageWrapRef = useRef<HTMLDivElement>(null);
 
   function handleReveal() {
     if (revealed) return;
     setRevealed(true);
     setBursting(true);
     setTimeout(() => setBursting(false), 600);
+  }
+
+  function handleOpenVideo() {
+    if (!skin.video_url || !imageWrapRef.current) return;
+    setVideoOrigin(imageWrapRef.current.getBoundingClientRect());
   }
 
   return (
@@ -104,7 +112,14 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
           >
             <div className={revealed ? 'animate-reveal-pop' : 'opacity-0'}>
               {/* Skin image */}
-              <div className="flex aspect-video items-center justify-center p-4">
+              <div
+                ref={imageWrapRef}
+                onClick={handleOpenVideo}
+                role={skin.video_url ? 'button' : undefined}
+                aria-label={skin.video_url ? `Play ${name} demo video` : undefined}
+                className="relative flex aspect-video items-center justify-center p-4"
+                style={{ cursor: skin.video_url ? 'pointer' : 'default' }}
+              >
                 {skin.display_icon ? (
                   <img
                     src={skin.display_icon}
@@ -113,6 +128,16 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
                   />
                 ) : (
                   <div className="text-sm text-text-secondary">No image</div>
+                )}
+
+                {skin.video_url && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-primary/0 opacity-0 transition-opacity duration-200 group-hover:bg-bg-primary/30 group-hover:opacity-100">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-primary/70 backdrop-blur-sm">
+                      <svg className="ml-0.5 h-4 w-4" viewBox="0 0 24 24" fill="white">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -153,6 +178,16 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
           boxShadow: `inset 0 0 0 1px ${tierColor}40, 0 0 20px ${tierColor}15`,
         }}
       />
+
+      {videoOrigin && skin.video_url && (
+        <SkinVideoModal
+          videoUrl={skin.video_url}
+          posterUrl={skin.display_icon}
+          name={name}
+          originRect={videoOrigin}
+          onClose={() => setVideoOrigin(null)}
+        />
+      )}
     </div>
   );
 }

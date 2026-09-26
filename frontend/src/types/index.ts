@@ -15,6 +15,7 @@ export interface SkinOffer {
   content_tier_name: string;
   content_tier_color: string;
   cost: number;
+  video_url: string | null;
 }
 
 export interface BundleItem {
