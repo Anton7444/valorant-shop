@@ -89,8 +89,7 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
           width: videoWidth,
           height: panelHeight,
           transform: panelTransform,
-          opacity: phase === 'entering' ? 0.4 : 1,
-          transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${TRANSITION_MS}ms ease`,
+          transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
         }}
       >
         <div className="relative min-h-0 flex-1 bg-black">
