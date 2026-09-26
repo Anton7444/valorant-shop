@@ -132,13 +132,10 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
                 )}
 
                 {hasVideo && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-primary/0 opacity-0 transition-opacity duration-200 group-hover:bg-bg-primary/30 group-hover:opacity-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-primary/70 backdrop-blur-sm">
-                      <svg className="ml-0.5 h-4 w-4" viewBox="0 0 24 24" fill="white">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </div>
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-t-md opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    style={{ boxShadow: 'inset 0 0 0 2px var(--glow-color), inset 0 0 18px -6px var(--glow-color)' }}
+                  />
                 )}
               </div>
 
