@@ -72,6 +72,10 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
 
   const panelTransform = phase === 'open' ? 'translate(0, 0) scale(1, 1)' : originTransform;
   const backdropOpacity = phase === 'open' ? 1 : 0;
+  // Fade the panel out as it shrinks back down on close, so it's already
+  // invisible by the time it reaches the card's exact size/position --
+  // otherwise it pops away abruptly while still sitting right on top of it.
+  const panelOpacity = phase === 'closing' ? 0 : 1;
 
   return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`${name} preview`}>
@@ -89,7 +93,8 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
           width: videoWidth,
           height: panelHeight,
           transform: panelTransform,
-          transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+          opacity: panelOpacity,
+          transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${TRANSITION_MS}ms ease`,
         }}
       >
         <div className="relative min-h-0 flex-1 bg-black">
