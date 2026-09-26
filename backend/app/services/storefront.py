@@ -7,6 +7,7 @@ from app.models.store import (
     BundleResponse,
     Bundle,
     DailyStoreResponse,
+    SkinLevel,
     SkinOffer,
     Wallet,
 )
@@ -85,6 +86,29 @@ async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
     tier_name = tier["name"] if tier else "Unknown"
     tier_color = tier["highlight_color"] if tier else ""
 
+    raw_levels = skin.get("levels")
+    if raw_levels:
+        levels = [
+            SkinLevel(
+                uuid=level["uuid"],
+                level_number=index,
+                display_icon=level.get("displayIcon") or skin.get("displayIcon", "") or "",
+                video_url=level.get("streamedVideo") or None,
+            )
+            for index, level in enumerate(raw_levels, start=1)
+        ]
+    else:
+        # Offer resolved to a chroma (color variant) rather than a skin with
+        # nested levels -- treat it as a single "level" using its own video.
+        levels = [
+            SkinLevel(
+                uuid=skin["uuid"],
+                level_number=1,
+                display_icon=skin.get("displayIcon", "") or "",
+                video_url=get_skin_video(item_uuid, offer_id, skin["uuid"]),
+            )
+        ]
+
     return SkinOffer(
         uuid=skin["uuid"],
         name=skin.get("displayName", "Unknown"),
@@ -93,7 +117,7 @@ async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
         content_tier_name=tier_name,
         content_tier_color=tier_color,
         cost=cost,
-        video_url=get_skin_video(item_uuid, offer_id, skin["uuid"]),
+        levels=levels,
     )
 
 

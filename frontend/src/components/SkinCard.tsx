@@ -31,6 +31,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
   const [bursting, setBursting] = useState(false);
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
   const imageWrapRef = useRef<HTMLDivElement>(null);
+  const hasVideo = skin.levels.some((level) => level.video_url);
 
   function handleReveal() {
     if (revealed) return;
@@ -40,7 +41,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
   }
 
   function handleOpenVideo() {
-    if (!skin.video_url || !imageWrapRef.current) return;
+    if (!hasVideo || !imageWrapRef.current) return;
     setVideoOrigin(imageWrapRef.current.getBoundingClientRect());
   }
 
@@ -115,10 +116,10 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
               <div
                 ref={imageWrapRef}
                 onClick={handleOpenVideo}
-                role={skin.video_url ? 'button' : undefined}
-                aria-label={skin.video_url ? `Play ${name} demo video` : undefined}
+                role={hasVideo ? 'button' : undefined}
+                aria-label={hasVideo ? `Play ${name} demo video` : undefined}
                 className="relative flex aspect-video items-center justify-center p-4"
-                style={{ cursor: skin.video_url ? 'pointer' : 'default' }}
+                style={{ cursor: hasVideo ? 'pointer' : 'default' }}
               >
                 {skin.display_icon ? (
                   <img
@@ -130,7 +131,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
                   <div className="text-sm text-text-secondary">No image</div>
                 )}
 
-                {skin.video_url && (
+                {hasVideo && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-primary/0 opacity-0 transition-opacity duration-200 group-hover:bg-bg-primary/30 group-hover:opacity-100">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-primary/70 backdrop-blur-sm">
                       <svg className="ml-0.5 h-4 w-4" viewBox="0 0 24 24" fill="white">
@@ -179,10 +180,10 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
         }}
       />
 
-      {videoOrigin && skin.video_url && (
+      {videoOrigin && hasVideo && (
         <SkinVideoModal
-          videoUrl={skin.video_url}
-          posterUrl={skin.display_icon}
+          levels={skin.levels}
+          fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
           onClose={() => setVideoOrigin(null)}

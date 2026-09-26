@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { SkinLevel } from '../types';
 
 interface OriginRect {
   top: number;
@@ -9,27 +10,37 @@ interface OriginRect {
 }
 
 interface SkinVideoModalProps {
-  videoUrl: string;
-  posterUrl: string;
+  levels: SkinLevel[];
+  fallbackIcon: string;
   name: string;
   originRect: OriginRect;
   onClose: () => void;
 }
 
 const TRANSITION_MS = 380;
+const THUMB_STRIP_HEIGHT = 84;
+const LEVEL_LABELS = ['Base', 'VFX', 'Animation', 'Finisher'];
 
-export default function SkinVideoModal({ videoUrl, posterUrl, name, originRect, onClose }: SkinVideoModalProps) {
+export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    const firstWithVideo = levels.findIndex((level) => level.video_url);
+    return firstWithVideo === -1 ? 0 : firstWithVideo;
+  });
 
-  const targetWidth = Math.min(window.innerWidth * 0.9, 960);
-  const targetHeight = (targetWidth * 9) / 16;
-  const targetTop = (window.innerHeight - targetHeight) / 2;
-  const targetLeft = (window.innerWidth - targetWidth) / 2;
+  const selected = levels[selectedIndex];
+  const showThumbStrip = levels.length > 1;
 
-  const scaleX = originRect.width / targetWidth;
-  const scaleY = originRect.height / targetHeight;
-  const translateX = originRect.left + originRect.width / 2 - (targetLeft + targetWidth / 2);
-  const translateY = originRect.top + originRect.height / 2 - (targetTop + targetHeight / 2);
+  const videoWidth = Math.min(window.innerWidth * 0.9, 960);
+  const videoHeight = (videoWidth * 9) / 16;
+  const panelHeight = videoHeight + (showThumbStrip ? THUMB_STRIP_HEIGHT : 0);
+  const targetTop = (window.innerHeight - panelHeight) / 2;
+  const targetLeft = (window.innerWidth - videoWidth) / 2;
+
+  const scaleX = originRect.width / videoWidth;
+  const scaleY = originRect.height / panelHeight;
+  const translateX = originRect.left + originRect.width / 2 - (targetLeft + videoWidth / 2);
+  const translateY = originRect.top + originRect.height / 2 - (targetTop + panelHeight / 2);
   const originTransform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`;
 
   useEffect(() => {
@@ -70,45 +81,82 @@ export default function SkinVideoModal({ videoUrl, posterUrl, name, originRect, 
       />
 
       <div
-        className="absolute overflow-hidden rounded-xl border border-border bg-bg-card shadow-2xl [transform-origin:center]"
+        className="absolute flex flex-col overflow-hidden rounded-xl border border-border bg-bg-card shadow-2xl [transform-origin:center]"
         style={{
           top: targetTop,
           left: targetLeft,
-          width: targetWidth,
-          height: targetHeight,
+          width: videoWidth,
+          height: panelHeight,
           transform: panelTransform,
           opacity: phase === 'entering' ? 0.4 : 1,
           transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${TRANSITION_MS}ms ease`,
         }}
       >
-        <button
-          type="button"
-          onClick={requestClose}
-          aria-label="Close preview"
-          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-bg-primary/70 text-text-primary transition-colors hover:bg-accent-red"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
+        <div className="relative min-h-0 flex-1 bg-black">
+          <button
+            type="button"
+            onClick={requestClose}
+            aria-label="Close preview"
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-bg-primary/70 text-text-primary transition-colors hover:bg-accent-red"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
 
-        <video
-          src={videoUrl}
-          poster={posterUrl}
-          className="h-full w-full bg-black object-contain"
-          autoPlay
-          loop
-          muted
-          playsInline
-          controls
-        />
+          {selected.video_url ? (
+            <video
+              key={selected.video_url}
+              src={selected.video_url}
+              poster={selected.display_icon || fallbackIcon}
+              className="h-full w-full object-contain"
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+            />
+          ) : (
+            <img
+              src={selected.display_icon || fallbackIcon}
+              alt={name}
+              className="h-full w-full object-contain p-8"
+            />
+          )}
 
-        <h3
-          className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent p-3 text-sm text-white"
-          style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
-        >
-          {name}
-        </h3>
+          <h3
+            className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent p-3 text-sm text-white"
+            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
+          >
+            {name}
+          </h3>
+        </div>
+
+        {showThumbStrip && (
+          <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-border bg-bg-secondary p-2.5">
+            {levels.map((level, index) => (
+              <button
+                key={level.uuid}
+                type="button"
+                onClick={() => setSelectedIndex(index)}
+                className={`flex shrink-0 flex-col items-center gap-1 rounded-lg border p-1.5 transition-colors ${
+                  index === selectedIndex
+                    ? 'border-accent-red bg-bg-card'
+                    : 'border-transparent bg-bg-card/50 hover:border-border'
+                }`}
+              >
+                <img
+                  src={level.display_icon || fallbackIcon}
+                  alt=""
+                  className="h-9 w-16 object-contain"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+                  {LEVEL_LABELS[index] ?? `Lv.${level.level_number}`}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>,
     document.body,

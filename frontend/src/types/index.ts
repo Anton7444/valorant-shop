@@ -7,6 +7,13 @@ export interface SessionResponse {
 
 // Store types
 
+export interface SkinLevel {
+  uuid: string;
+  level_number: number;
+  display_icon: string;
+  video_url: string | null;
+}
+
 export interface SkinOffer {
   uuid: string;
   name: string;
@@ -15,7 +22,7 @@ export interface SkinOffer {
   content_tier_name: string;
   content_tier_color: string;
   cost: number;
-  video_url: string | null;
+  levels: SkinLevel[];
 }
 
 export interface BundleItem {

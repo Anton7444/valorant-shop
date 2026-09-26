@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 
 
+class SkinLevel(BaseModel):
+    uuid: str
+    level_number: int
+    display_icon: str
+    video_url: str | None = None
+
+
 class SkinOffer(BaseModel):
     uuid: str
     name: str
@@ -9,7 +16,7 @@ class SkinOffer(BaseModel):
     content_tier_name: str
     content_tier_color: str
     cost: int
-    video_url: str | None = None
+    levels: list[SkinLevel] = []
 
 
 class BundleItem(BaseModel):
