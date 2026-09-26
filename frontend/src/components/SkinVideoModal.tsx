@@ -18,8 +18,7 @@ interface SkinVideoModalProps {
 }
 
 const TRANSITION_MS = 380;
-const THUMB_STRIP_HEIGHT = 84;
-const LEVEL_LABELS = ['Base', 'VFX', 'Animation', 'Finisher'];
+const THUMB_STRIP_HEIGHT = 52;
 
 export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
@@ -114,7 +113,6 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
               loop
               muted
               playsInline
-              controls
             />
           ) : (
             <img
@@ -133,26 +131,19 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
         </div>
 
         {showThumbStrip && (
-          <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-border bg-bg-secondary p-2.5">
+          <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border bg-bg-secondary p-2.5">
             {levels.map((level, index) => (
               <button
                 key={level.uuid}
                 type="button"
                 onClick={() => setSelectedIndex(index)}
-                className={`flex shrink-0 flex-col items-center gap-1 rounded-lg border p-1.5 transition-colors ${
+                className={`rounded-md border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
                   index === selectedIndex
-                    ? 'border-accent-red bg-bg-card'
-                    : 'border-transparent bg-bg-card/50 hover:border-border'
+                    ? 'border-accent-red bg-bg-card text-text-primary'
+                    : 'border-border bg-bg-card/50 text-text-secondary hover:border-text-secondary'
                 }`}
               >
-                <img
-                  src={level.display_icon || fallbackIcon}
-                  alt=""
-                  className="h-9 w-16 object-contain"
-                />
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
-                  {LEVEL_LABELS[index] ?? `Lv.${level.level_number}`}
-                </span>
+                LV.{level.level_number}
               </button>
             ))}
           </div>
