@@ -133,12 +133,8 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
 
                 {skin.owned && (
                   <div
-                    className="animate-purchased-fade pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 backdrop-blur-[1.5px]"
-                    style={{
-                      background:
-                        'radial-gradient(circle at center, rgba(8,26,24,0.55) 0%, rgba(8,20,24,0.82) 100%)',
-                      boxShadow: 'inset 0 0 0 1px var(--color-accent-teal), inset 0 0 32px -8px var(--color-accent-teal)',
-                    }}
+                    className="animate-purchased-fade pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2"
+                    style={{ background: 'rgba(10, 16, 24, 0.72)' }}
                     role="img"
                     aria-label="Purchased"
                   >
