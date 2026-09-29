@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useLayoutEffect, useRef } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../context/useLanguage';
 import * as api from '../api/client';
@@ -10,10 +11,32 @@ const NAV_ITEMS = [
   { to: '/inventory', label: 'Inventory' },
 ];
 
+// Each page mounts its own header, so remember where the highlight last sat
+// and animate from there to the new tab instead of popping in.
+let lastIndicator: { left: number; width: number } | null = null;
+
 export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
   const { language, setLanguage } = useLanguage();
+  const { pathname } = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const active = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const el = indicatorRef.current;
+    if (!active || !el) return;
+    // Defer one frame so the browser paints the old position first and the
+    // transition has something to slide from.
+    const frame = requestAnimationFrame(() => {
+      lastIndicator = { left: active.offsetLeft, width: active.offsetWidth };
+      el.style.width = `${lastIndicator.width}px`;
+      el.style.transform = `translateX(${lastIndicator.left}px)`;
+      el.style.opacity = '1';
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
 
   async function handleLogout() {
     await api.logout().catch(() => {});
@@ -28,16 +51,26 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           <h1 className="font-display text-lg tracking-wider text-text-primary">
             VAL<span className="text-accent-red">SHOP</span>
           </h1>
-          <nav aria-label="Main" className="flex items-center gap-1">
+          <nav ref={navRef} aria-label="Main" className="relative flex items-center gap-1">
+            <span
+              ref={indicatorRef}
+              aria-hidden="true"
+              className="absolute inset-y-0 left-0 overflow-hidden rounded-sm border border-accent-red/40 bg-accent-red/15 shadow-[0_0_18px_-6px_rgba(255,70,85,0.7)] transition-[transform,width,opacity] duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
+              style={{
+                width: lastIndicator?.width ?? 0,
+                transform: `translateX(${lastIndicator?.left ?? 0}px)`,
+                opacity: lastIndicator ? 1 : 0,
+              }}
+            >
+              <span className="absolute inset-y-0 left-0 w-0.5 bg-accent-red" />
+            </span>
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `font-display rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-accent-red/10 text-accent-red'
-                      : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                  `font-display relative z-10 rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
+                    isActive ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary'
                   }`
                 }
               >
