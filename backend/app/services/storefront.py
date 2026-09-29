@@ -22,7 +22,10 @@ from app.services.asset_cache import (
     get_skin_ensured,
     get_skin_video,
     ITEM_TYPE_SKIN,
+    ITEM_TYPE_SKIN_VARIANT,
 )
+
+SKIN_ITEM_TYPES = {ITEM_TYPE_SKIN, ITEM_TYPE_SKIN_VARIANT}
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,31 @@ async def fetch_storefront(
         return resp.json()
 
 
+def _build_levels(skin: dict, *lookup_uuids: str) -> list[SkinLevel]:
+    """Build a skin's selectable levels (with demo videos where Riot has them)."""
+    raw_levels = skin.get("levels")
+    if raw_levels:
+        return [
+            SkinLevel(
+                uuid=level["uuid"],
+                level_number=index,
+                display_icon=level.get("displayIcon") or skin.get("displayIcon", "") or "",
+                video_url=level.get("streamedVideo") or None,
+            )
+            for index, level in enumerate(raw_levels, start=1)
+        ]
+    # Chroma (color variant) rather than a skin with nested levels -- treat it
+    # as a single "level" using its own video.
+    return [
+        SkinLevel(
+            uuid=skin["uuid"],
+            level_number=1,
+            display_icon=skin.get("displayIcon", "") or "",
+            video_url=get_skin_video(*lookup_uuids, skin["uuid"]),
+        )
+    ]
+
+
 async def _resolve_skin_offer(offer: dict, owned_ids: frozenset[str] = frozenset()) -> SkinOffer | None:
     """Resolve a single store offer dict into a SkinOffer model."""
     offer_id = offer.get("OfferID", "")
@@ -89,28 +117,7 @@ async def _resolve_skin_offer(offer: dict, owned_ids: frozenset[str] = frozenset
     tier_name = tier["name"] if tier else "Unknown"
     tier_color = tier["highlight_color"] if tier else ""
 
-    raw_levels = skin.get("levels")
-    if raw_levels:
-        levels = [
-            SkinLevel(
-                uuid=level["uuid"],
-                level_number=index,
-                display_icon=level.get("displayIcon") or skin.get("displayIcon", "") or "",
-                video_url=level.get("streamedVideo") or None,
-            )
-            for index, level in enumerate(raw_levels, start=1)
-        ]
-    else:
-        # Offer resolved to a chroma (color variant) rather than a skin with
-        # nested levels -- treat it as a single "level" using its own video.
-        levels = [
-            SkinLevel(
-                uuid=skin["uuid"],
-                level_number=1,
-                display_icon=skin.get("displayIcon", "") or "",
-                video_url=get_skin_video(item_uuid, offer_id, skin["uuid"]),
-            )
-        ]
+    levels = _build_levels(skin, item_uuid, offer_id)
 
     candidate_ids = {offer_id.lower(), item_uuid.lower(), skin["uuid"].lower()}
     candidate_ids.update(level.uuid.lower() for level in levels)
@@ -187,6 +194,7 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
                 base_price=base_price,
                 discounted_price=discounted_price,
                 discount_percent=discount_pct,
+                levels=_build_levels(item, item_uuid) if item and item_type_id.lower() in SKIN_ITEM_TYPES else [],
             ))
 
             total_base += base_price
