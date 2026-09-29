@@ -14,15 +14,59 @@
   --color-tier-premium: #D1548D;
   --color-tier-ultra: #FAD663;
   --color-tier-exclusive: #F5955B;
+
+  --font-display: 'Oswald', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 }
 
 body {
   margin: 0;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: 'DM Sans', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Geist', 'DM Sans', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* Ambient lighting + fine grain so the flat navy doesn't feel sterile */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% -10%, rgba(255, 70, 85, 0.09), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(23, 232, 181, 0.05), transparent 70%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.035 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 #root {

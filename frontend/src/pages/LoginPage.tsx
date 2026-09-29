@@ -69,7 +69,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-bg-primary px-4">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4">
       {/* Angular geometric background accents */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute -left-20 top-1/4 h-px w-80 rotate-[35deg] bg-gradient-to-r from-transparent via-accent-red/20 to-transparent" />
@@ -81,7 +81,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        <div className="rounded-lg border border-border bg-bg-secondary p-8 shadow-2xl">
+        <div className="rounded-md border border-border/70 bg-bg-secondary/90 p-8 shadow-[0_24px_60px_-20px_rgba(4,10,18,0.8)] backdrop-blur">
           <h1
             className="mb-1 text-center text-4xl tracking-wider text-text-primary"
             style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
@@ -97,7 +97,7 @@ export default function LoginPage() {
               <button
                 onClick={handleOpenLogin}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ fontFamily: "'Oswald', sans-serif" }}
               >
                 {loading && <Spinner />}
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || !pastedUrl.trim()}
-                  className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   style={{ fontFamily: "'Oswald', sans-serif" }}
                 >
                   {loading && <Spinner />}
