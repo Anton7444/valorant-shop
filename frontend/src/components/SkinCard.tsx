@@ -94,7 +94,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
               </div>
             </div>
 
-            <div className="flex items-end justify-between border-t border-border p-4">
+            <div className="flex items-center justify-between border-t border-border p-4">
               <div className="min-w-0 space-y-1.5">
                 <div className="h-4 w-28 rounded bg-bg-secondary/70" />
                 <div
@@ -177,7 +177,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
               </div>
 
               {/* Info */}
-              <div className="flex items-end justify-between border-t border-border bg-bg-card p-4">
+              <div className="flex items-center justify-between border-t border-border bg-bg-card p-4">
                 <div className="min-w-0">
                   <h3
                     className="truncate text-base text-text-primary"
