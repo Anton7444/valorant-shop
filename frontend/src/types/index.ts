@@ -47,6 +47,7 @@ export interface BundleItem {
   base_price: number;
   discounted_price: number;
   discount_percent: number;
+  levels?: SkinLevel[];
 }
 
 export interface Bundle {

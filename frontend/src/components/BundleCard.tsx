@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { Bundle } from '../types';
+import { useEffect, useRef, useState } from 'react';
+import type { Bundle, BundleItem } from '../types';
+import SkinVideoModal from './SkinVideoModal';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 
@@ -72,29 +73,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
       {/* Items grid */}
       <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
         {bundle.items.map((item) => (
-          <div
-            key={item.uuid}
-            className="flex flex-col items-center rounded border border-border/50 bg-bg-secondary p-2"
-          >
-            {item.display_icon ? (
-              <img
-                src={item.display_icon}
-                alt={localizedName(item.uuid, item.name, localizedNames)}
-                className="mb-2 h-16 w-full object-contain"
-              />
-            ) : (
-              <div className="mb-2 flex h-16 w-full items-center justify-center text-xs text-text-secondary">
-                No image
-              </div>
-            )}
-            <p className="line-clamp-1 text-center text-xs text-text-primary">{localizedName(item.uuid, item.name, localizedNames)}</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
-              <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
-              </svg>
-              {item.discounted_price.toLocaleString()}
-            </div>
-          </div>
+          <BundleItemTile key={item.uuid} item={item} />
         ))}
       </div>
 
@@ -112,6 +91,50 @@ export default function BundleCard({ bundle }: BundleCardProps) {
           {bundle.total_discounted_price.toLocaleString()} VP
         </span>
       </div>
+    </div>
+  );
+}
+
+function BundleItemTile({ item }: { item: BundleItem }) {
+  const { localizedNames } = useLanguage();
+  const name = localizedName(item.uuid, item.name, localizedNames);
+  const levels = item.levels ?? [];
+  const hasVideo = levels.some((level) => level.video_url);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
+
+  return (
+    <div className="flex flex-col items-center rounded border border-border/50 bg-bg-secondary p-2">
+      <div
+        ref={imageRef}
+        onClick={() => hasVideo && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}
+        role={hasVideo ? 'button' : undefined}
+        aria-label={hasVideo ? `Play ${name} demo video` : undefined}
+        className="mb-2 h-16 w-full"
+        style={{ cursor: hasVideo ? 'pointer' : 'default' }}
+      >
+        {item.display_icon ? (
+          <img src={item.display_icon} alt={name} className="h-full w-full object-contain" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-text-secondary">No image</div>
+        )}
+      </div>
+      <p className="line-clamp-1 text-center text-xs text-text-primary">{name}</p>
+      <div className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
+        </svg>
+        {item.discounted_price.toLocaleString()}
+      </div>
+      {videoOrigin && hasVideo && (
+        <SkinVideoModal
+          levels={levels}
+          fallbackIcon={item.display_icon}
+          name={name}
+          originRect={videoOrigin}
+          onClose={() => setVideoOrigin(null)}
+        />
+      )}
     </div>
   );
 }

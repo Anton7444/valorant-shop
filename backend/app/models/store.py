@@ -41,6 +41,7 @@ class BundleItem(BaseModel):
     base_price: int
     discounted_price: int
     discount_percent: float
+    levels: list[SkinLevel] = []
 
 
 class Bundle(BaseModel):
