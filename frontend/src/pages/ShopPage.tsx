@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { Bundle, SkinOffer, Wallet } from '../types';
 import CountdownTimer from '../components/CountdownTimer';
-import WalletDisplay from '../components/WalletDisplay';
+import AppHeader from '../components/AppHeader';
 import SkinCard from '../components/SkinCard';
 import BundleCard from '../components/BundleCard';
-import { useLanguage } from '../context/useLanguage';
 
 const STORE_SEEN_KEY = 'valshop:lastSeenStoreKey';
 
 export default function ShopPage() {
-  const { state, dispatch } = useAuth();
+  const { dispatch } = useAuth();
   const navigate = useNavigate();
-  const { language, setLanguage } = useLanguage();
 
   const [offers, setOffers] = useState<SkinOffer[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -63,61 +61,13 @@ export default function ShopPage() {
     fetchStoreData();
   }, [fetchStoreData]);
 
-  async function handleLogout() {
-    await api.logout().catch(() => {});
-    dispatch({ type: 'LOGOUT' });
-    navigate('/', { replace: true });
-  }
-
   return (
-    <div className="min-h-svh bg-bg-primary">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-secondary/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
-            <h1
-              className="text-lg tracking-wider text-text-primary"
-              style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-            >
-              VAL<span className="text-accent-red">SHOP</span>
-            </h1>
-            {state.puuid && (
-              <span className="hidden text-xs text-text-secondary sm:block">
-                {state.puuid.slice(0, 8)}...
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {wallet && <WalletDisplay wallet={wallet} />}
-            <label className="sr-only" htmlFor="language-select">Skin and bundle language</label>
-            <select
-              id="language-select"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value as typeof language)}
-              className="rounded border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text-secondary"
-            >
-              <option value="en-US">EN</option>
-              <option value="zh-TW">繁中</option>
-            </select>
-            <Link
-              to="/inventory"
-              className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
-            >
-              Inventory
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-dvh">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-sm focus:bg-accent-red focus:px-3 focus:py-2 focus:text-sm focus:text-white">Skip to content</a>
+      <AppHeader wallet={wallet} />
 
       {/* Main content */}
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main id="main" className="mx-auto max-w-6xl px-4 py-10">
         {loading ? (
           <LoadingSkeleton />
         ) : error ? (
@@ -142,12 +92,7 @@ export default function ShopPage() {
 
             {/* Daily Store */}
             <section className="mb-12">
-              <h2
-                className="mb-6 text-2xl tracking-wider text-text-primary"
-                style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-              >
-                DAILY STORE
-              </h2>
+              <SectionHeading>Daily store</SectionHeading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {offers.map((skin) => (
                   <SkinCard key={skin.uuid} skin={skin} startRevealed={!isNewStore} />
@@ -158,12 +103,7 @@ export default function ShopPage() {
             {/* Featured Bundle */}
             {bundles.length > 0 && (
               <section>
-                <h2
-                  className="mb-6 text-2xl tracking-wider text-text-primary"
-                  style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-                >
-                  FEATURED BUNDLE
-                </h2>
+                <SectionHeading>Featured bundle</SectionHeading>
                 <div className="space-y-4">
                   {bundles.map((bundle) => (
                     <BundleCard key={bundle.uuid} bundle={bundle} />
@@ -178,6 +118,16 @@ export default function ShopPage() {
   );
 }
 
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-6 flex items-center gap-3">
+      <span className="h-5 w-1 bg-accent-red" aria-hidden="true" />
+      <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">{children}</h2>
+      <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" aria-hidden="true" />
+    </div>
+  );
+}
+
 function SkinCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-card">
@@ -188,7 +138,7 @@ function SkinCardSkeleton() {
       <div className="flex items-end justify-between border-t border-border p-4">
         <div className="space-y-2">
           <div className="h-5 w-32 rounded bg-bg-secondary" />
-          <div className="h-4 w-16 rounded-full bg-bg-secondary" />
+          <div className="h-4 w-16 rounded-sm bg-bg-secondary" />
         </div>
         <div className="h-5 w-20 rounded bg-bg-secondary" />
       </div>

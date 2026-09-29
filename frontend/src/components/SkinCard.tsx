@@ -187,7 +187,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
                   </h3>
                   {/* Tier badge */}
                   <span
-                    className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+                    className="mt-1 inline-block rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
                     style={{ backgroundColor: tierColor }}
                   >
                     {skin.content_tier_name}

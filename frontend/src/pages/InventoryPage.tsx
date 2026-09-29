@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { OwnedSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
+import AppHeader from '../components/AppHeader';
 import { localizedName } from '../context/languageNames';
 import SkinVideoModal from '../components/SkinVideoModal';
 
@@ -43,37 +44,19 @@ export default function InventoryPage() {
   }, [skins, query, localizedNames]);
 
   return (
-    <div className="min-h-svh bg-bg-primary">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-secondary/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <h1
-            className="text-lg tracking-wider text-text-primary"
-            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-          >
-            VAL<span className="text-accent-red">SHOP</span>
-          </h1>
-          <Link
-            to="/shop"
-            className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
-          >
-            Back to Store
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-dvh">
+      <AppHeader />
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main id="main" className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2
-            className="text-2xl tracking-wider text-text-primary"
-            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-          >
-            MY SKINS {!loading && !error && <span className="text-text-secondary">({skins.length})</span>}
+          <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">
+            My skins {!loading && !error && <span className="text-text-secondary">({skins.length})</span>}
           </h2>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search skins..."
-            className="rounded border border-border bg-bg-secondary px-3 py-1.5 text-sm text-text-primary"
+            className="rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-secondary/50 focus:border-accent-red"
           />
         </div>
 
@@ -137,7 +120,7 @@ function InventoryCard({ skin }: { skin: OwnedSkin }) {
           {name}
         </h3>
         <span
-          className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+          className="mt-1 inline-block rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
           style={{ backgroundColor: color }}
         >
           {skin.content_tier_name}
