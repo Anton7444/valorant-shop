@@ -172,10 +172,42 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
       {/* Purchased overlay */}
       {skin.owned && revealed && (
         <div
-          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-black/60"
+          className="animate-purchased-fade pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg backdrop-blur-[1.5px]"
+          style={{
+            background:
+              'radial-gradient(circle at center, rgba(8,26,24,0.55) 0%, rgba(8,20,24,0.82) 100%)',
+            boxShadow: 'inset 0 0 0 1px var(--color-accent-teal), inset 0 0 32px -8px var(--color-accent-teal)',
+          }}
+          role="img"
           aria-label="Purchased"
         >
-          <span className="text-7xl drop-shadow-lg">✅</span>
+          <svg className="h-16 w-16" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="24" stroke="var(--color-accent-teal)" strokeOpacity="0.18" strokeWidth="2" />
+            <circle
+              className="purchased-ring"
+              cx="28"
+              cy="28"
+              r="24"
+              stroke="var(--color-accent-teal)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              transform="rotate(-90 28 28)"
+            />
+            <path
+              className="purchased-check"
+              d="M17 29.5l7.5 7.5L39 20"
+              stroke="var(--color-accent-teal)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span
+            className="text-xs tracking-[0.35em] text-accent-teal"
+            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
+          >
+            PURCHASED
+          </span>
         </div>
       )}
 
