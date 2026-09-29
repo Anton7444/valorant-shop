@@ -7,6 +7,8 @@ from app.models.store import (
     BundleResponse,
     Bundle,
     DailyStoreResponse,
+    InventoryResponse,
+    OwnedSkin,
     SkinLevel,
     SkinOffer,
     Wallet,
@@ -19,6 +21,7 @@ from app.services.asset_cache import (
     get_item_ensured,
     get_skin_ensured,
     get_skin_video,
+    ITEM_TYPE_SKIN,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,7 +59,7 @@ async def fetch_storefront(
         return resp.json()
 
 
-async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
+async def _resolve_skin_offer(offer: dict, owned_ids: frozenset[str] = frozenset()) -> SkinOffer | None:
     """Resolve a single store offer dict into a SkinOffer model."""
     offer_id = offer.get("OfferID", "")
     cost = offer.get("Cost", {}).get(VP_CURRENCY_ID, 0)
@@ -109,7 +112,11 @@ async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
             )
         ]
 
+    candidate_ids = {offer_id.lower(), item_uuid.lower(), skin["uuid"].lower()}
+    candidate_ids.update(level.uuid.lower() for level in levels)
+
     return SkinOffer(
+        owned=bool(candidate_ids & owned_ids),
         uuid=skin["uuid"],
         name=skin.get("displayName", "Unknown"),
         display_icon=skin.get("displayIcon", "") or "",
@@ -121,7 +128,7 @@ async def _resolve_skin_offer(offer: dict) -> SkinOffer | None:
     )
 
 
-async def get_daily_store(raw_storefront: dict) -> DailyStoreResponse:
+async def get_daily_store(raw_storefront: dict, owned_ids: frozenset[str] = frozenset()) -> DailyStoreResponse:
     """Parse the daily store from raw storefront data."""
     panel = raw_storefront.get("SkinsPanelLayout", {})
     raw_offers = panel.get("SingleItemStoreOffers", [])
@@ -129,7 +136,7 @@ async def get_daily_store(raw_storefront: dict) -> DailyStoreResponse:
 
     offers: list[SkinOffer] = []
     for raw_offer in raw_offers:
-        skin_offer = await _resolve_skin_offer(raw_offer)
+        skin_offer = await _resolve_skin_offer(raw_offer, owned_ids)
         if skin_offer:
             offers.append(skin_offer)
 
@@ -196,6 +203,55 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
         ))
 
     return BundleResponse(bundles=bundles)
+
+
+async def fetch_owned_skin_level_ids(
+    access_token: str, entitlements_token: str, puuid: str, shard: str
+) -> frozenset[str]:
+    """Fetch the UUIDs of every skin level the player owns (lowercased)."""
+    url = f"https://pd.{shard}.a.pvp.net/store/v1/entitlements/{puuid}/{ITEM_TYPE_SKIN}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(url, headers=_riot_headers(access_token, entitlements_token))
+        if not resp.is_success:
+            logger.error(
+                "Entitlements request failed: %s %s — body: %s",
+                resp.status_code, resp.reason_phrase, resp.text[:500],
+            )
+            resp.raise_for_status()
+        data = resp.json()
+    return frozenset(e.get("ItemID", "").lower() for e in data.get("Entitlements", []))
+
+
+async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
+    """Resolve owned skin level UUIDs into unique owned skins."""
+    skins: dict[str, OwnedSkin] = {}
+    for level_id in owned_ids:
+        skin = await get_skin_ensured(level_id)
+        if not skin or skin["uuid"] in skins:
+            continue
+        tier_uuid = skin.get("contentTierUuid", "")
+        # Standard / default weapon skins have no content tier; hide them.
+        if not tier_uuid:
+            continue
+        tier = get_content_tier(tier_uuid)
+        skins[skin["uuid"]] = OwnedSkin(
+            uuid=skin["uuid"],
+            name=skin.get("displayName", "Unknown"),
+            display_icon=skin.get("displayIcon", "") or "",
+            content_tier_uuid=tier_uuid,
+            content_tier_name=tier["name"] if tier else "Unknown",
+            content_tier_color=tier["highlight_color"] if tier else "",
+            levels=[
+                SkinLevel(
+                    uuid=level["uuid"],
+                    level_number=index,
+                    display_icon=level.get("displayIcon") or skin.get("displayIcon", "") or "",
+                    video_url=level.get("streamedVideo") or None,
+                )
+                for index, level in enumerate(skin.get("levels") or [], start=1)
+            ],
+        )
+    return InventoryResponse(skins=sorted(skins.values(), key=lambda s: s.name.lower()))
 
 
 async def get_wallet(

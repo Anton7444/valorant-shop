@@ -1,6 +1,7 @@
 import type {
   BundleResponse,
   DailyStoreResponse,
+  InventoryResponse,
   SessionResponse,
   Wallet,
 } from '../types';
@@ -81,4 +82,8 @@ export function getBundles(): Promise<BundleResponse> {
 
 export function getWallet(): Promise<Wallet> {
   return request('/api/store/wallet');
+}
+
+export function getInventory(): Promise<InventoryResponse> {
+  return request('/api/store/inventory');
 }

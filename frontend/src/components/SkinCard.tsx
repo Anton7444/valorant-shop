@@ -169,6 +169,16 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
         </div>
       </div>
 
+      {/* Purchased overlay */}
+      {skin.owned && revealed && (
+        <div
+          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-black/60"
+          aria-label="Purchased"
+        >
+          <span className="text-7xl drop-shadow-lg">✅</span>
+        </div>
+      )}
+
       {/* Hover glow */}
       <div
         className="pointer-events-none absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
