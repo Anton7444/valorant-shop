@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { Bundle, SkinOffer, Wallet } from '../types';
@@ -100,6 +100,12 @@ export default function ShopPage() {
               <option value="en-US">EN</option>
               <option value="zh-TW">繁中</option>
             </select>
+            <Link
+              to="/inventory"
+              className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
+            >
+              Inventory
+            </Link>
             <button
               onClick={handleLogout}
               className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"

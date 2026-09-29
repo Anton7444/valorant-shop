@@ -23,6 +23,21 @@ export interface SkinOffer {
   content_tier_color: string;
   cost: number;
   levels: SkinLevel[];
+  owned?: boolean;
+}
+
+export interface OwnedSkin {
+  uuid: string;
+  name: string;
+  display_icon: string;
+  content_tier_uuid: string;
+  content_tier_name: string;
+  content_tier_color: string;
+  levels: SkinLevel[];
+}
+
+export interface InventoryResponse {
+  skins: OwnedSkin[];
 }
 
 export interface BundleItem {

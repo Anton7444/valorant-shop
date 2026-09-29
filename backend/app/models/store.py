@@ -17,6 +17,21 @@ class SkinOffer(BaseModel):
     content_tier_color: str
     cost: int
     levels: list[SkinLevel] = []
+    owned: bool = False
+
+
+class OwnedSkin(BaseModel):
+    uuid: str
+    name: str
+    display_icon: str
+    content_tier_uuid: str
+    content_tier_name: str
+    content_tier_color: str
+    levels: list[SkinLevel] = []
+
+
+class InventoryResponse(BaseModel):
+    skins: list[OwnedSkin]
 
 
 class BundleItem(BaseModel):

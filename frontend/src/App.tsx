@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ShopPage from './pages/ShopPage';
+import InventoryPage from './pages/InventoryPage';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
@@ -19,6 +20,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ShopPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventory"
+                element={
+                  <ProtectedRoute>
+                    <InventoryPage />
                   </ProtectedRoute>
                 }
               />

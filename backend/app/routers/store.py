@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.auth import SessionData
-from app.models.store import BundleResponse, DailyStoreResponse, Wallet
+from app.models.store import BundleResponse, DailyStoreResponse, InventoryResponse, Wallet
 from app.services import storefront
 from app.session_store import store
 
@@ -55,7 +55,15 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
         )
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
-    return await storefront.get_daily_store(raw)
+    try:
+        owned_ids = await storefront.fetch_owned_skin_level_ids(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError):
+        # Ownership is a nice-to-have overlay; never fail the store over it.
+        logger.warning("Could not fetch entitlements; skipping owned markers")
+        owned_ids = frozenset()
+    return await storefront.get_daily_store(raw, owned_ids)
 
 
 @router.get("/bundle", response_model=BundleResponse)
@@ -77,3 +85,14 @@ async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
         )
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
+
+
+@router.get("/inventory", response_model=InventoryResponse)
+async def inventory(session: SessionData = Depends(get_session)) -> InventoryResponse:
+    try:
+        owned_ids = await storefront.fetch_owned_skin_level_ids(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        raise _handle_riot_error(exc)
+    return await storefront.get_inventory(owned_ids)
