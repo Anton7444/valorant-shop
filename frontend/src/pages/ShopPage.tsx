@@ -94,8 +94,8 @@ export default function ShopPage() {
             <section className="mb-12">
               <SectionHeading>Daily store</SectionHeading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {offers.map((skin) => (
-                  <SkinCard key={skin.uuid} skin={skin} startRevealed={!isNewStore} />
+                {offers.map((skin, index) => (
+                  <SkinCard key={skin.uuid} skin={skin} startRevealed={!isNewStore} index={index} />
                 ))}
               </div>
             </section>

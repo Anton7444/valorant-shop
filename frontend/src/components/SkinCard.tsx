@@ -3,6 +3,7 @@ import type { SkinOffer } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import SkinVideoModal from './SkinVideoModal';
+import { staggerStyle, trackPointer } from '../utils/spotlight';
 
 const TIER_COLOR_MAP: Record<string, string> = {
   select: 'var(--color-tier-select)',
@@ -20,9 +21,10 @@ function getTierColor(tierName: string, apiColor: string): string {
 interface SkinCardProps {
   skin: SkinOffer;
   startRevealed?: boolean;
+  index?: number;
 }
 
-export default function SkinCard({ skin, startRevealed = false }: SkinCardProps) {
+export default function SkinCard({ skin, startRevealed = false, index = 0 }: SkinCardProps) {
   const { localizedNames } = useLanguage();
   const name = localizedName(skin.uuid, skin.name, localizedNames);
   const tierColor = getTierColor(skin.content_tier_name, skin.content_tier_color);
@@ -47,8 +49,10 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
 
   return (
     <div
-      className="group relative overflow-hidden rounded-lg border border-border bg-bg-card transition-all duration-200 hover:scale-[1.02]"
+      className="card-motion card-spotlight group relative overflow-hidden rounded-lg border border-border bg-bg-card"
+      onPointerMove={trackPointer}
       style={{
+        ...staggerStyle(index),
         '--glow-color': tierColor,
       } as React.CSSProperties}
     >
@@ -125,7 +129,7 @@ export default function SkinCard({ skin, startRevealed = false }: SkinCardProps)
                   <img
                     src={skin.display_icon}
                     alt={name}
-                    className="h-full w-full object-contain drop-shadow-lg transition-transform duration-200 group-hover:scale-105"
+                    className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105"
                   />
                 ) : (
                   <div className="text-sm text-text-secondary">No image</div>

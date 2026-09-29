@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Bundle, BundleItem } from '../types';
+import { staggerStyle, trackPointer } from '../utils/spotlight';
 import SkinVideoModal from './SkinVideoModal';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
@@ -72,8 +73,8 @@ export default function BundleCard({ bundle }: BundleCardProps) {
 
       {/* Items grid */}
       <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
-        {bundle.items.map((item) => (
-          <BundleItemTile key={item.uuid} item={item} />
+        {bundle.items.map((item, index) => (
+          <BundleItemTile key={item.uuid} item={item} index={index} />
         ))}
       </div>
 
@@ -95,7 +96,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
   );
 }
 
-function BundleItemTile({ item }: { item: BundleItem }) {
+function BundleItemTile({ item, index }: { item: BundleItem; index: number }) {
   const { localizedNames } = useLanguage();
   const name = localizedName(item.uuid, item.name, localizedNames);
   const levels = item.levels ?? [];
@@ -104,7 +105,11 @@ function BundleItemTile({ item }: { item: BundleItem }) {
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
 
   return (
-    <div className="flex flex-col items-center rounded border border-border/50 bg-bg-secondary p-2">
+    <div
+      className="card-motion card-spotlight relative flex flex-col items-center overflow-hidden rounded border border-border/50 bg-bg-secondary p-2"
+      onPointerMove={trackPointer}
+      style={staggerStyle(index)}
+    >
       <div
         ref={imageRef}
         onClick={() => hasVideo && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}

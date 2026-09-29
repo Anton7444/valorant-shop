@@ -6,6 +6,7 @@ import type { OwnedSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import AppHeader from '../components/AppHeader';
 import { localizedName } from '../context/languageNames';
+import { staggerStyle, trackPointer } from '../utils/spotlight';
 import SkinVideoModal from '../components/SkinVideoModal';
 
 function tierColor(skin: OwnedSkin): string {
@@ -68,8 +69,8 @@ export default function InventoryPage() {
           <p className="py-20 text-center text-text-secondary">No skins found.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            {filtered.map((skin) => (
-              <InventoryCard key={skin.uuid} skin={skin} />
+            {filtered.map((skin, index) => (
+              <InventoryCard key={skin.uuid} skin={skin} index={index} />
             ))}
           </div>
         )}
@@ -78,7 +79,7 @@ export default function InventoryPage() {
   );
 }
 
-function InventoryCard({ skin }: { skin: OwnedSkin }) {
+function InventoryCard({ skin, index }: { skin: OwnedSkin; index: number }) {
   const { localizedNames } = useLanguage();
   const color = tierColor(skin);
   const name = localizedName(skin.uuid, skin.name, localizedNames);
@@ -88,8 +89,9 @@ function InventoryCard({ skin }: { skin: OwnedSkin }) {
 
   return (
     <div
-      className="group relative overflow-hidden rounded-lg border border-border bg-bg-card"
-      style={{ '--glow-color': color } as React.CSSProperties}
+      className="card-motion card-spotlight group relative overflow-hidden rounded-lg border border-border bg-bg-card"
+      onPointerMove={trackPointer}
+      style={{ ...staggerStyle(index), '--glow-color': color } as React.CSSProperties}
     >
       <div className="h-0.5" style={{ backgroundColor: color }} />
       <div
@@ -101,7 +103,7 @@ function InventoryCard({ skin }: { skin: OwnedSkin }) {
         style={{ cursor: hasVideo ? 'pointer' : 'default' }}
       >
         {skin.display_icon ? (
-          <img src={skin.display_icon} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg" />
+          <img src={skin.display_icon} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
         ) : (
           <span className="text-sm text-text-secondary">No image</span>
         )}
