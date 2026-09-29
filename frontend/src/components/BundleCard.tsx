@@ -42,7 +42,11 @@ export default function BundleCard({ bundle }: BundleCardProps) {
   const hasDiscount = bundle.total_discounted_price < bundle.total_base_price;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-bg-card">
+    <div
+      className="card-motion card-motion-lg card-spotlight group/bundle relative overflow-hidden rounded-lg border border-border bg-bg-card"
+      onPointerMove={trackPointer}
+      style={staggerStyle(4)}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <h3
@@ -66,7 +70,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
           <img
             src={bundle.display_icon}
             alt={bundleName}
-            className="max-h-40 object-contain"
+            className="max-h-40 object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/bundle:scale-105"
           />
         </div>
       )}
