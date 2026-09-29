@@ -215,3 +215,8 @@ body::before {
 .card-spotlight:hover::after {
   opacity: 1;
 }
+
+/* Large cards (bundle): lift less so the whole panel doesn't jump */
+.card-motion-lg:hover {
+  transform: translateY(-3px);
+}
