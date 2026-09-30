@@ -92,7 +92,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
             id="language-select"
             value={language}
             onChange={(event) => setLanguage(event.target.value as typeof language)}
-            className="rounded-sm border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text-secondary transition-colors hover:border-text-secondary"
+            className="rounded-sm border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text-secondary transition-colors hover:border-text-secondary focus:border-accent-red"
           >
             <option value="en-US">EN</option>
             <option value="zh-TW">繁中</option>
