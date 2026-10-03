@@ -213,8 +213,8 @@ select:focus-visible {
   opacity: 0;
   transition: opacity 0.35s ease;
   background: radial-gradient(
-    260px circle at var(--mx, 50%) var(--my, 50%),
-    color-mix(in srgb, var(--glow-color, var(--color-accent-red)) 22%, transparent),
+    130px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--glow-color, var(--color-accent-red)) 9%, transparent),
     transparent 70%
   );
 }
