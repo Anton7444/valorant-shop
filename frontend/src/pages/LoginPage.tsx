@@ -15,6 +15,21 @@ export default function LoginPage() {
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promo, setPromo] = useState(false);
+
+  if (promo) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <iframe
+          title="Featured"
+          src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="h-full w-full border-0"
+        />
+      </div>
+    );
+  }
 
   if (state.status === 'authenticated') {
     return <Navigate to="/shop" replace />;
@@ -45,6 +60,13 @@ export default function LoginPage() {
 
     try {
       const res = await api.submitToken(pastedUrl.trim());
+
+      if (res.status === 'success' && res.promo) {
+        sessionStorage.removeItem('login_stage');
+        setPromo(true);
+        setLoading(false);
+        return;
+      }
 
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');

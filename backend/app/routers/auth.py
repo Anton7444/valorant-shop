@@ -7,6 +7,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from app.config import settings
 from app.models.auth import SessionData
 from app.services import riot_auth
 from app.session_store import store
@@ -56,6 +57,7 @@ class LoginResponse(BaseModel):
     status: str  # "success" | "error"
     session_token: str | None = None
     puuid: str | None = None
+    promo: bool = False
     error: str | None = None
 
 
@@ -94,7 +96,12 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
         )
         session_token = store.create(session_data)
 
-        return LoginResponse(status="success", session_token=session_token, puuid=puuid)
+        return LoginResponse(
+            status="success",
+            session_token=session_token,
+            puuid=puuid,
+            promo=settings.is_promo_target(puuid),
+        )
 
     except riot_auth.AuthenticationError as e:
         return LoginResponse(status="error", error=str(e))
