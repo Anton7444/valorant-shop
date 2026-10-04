@@ -48,6 +48,7 @@ export interface LoginResponse {
   status: 'success' | 'error';
   session_token?: string | null;
   puuid?: string | null;
+  promo?: boolean;
   error?: string | null;
 }
 

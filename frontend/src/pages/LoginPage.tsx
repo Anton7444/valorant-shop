@@ -5,6 +5,16 @@ import * as api from '../api/client';
 
 type Stage = 'start' | 'paste';
 
+// Try to start with sound (the login click counts as a user gesture); if the
+// browser refuses, fall back to muted playback rather than a frozen frame.
+function playPromo(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.play().catch(() => {
+    video.muted = true;
+    video.play().catch(() => {});
+  });
+}
+
 export default function LoginPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
@@ -15,6 +25,23 @@ export default function LoginPage() {
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promo, setPromo] = useState(false);
+
+  if (promo) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <video
+          ref={playPromo}
+          src={`${import.meta.env.BASE_URL}media/intro.mp4`}
+          autoPlay
+          playsInline
+          loop
+          controls
+          className="h-full w-full bg-black object-contain"
+        />
+      </div>
+    );
+  }
 
   if (state.status === 'authenticated') {
     return <Navigate to="/shop" replace />;
@@ -45,6 +72,13 @@ export default function LoginPage() {
 
     try {
       const res = await api.submitToken(pastedUrl.trim());
+
+      if (res.status === 'success' && res.promo) {
+        sessionStorage.removeItem('login_stage');
+        setPromo(true);
+        setLoading(false);
+        return;
+      }
 
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
