@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { LanguageContext } from './languageContextDef';
 
-export type ShopLanguage = 'en-US' | 'zh-TW';
+export type ShopLanguage = 'en-US' | 'zh-TW' | 'zh-CN';
 
 const STORAGE_KEY = 'valorant-shop-language';
 const CATALOGS = ['weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
 type CatalogEntry = { uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> };
 
 function getInitialLanguage(): ShopLanguage {
-  return localStorage.getItem(STORAGE_KEY) === 'zh-TW' ? 'zh-TW' : 'en-US';
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === 'zh-TW' || stored === 'zh-CN' ? stored : 'en-US';
 }
 
 function indexCatalog(data: CatalogEntry[]) {
@@ -43,13 +44,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (language !== 'zh-TW') return;
+    if (language === 'en-US') return;
 
     let cancelled = false;
     Promise.all(
       CATALOGS.map(async (catalog) => {
         const [localizedResponse, englishResponse] = await Promise.all([
-          fetch(`https://valorant-api.com/v1/${catalog}?language=zh-TW`),
+          fetch(`https://valorant-api.com/v1/${catalog}?language=${language}`),
           fetch(`https://valorant-api.com/v1/${catalog}?language=en-US`),
         ]);
         if (!localizedResponse.ok || !englishResponse.ok) throw new Error('Localized catalog request failed');
@@ -74,7 +75,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   const value = useMemo(
-    () => ({ language, setLanguage, localizedNames: language === 'zh-TW' ? localizedNames : {} }),
+    () => ({ language, setLanguage, localizedNames: language === 'en-US' ? {} : localizedNames }),
     [language, localizedNames],
   );
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
