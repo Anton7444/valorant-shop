@@ -5,6 +5,16 @@ import * as api from '../api/client';
 
 type Stage = 'start' | 'paste';
 
+// Try to start with sound (the login click counts as a user gesture); if the
+// browser refuses, fall back to muted playback rather than a frozen frame.
+function playPromo(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.play().catch(() => {
+    video.muted = true;
+    video.play().catch(() => {});
+  });
+}
+
 export default function LoginPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
@@ -20,12 +30,14 @@ export default function LoginPage() {
   if (promo) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
-        <iframe
-          title="Featured"
-          src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0"
-          allow="autoplay; encrypted-media; picture-in-picture"
-          allowFullScreen
-          className="h-full w-full border-0"
+        <video
+          ref={playPromo}
+          src={`${import.meta.env.BASE_URL}media/intro.mp4`}
+          autoPlay
+          playsInline
+          loop
+          controls
+          className="h-full w-full bg-black object-contain"
         />
       </div>
     );
