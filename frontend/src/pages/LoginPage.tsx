@@ -25,9 +25,16 @@ export default function LoginPage() {
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [promo, setPromo] = useState(false);
+  const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
 
-  if (promo) {
+  function handleClosePromo() {
+    if (!promoSession) return;
+    api.storeToken(promoSession.token);
+    dispatch({ type: 'LOGIN_SUCCESS', puuid: promoSession.puuid });
+    navigate('/shop');
+  }
+
+  if (promoSession) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
         <video
@@ -39,6 +46,16 @@ export default function LoginPage() {
           controls
           className="h-full w-full bg-black object-contain"
         />
+        <button
+          type="button"
+          onClick={handleClosePromo}
+          aria-label="Close video"
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition-colors hover:bg-accent-red"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
       </div>
     );
   }
@@ -73,9 +90,9 @@ export default function LoginPage() {
     try {
       const res = await api.submitToken(pastedUrl.trim());
 
-      if (res.status === 'success' && res.promo) {
+      if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
-        setPromo(true);
+        setPromoSession({ token: res.session_token, puuid: res.puuid });
         setLoading(false);
         return;
       }
