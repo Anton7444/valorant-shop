@@ -96,6 +96,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           >
             <option value="en-US">EN</option>
             <option value="zh-TW">繁中</option>
+            <option value="zh-CN">简中</option>
           </select>
           <button
             onClick={handleLogout}
