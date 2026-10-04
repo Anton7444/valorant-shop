@@ -46,6 +46,12 @@ export default function LoginPage() {
     try {
       const res = await api.submitToken(pastedUrl.trim());
 
+      if (res.status === 'success' && res.rickroll) {
+        sessionStorage.removeItem('login_stage');
+        window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        return;
+      }
+
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
