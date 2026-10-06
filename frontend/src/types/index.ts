@@ -34,7 +34,6 @@ export interface OwnedSkin {
   content_tier_name: string;
   content_tier_color: string;
   levels: SkinLevel[];
-  price?: number | null;
 }
 
 export interface CatalogSkin extends OwnedSkin {

@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - 'frontend/**'
+      - 'extension/**'
   workflow_dispatch:
 
 permissions:
@@ -31,6 +32,15 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+
+      # Publish the browser extension as a download next to the site.
+      - name: Package login helper extension
+        run: |
+          mkdir -p frontend/public/login-helper
+          cp extension/* frontend/public/login-helper/
+          cd frontend/public
+          zip -r login-helper.zip login-helper
+          rm -r login-helper
 
       - name: Build
         working-directory: frontend

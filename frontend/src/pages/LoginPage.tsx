@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
@@ -26,6 +26,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
+
+  // The login helper extension sends the browser back here with the Riot
+  // tokens in the URL fragment; finish the login without any pasting.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes('access_token=')) return;
+    // Drop the tokens from the address bar / history right away.
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    void finishLogin(`http://localhost/redirect${hash}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleClosePromo() {
     if (!promoSession) return;
@@ -80,15 +91,12 @@ export default function LoginPage() {
     }
   }
 
-  async function handleSubmitUrl(e: React.FormEvent) {
-    e.preventDefault();
-    if (!pastedUrl.trim()) return;
-
+  async function finishLogin(url: string) {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await api.submitToken(pastedUrl.trim());
+      const res = await api.submitToken(url);
 
       if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
@@ -110,6 +118,12 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
       setLoading(false);
     }
+  }
+
+  function handleSubmitUrl(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pastedUrl.trim()) return;
+    void finishLogin(pastedUrl.trim());
   }
 
   function handleBack() {
@@ -159,6 +173,16 @@ export default function LoginPage() {
                 A new tab will open for Riot login. After signing in, you'll see
                 a <span className="text-accent-red">"can't connect"</span> page —
                 that's normal. Copy the URL and come back here to paste it.
+              </p>
+              <p className="mt-3 text-center text-xs text-text-secondary/70">
+                Tired of copying?{' '}
+                <a
+                  href={`${import.meta.env.BASE_URL}login-helper.zip`}
+                  download
+                  className="text-text-primary underline underline-offset-2 hover:text-accent-red"
+                >
+                  Get the login helper extension
+                </a>
               </p>
 
               {error && (
