@@ -6,8 +6,8 @@ const SITE_URL = 'https://anton7444.github.io/valorant-shop/';
 // navigation instead and hand the tokens (the part after #) to the site, which
 // completes the login.
 //
-// If the login tab was opened from a site tab, reuse that original tab (so you
-// end up with one tab) and close the login tab. Otherwise just turn the login
+// If a site tab is already open, reuse it (so you end up with one tab) and
+// close the login tab. Otherwise just turn the login
 // tab itself into the site.
 chrome.webNavigation.onBeforeNavigate.addListener(
   async (details) => {
@@ -20,17 +20,27 @@ chrome.webNavigation.onBeforeNavigate.addListener(
 
     try {
       const loginTab = await chrome.tabs.get(details.tabId);
-      if (loginTab.openerTabId !== undefined) {
-        // The tab URL is only readable for the site's origin (host permission).
-        const opener = await chrome.tabs.get(loginTab.openerTabId);
-        if (opener.url && opener.url.startsWith(SITE_URL)) {
-          await chrome.tabs.update(opener.id, { url: target, active: true });
-          await chrome.tabs.remove(details.tabId);
-          return;
-        }
+      // Chrome does not always record which tab opened the login tab, so look
+      // for any open site tab (readable thanks to the site host permission).
+      // Prefer the opener, then a tab in the same window, then the most
+      // recently used one.
+      const siteTabs = (await chrome.tabs.query({ url: SITE_URL + '*' })).filter(
+        (tab) => tab.id !== details.tabId,
+      );
+      const original =
+        siteTabs.find((tab) => tab.id === loginTab.openerTabId) ??
+        siteTabs
+          .filter((tab) => tab.windowId === loginTab.windowId)
+          .sort((x, y) => (y.lastAccessed ?? 0) - (x.lastAccessed ?? 0))[0] ??
+        siteTabs.sort((x, y) => (y.lastAccessed ?? 0) - (x.lastAccessed ?? 0))[0];
+      if (original) {
+        await chrome.tabs.update(original.id, { url: target, active: true });
+        await chrome.windows.update(original.windowId, { focused: true });
+        await chrome.tabs.remove(details.tabId);
+        return;
       }
     } catch {
-      // Opener is gone or unreadable; fall back below.
+      // Tabs unreadable; fall back below.
     }
     chrome.tabs.update(details.tabId, { url: target });
   },
