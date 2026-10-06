@@ -33,6 +33,7 @@ _skin_levels_to_skin: dict[str, dict] = {}
 _skin_chromas_to_skin: dict[str, dict] = {}
 _skin_video_by_uuid: dict[str, str] = {}
 _skin_weapon: dict[str, str] = {}
+_weapon_cost: dict[str, int] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
 _buddies: dict[str, dict] = {}
@@ -127,6 +128,7 @@ async def initialize() -> None:
             weapons_resp = await client.get(f"{BASE_URL}/weapons")
             weapons_resp.raise_for_status()
         for weapon in weapons_resp.json()["data"]:
+            _weapon_cost[weapon.get("displayName", "")] = (weapon.get("shopData") or {}).get("cost") or 0
             for weapon_skin in weapon.get("skins", []):
                 _skin_weapon[weapon_skin["uuid"].lower()] = weapon.get("displayName", "")
     except Exception:
@@ -240,6 +242,10 @@ def get_skin(uuid: str) -> dict | None:
 
 def all_skins() -> list[dict]:
     return list(_skins.values())
+
+
+def get_weapon_cost(name: str) -> int:
+    return _weapon_cost.get(name, 0)
 
 
 def get_skin_weapon(skin_uuid: str) -> str:
