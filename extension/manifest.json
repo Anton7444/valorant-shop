@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Valorant Shop Login Helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Automatically sends the Riot login redirect back to the Valorant Shop site.",
   "permissions": ["webNavigation"],
+  "host_permissions": ["https://anton7444.github.io/*"],
   "background": { "service_worker": "background.js" }
 }
