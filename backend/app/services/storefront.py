@@ -1,4 +1,5 @@
 import logging
+import time
 
 import httpx
 
@@ -233,6 +234,48 @@ async def fetch_owned_skin_level_ids(
     return frozenset(e.get("ItemID", "").lower() for e in data.get("Entitlements", []))
 
 
+# Offer prices are the same for every player, so share them across requests.
+_price_cache: dict[str, int] = {}
+_price_cache_at: float = 0.0
+PRICE_CACHE_SECONDS = 3600
+
+
+async def fetch_skin_prices(
+    access_token: str, entitlements_token: str, shard: str
+) -> dict[str, int]:
+    """Map skin level UUID (lowercased) -> VP price. Empty if unavailable."""
+    global _price_cache, _price_cache_at
+    if _price_cache and time.monotonic() - _price_cache_at < PRICE_CACHE_SECONDS:
+        return _price_cache
+    try:
+        url = f"https://pd.{shard}.a.pvp.net/store/v1/offers/"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url, headers=_riot_headers(access_token, entitlements_token))
+            resp.raise_for_status()
+            offers = resp.json().get("Offers", [])
+    except (httpx.HTTPStatusError, httpx.RequestError):
+        logger.warning("Could not fetch store offers; skin prices unavailable")
+        return _price_cache
+    prices: dict[str, int] = {}
+    for offer in offers:
+        cost = offer.get("Cost", {}).get(VP_CURRENCY_ID)
+        if cost is None:
+            continue
+        prices[offer.get("OfferID", "").lower()] = cost
+        for reward in offer.get("Rewards", []):
+            prices[reward.get("ItemID", "").lower()] = cost
+    _price_cache, _price_cache_at = prices, time.monotonic()
+    return prices
+
+
+def _skin_price(skin: dict, prices: dict[str, int]) -> int | None:
+    for level in skin.get("levels") or []:
+        price = prices.get(level["uuid"].lower())
+        if price is not None:
+            return price
+    return prices.get(skin["uuid"].lower())
+
+
 async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
     """Resolve owned skin level UUIDs into unique owned skins."""
     skins: dict[str, OwnedSkin] = {}
@@ -265,7 +308,7 @@ async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
     return InventoryResponse(skins=sorted(skins.values(), key=lambda s: s.name.lower()))
 
 
-def get_catalog() -> CatalogResponse:
+def get_catalog(prices: dict[str, int] | None = None) -> CatalogResponse:
     """Every skin that has a content tier, whether or not the player owns it."""
     skins: list[CatalogSkin] = []
     for skin in asset_cache.all_skins():
@@ -282,6 +325,7 @@ def get_catalog() -> CatalogResponse:
                 content_tier_name=tier["name"] if tier else "Unknown",
                 content_tier_color=tier["highlight_color"] if tier else "",
                 weapon=asset_cache.get_skin_weapon(skin["uuid"]),
+                price=_skin_price(skin, prices or {}),
                 levels=[
                     SkinLevel(
                         uuid=level["uuid"],

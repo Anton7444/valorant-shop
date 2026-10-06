@@ -45,12 +45,23 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         )}
       </div>
       <div className="border-t border-border p-3">
-        <h3
-          className="truncate text-sm text-text-primary"
-          style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
-        >
-          {name}
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3
+            className="truncate text-sm text-text-primary"
+            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
+          >
+            {name}
+          </h3>
+          {skin.price != null && (
+            <div className="flex shrink-0 items-center gap-1 text-text-primary">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
+              </svg>
+              <span className="text-sm font-semibold">{skin.price.toLocaleString()}</span>
+              <span className="text-xs text-text-secondary">VP</span>
+            </div>
+          )}
+        </div>
         <span
           className="mt-1 inline-block rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
           style={{ backgroundColor: color }}
