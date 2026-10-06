@@ -293,10 +293,10 @@ def get_catalog() -> CatalogResponse:
                 ],
             )
         )
-    # Cheapest weapon first; the free melee (no shop price) goes last.
+    # Cheapest weapon first (the free Classic leads); melee has no shop price
+    # and goes last.
     def weapon_rank(name: str) -> tuple[int, int, str]:
-        cost = asset_cache.get_weapon_cost(name)
-        return (0 if cost else 1, cost, name)
+        return (1 if name == "Melee" else 0, asset_cache.get_weapon_cost(name), name)
 
     skins.sort(key=lambda s: (weapon_rank(s.weapon), s.name.lower()))
     weapons = sorted({s.weapon for s in skins if s.weapon}, key=weapon_rank)
