@@ -73,6 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Logging in from another tab (the Riot login helper finishes in a new tab)
+  // stores the token here too; pick it up so this tab signs in as well.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== 'session_token' || !event.newValue) return;
+      api.checkSession().then((res) => {
+        if (res.valid && res.puuid) {
+          dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid });
+        }
+      }).catch(() => {});
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ state, dispatch }}>
       {children}
