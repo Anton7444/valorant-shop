@@ -81,6 +81,12 @@ export default function LoginPage() {
 
     try {
       const { auth_url } = await api.getAuthUrl();
+      // With the login helper extension, stay in this tab: it returns here
+      // with the login result. Otherwise open a new tab and use manual paste.
+      if (document.documentElement.dataset.loginHelper) {
+        window.location.assign(auth_url);
+        return;
+      }
       window.open(auth_url, '_blank', 'noopener');
       sessionStorage.setItem('login_stage', 'paste');
       setStage('paste');
