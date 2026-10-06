@@ -30,6 +30,15 @@ class OwnedSkin(BaseModel):
     levels: list[SkinLevel] = []
 
 
+class CatalogSkin(OwnedSkin):
+    weapon: str = ""
+
+
+class CatalogResponse(BaseModel):
+    skins: list[CatalogSkin]
+    weapons: list[str]
+
+
 class InventoryResponse(BaseModel):
     skins: list[OwnedSkin]
 

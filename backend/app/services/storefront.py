@@ -7,12 +7,15 @@ from app.models.store import (
     BundleResponse,
     Bundle,
     DailyStoreResponse,
+    CatalogResponse,
+    CatalogSkin,
     InventoryResponse,
     OwnedSkin,
     SkinLevel,
     SkinOffer,
     Wallet,
 )
+from app.services import asset_cache
 from app.services.asset_cache import (
     CLIENT_PLATFORM,
     get_bundle_info_ensured,
@@ -260,6 +263,39 @@ async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
             ],
         )
     return InventoryResponse(skins=sorted(skins.values(), key=lambda s: s.name.lower()))
+
+
+def get_catalog() -> CatalogResponse:
+    """Every skin that has a content tier, whether or not the player owns it."""
+    skins: list[CatalogSkin] = []
+    for skin in asset_cache.all_skins():
+        tier_uuid = skin.get("contentTierUuid", "")
+        if not tier_uuid:
+            continue
+        tier = get_content_tier(tier_uuid)
+        skins.append(
+            CatalogSkin(
+                uuid=skin["uuid"],
+                name=skin.get("displayName", "Unknown"),
+                display_icon=skin.get("displayIcon", "") or "",
+                content_tier_uuid=tier_uuid,
+                content_tier_name=tier["name"] if tier else "Unknown",
+                content_tier_color=tier["highlight_color"] if tier else "",
+                weapon=asset_cache.get_skin_weapon(skin["uuid"]),
+                levels=[
+                    SkinLevel(
+                        uuid=level["uuid"],
+                        level_number=index,
+                        display_icon=level.get("displayIcon") or skin.get("displayIcon", "") or "",
+                        video_url=level.get("streamedVideo") or None,
+                    )
+                    for index, level in enumerate(skin.get("levels") or [], start=1)
+                ],
+            )
+        )
+    skins.sort(key=lambda s: (s.weapon, s.name.lower()))
+    weapons = sorted({s.weapon for s in skins if s.weapon})
+    return CatalogResponse(skins=skins, weapons=weapons)
 
 
 async def get_wallet(

@@ -32,6 +32,7 @@ _skins: dict[str, dict] = {}
 _skin_levels_to_skin: dict[str, dict] = {}
 _skin_chromas_to_skin: dict[str, dict] = {}
 _skin_video_by_uuid: dict[str, str] = {}
+_skin_weapon: dict[str, str] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
 _buddies: dict[str, dict] = {}
@@ -118,6 +119,18 @@ async def initialize() -> None:
             }
             if chroma.get("streamedVideo"):
                 _skin_video_by_uuid[chroma_uuid] = chroma["streamedVideo"]
+
+    # Weapon names per skin (best effort: the catalog filter just loses its
+    # weapon grouping if this endpoint is unavailable).
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            weapons_resp = await client.get(f"{BASE_URL}/weapons")
+            weapons_resp.raise_for_status()
+        for weapon in weapons_resp.json()["data"]:
+            for weapon_skin in weapon.get("skins", []):
+                _skin_weapon[weapon_skin["uuid"].lower()] = weapon.get("displayName", "")
+    except Exception:
+        logger.warning("Could not load weapon list", exc_info=True)
 
     # Content tiers
     for tier in tiers_resp:
@@ -223,6 +236,14 @@ def get_skin(uuid: str) -> dict | None:
     """Lookup skin by skin UUID, skin level UUID, or chroma (variant) UUID."""
     key = uuid.lower()
     return _skins.get(key) or _skin_levels_to_skin.get(key) or _skin_chromas_to_skin.get(key)
+
+
+def all_skins() -> list[dict]:
+    return list(_skins.values())
+
+
+def get_skin_weapon(skin_uuid: str) -> str:
+    return _skin_weapon.get(skin_uuid.lower(), "")
 
 
 def get_skin_video(*uuids: str) -> str | None:

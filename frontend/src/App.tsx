@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
+import CatalogPage from './pages/CatalogPage';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
@@ -28,6 +29,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <InventoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/catalog"
+                element={
+                  <ProtectedRoute>
+                    <CatalogPage />
                   </ProtectedRoute>
                 }
               />
