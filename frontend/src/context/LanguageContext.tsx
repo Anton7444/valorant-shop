@@ -4,7 +4,7 @@ import { LanguageContext } from './languageContextDef';
 export type ShopLanguage = 'en-US' | 'zh-TW' | 'zh-CN';
 
 const STORAGE_KEY = 'valorant-shop-language';
-const CATALOGS = ['weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
+const CATALOGS = ['weapons', 'weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
 type CatalogEntry = { uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> };
 
 function getInitialLanguage(): ShopLanguage {

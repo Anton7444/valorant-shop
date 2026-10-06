@@ -134,7 +134,7 @@ export default function CatalogPage() {
                     setLimit(PAGE_SIZE);
                   }}
                 >
-                  {w}
+                  {localizedName(w, w, localizedNames)}
                 </FilterChip>
               ))}
             </div>
@@ -181,7 +181,7 @@ export default function CatalogPage() {
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {filtered.slice(0, limit).map((skin, index) => (
-                <SkinCollectionCard key={skin.uuid} skin={skin} index={index} subtitle={skin.weapon} />
+                <SkinCollectionCard key={skin.uuid} skin={skin} index={index} subtitle={localizedName(skin.weapon, skin.weapon, localizedNames)} />
               ))}
             </div>
             {filtered.length > limit && (
