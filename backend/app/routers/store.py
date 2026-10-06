@@ -95,10 +95,7 @@ async def inventory(session: SessionData = Depends(get_session)) -> InventoryRes
         )
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
-    prices = await storefront.fetch_skin_prices(
-        session.access_token, session.entitlements_token, session.shard
-    )
-    return await storefront.get_inventory(owned_ids, prices)
+    return await storefront.get_inventory(owned_ids)
 
 
 @router.get("/catalog", response_model=CatalogResponse)

@@ -276,7 +276,7 @@ def _skin_price(skin: dict, prices: dict[str, int]) -> int | None:
     return prices.get(skin["uuid"].lower())
 
 
-async def get_inventory(owned_ids: frozenset[str], prices: dict[str, int] | None = None) -> InventoryResponse:
+async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
     """Resolve owned skin level UUIDs into unique owned skins."""
     skins: dict[str, OwnedSkin] = {}
     for level_id in owned_ids:
@@ -295,7 +295,6 @@ async def get_inventory(owned_ids: frozenset[str], prices: dict[str, int] | None
             content_tier_uuid=tier_uuid,
             content_tier_name=tier["name"] if tier else "Unknown",
             content_tier_color=tier["highlight_color"] if tier else "",
-            price=_skin_price(skin, prices or {}),
             levels=[
                 SkinLevel(
                     uuid=level["uuid"],
