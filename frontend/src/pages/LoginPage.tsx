@@ -174,6 +174,16 @@ export default function LoginPage() {
                 a <span className="text-accent-red">"can't connect"</span> page —
                 that's normal. Copy the URL and come back here to paste it.
               </p>
+              <p className="mt-3 text-center text-xs text-text-secondary/70">
+                Tired of copying?{' '}
+                <a
+                  href={`${import.meta.env.BASE_URL}login-helper.zip`}
+                  download
+                  className="text-text-primary underline underline-offset-2 hover:text-accent-red"
+                >
+                  Get the login helper extension
+                </a>
+              </p>
 
               {error && (
                 <p className="mt-4 text-center text-sm text-accent-red">{error}</p>
