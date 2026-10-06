@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.auth import SessionData
-from app.models.store import BundleResponse, DailyStoreResponse, InventoryResponse, Wallet
+from app.models.store import BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, Wallet
 from app.services import storefront
 from app.session_store import store
 
@@ -96,3 +96,8 @@ async def inventory(session: SessionData = Depends(get_session)) -> InventoryRes
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
     return await storefront.get_inventory(owned_ids)
+
+
+@router.get("/catalog", response_model=CatalogResponse)
+async def catalog(session: SessionData = Depends(get_session)) -> CatalogResponse:
+    return storefront.get_catalog()

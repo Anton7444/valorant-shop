@@ -1,5 +1,6 @@
 import type {
   BundleResponse,
+  CatalogResponse,
   DailyStoreResponse,
   InventoryResponse,
   SessionResponse,
@@ -87,4 +88,8 @@ export function getWallet(): Promise<Wallet> {
 
 export function getInventory(): Promise<InventoryResponse> {
   return request('/api/store/inventory');
+}
+
+export function getCatalog(): Promise<CatalogResponse> {
+  return request('/api/store/catalog');
 }

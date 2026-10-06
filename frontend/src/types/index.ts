@@ -36,6 +36,15 @@ export interface OwnedSkin {
   levels: SkinLevel[];
 }
 
+export interface CatalogSkin extends OwnedSkin {
+  weapon: string;
+}
+
+export interface CatalogResponse {
+  skins: CatalogSkin[];
+  weapons: string[];
+}
+
 export interface InventoryResponse {
   skins: OwnedSkin[];
 }

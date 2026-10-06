@@ -9,6 +9,7 @@ import WalletDisplay from './WalletDisplay';
 const NAV_ITEMS = [
   { to: '/shop', label: 'Store' },
   { to: '/inventory', label: 'Inventory' },
+  { to: '/catalog', label: 'Catalog' },
 ];
 
 // Each page mounts its own header, so remember where the highlight last sat
