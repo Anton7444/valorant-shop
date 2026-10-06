@@ -10,9 +10,12 @@ Browser extension (Chrome / Edge / Brave, Manifest V3) that removes the
 
 ## Use
 Click **Open Riot Login** on the site as usual and sign in. After Riot
-redirects to `http://localhost/redirect#...`, the extension sends the tab back
-to the site, which finishes the login automatically. Without the extension the
+redirects to `http://localhost/redirect#...`, the extension sends your original site tab to the
+site with the login result, closes the Riot login tab, and the site finishes the
+login automatically (one tab left). Without the extension the
 site still works with the manual paste box.
 
 If the site is hosted somewhere else, edit `SITE_URL` in `background.js` and
 reload the extension.
+
+After updating the files, press the reload icon on the extension in `chrome://extensions`.
