@@ -28,6 +28,7 @@ class OwnedSkin(BaseModel):
     content_tier_name: str
     content_tier_color: str
     levels: list[SkinLevel] = []
+    price: int | None = None
 
 
 class CatalogSkin(OwnedSkin):
