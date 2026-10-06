@@ -100,7 +100,4 @@ async def inventory(session: SessionData = Depends(get_session)) -> InventoryRes
 
 @router.get("/catalog", response_model=CatalogResponse)
 async def catalog(session: SessionData = Depends(get_session)) -> CatalogResponse:
-    prices = await storefront.fetch_skin_prices(
-        session.access_token, session.entitlements_token, session.shard
-    )
-    return storefront.get_catalog(prices)
+    return storefront.get_catalog()
