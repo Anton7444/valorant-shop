@@ -38,6 +38,21 @@ function FilterChip({
   );
 }
 
+// Skin names end with the weapon name ("Glitchpop Ares"); drop it so a search
+// only matches the skin's own name, not every skin of that weapon.
+function searchableName(skin: CatalogSkin, names: Record<string, string>): string {
+  let name = localizedName(skin.uuid, skin.name, names);
+  const weapons = [localizedName(skin.weapon, skin.weapon, names), skin.weapon].filter(Boolean);
+  for (const weapon of weapons) {
+    const idx = name.toLowerCase().lastIndexOf(weapon.toLowerCase());
+    if (idx >= 0) {
+      name = name.slice(0, idx) + name.slice(idx + weapon.length);
+      break;
+    }
+  }
+  return name.trim().toLowerCase();
+}
+
 function toggle(set: Set<string>, value: string): Set<string> {
   const next = new Set(set);
   if (!next.delete(value)) next.add(value);
@@ -94,7 +109,7 @@ export default function CatalogPage() {
     return skins.filter((s) => {
       if (weaponFilter.size && !weaponFilter.has(s.weapon)) return false;
       if (tierFilter.size && !tierFilter.has(s.content_tier_uuid)) return false;
-      if (q && !localizedName(s.uuid, s.name, localizedNames).toLowerCase().includes(q)) return false;
+      if (q && !searchableName(s, localizedNames).includes(q)) return false;
       return true;
     });
   }, [skins, query, weaponFilter, tierFilter, localizedNames]);
