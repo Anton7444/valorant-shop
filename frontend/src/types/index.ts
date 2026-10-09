@@ -34,6 +34,7 @@ export interface OwnedSkin {
   content_tier_name: string;
   content_tier_color: string;
   levels: SkinLevel[];
+  weapon?: string;
 }
 
 export interface CatalogSkin extends OwnedSkin {
@@ -47,6 +48,7 @@ export interface CatalogResponse {
 
 export interface InventoryResponse {
   skins: OwnedSkin[];
+  weapons?: string[];
 }
 
 export interface BundleItem {

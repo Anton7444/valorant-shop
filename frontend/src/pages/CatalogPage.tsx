@@ -1,67 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { CatalogSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import AppHeader from '../components/AppHeader';
 import SkinCollectionCard from '../components/SkinCollectionCard';
+import SkinFilters from '../components/SkinFilters';
+import { filterSkins, tiersOf, toggle } from '../utils/skinFilters';
 import { localizedName } from '../context/languageNames';
 
 const PAGE_SIZE = 60;
 
-function FilterChip({
-  active,
-  color,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  color?: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-sm border px-2.5 py-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
-        active
-          ? 'border-accent-red bg-accent-red/10 text-text-primary'
-          : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary'
-      }`}
-    >
-      {color && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: color }} />}
-      {children}
-    </button>
-  );
-}
-
-// Skin names end with the weapon name ("Glitchpop Ares"); drop it so a search
-// only matches the skin's own name, not every skin of that weapon.
-function searchableName(skin: CatalogSkin, names: Record<string, string>): string {
-  let name = localizedName(skin.uuid, skin.name, names);
-  const weapons = [localizedName(skin.weapon, skin.weapon, names), skin.weapon].filter(Boolean);
-  for (const weapon of weapons) {
-    const idx = name.toLowerCase().lastIndexOf(weapon.toLowerCase());
-    if (idx >= 0) {
-      name = name.slice(0, idx) + name.slice(idx + weapon.length);
-      break;
-    }
-  }
-  return name.trim().toLowerCase();
-}
-
-function toggle(set: Set<string>, value: string): Set<string> {
-  const next = new Set(set);
-  if (!next.delete(value)) next.add(value);
-  return next;
-}
-
+// Public page: the catalog is static game data, so no login is needed.
 export default function CatalogPage() {
-  const { dispatch } = useAuth();
-  const navigate = useNavigate();
   const { localizedNames } = useLanguage();
   const [skins, setSkins] = useState<CatalogSkin[]>([]);
   const [weapons, setWeapons] = useState<string[]>([]);
@@ -79,41 +29,15 @@ export default function CatalogPage() {
         setSkins(res.skins);
         setWeapons(res.weapons);
       })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : 'Failed to load catalog';
-        if (message.includes('401') || message.includes('Not authenticated') || message.includes('Session expired')) {
-          dispatch({ type: 'LOGOUT' });
-          navigate('/', { replace: true });
-          return;
-        }
-        setError(message);
-      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load catalog'))
       .finally(() => setLoading(false));
-  }, [dispatch, navigate]);
+  }, []);
 
-  const tiers = useMemo(() => {
-    const map = new Map<string, { name: string; color: string }>();
-    for (const s of skins) {
-      if (!map.has(s.content_tier_uuid)) {
-        map.set(s.content_tier_uuid, {
-          name: s.content_tier_name,
-          color: s.content_tier_color ? `#${s.content_tier_color.slice(0, 6)}` : '',
-        });
-      }
-    }
-    return [...map.entries()];
-  }, [skins]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return skins.filter((s) => {
-      if (weaponFilter.size && !weaponFilter.has(s.weapon)) return false;
-      if (tierFilter.size && !tierFilter.has(s.content_tier_uuid)) return false;
-      if (q && !searchableName(s, localizedNames).includes(q)) return false;
-      return true;
-    });
-  }, [skins, query, weaponFilter, tierFilter, localizedNames]);
-
+  const tiers = useMemo(() => tiersOf(skins), [skins]);
+  const filtered = useMemo(
+    () => filterSkins(skins, query, weaponFilter, tierFilter, localizedNames),
+    [skins, query, weaponFilter, tierFilter, localizedNames],
+  );
   const hasFilters = weaponFilter.size > 0 || tierFilter.size > 0 || query !== '';
 
   return (
@@ -137,53 +61,27 @@ export default function CatalogPage() {
         </div>
 
         {!loading && !error && (
-          <div className="mb-8 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 w-14 text-[11px] uppercase tracking-widest text-text-secondary">Weapon</span>
-              {weapons.map((w) => (
-                <FilterChip
-                  key={w}
-                  active={weaponFilter.has(w)}
-                  onClick={() => {
-                    setWeaponFilter((cur) => toggle(cur, w));
-                    setLimit(PAGE_SIZE);
-                  }}
-                >
-                  {localizedName(w, w, localizedNames)}
-                </FilterChip>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 w-14 text-[11px] uppercase tracking-widest text-text-secondary">Tier</span>
-              {tiers.map(([id, tier]) => (
-                <FilterChip
-                  key={id}
-                  active={tierFilter.has(id)}
-                  color={tier.color}
-                  onClick={() => {
-                    setTierFilter((cur) => toggle(cur, id));
-                    setLimit(PAGE_SIZE);
-                  }}
-                >
-                  {tier.name}
-                </FilterChip>
-              ))}
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWeaponFilter(new Set());
-                    setTierFilter(new Set());
-                    setQuery('');
-                    setLimit(PAGE_SIZE);
-                  }}
-                  className="ml-2 text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
+          <SkinFilters
+            weapons={weapons}
+            tiers={tiers}
+            weaponFilter={weaponFilter}
+            tierFilter={tierFilter}
+            hasFilters={hasFilters}
+            onToggleWeapon={(w) => {
+              setWeaponFilter((cur) => toggle(cur, w));
+              setLimit(PAGE_SIZE);
+            }}
+            onToggleTier={(t) => {
+              setTierFilter((cur) => toggle(cur, t));
+              setLimit(PAGE_SIZE);
+            }}
+            onClear={() => {
+              setWeaponFilter(new Set());
+              setTierFilter(new Set());
+              setQuery('');
+              setLimit(PAGE_SIZE);
+            }}
+          />
         )}
 
         {loading ? (
@@ -196,7 +94,12 @@ export default function CatalogPage() {
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {filtered.slice(0, limit).map((skin, index) => (
-                <SkinCollectionCard key={skin.uuid} skin={skin} index={index} subtitle={localizedName(skin.weapon, skin.weapon, localizedNames)} />
+                <SkinCollectionCard
+                  key={skin.uuid}
+                  skin={skin}
+                  index={index}
+                  subtitle={localizedName(skin.weapon, skin.weapon, localizedNames)}
+                />
               ))}
             </div>
             {filtered.length > limit && (

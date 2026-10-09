@@ -99,5 +99,6 @@ async def inventory(session: SessionData = Depends(get_session)) -> InventoryRes
 
 
 @router.get("/catalog", response_model=CatalogResponse)
-async def catalog(session: SessionData = Depends(get_session)) -> CatalogResponse:
+async def catalog() -> CatalogResponse:
+    # Static game data; no login needed.
     return storefront.get_catalog()

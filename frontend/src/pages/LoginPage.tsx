@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 
@@ -161,6 +161,11 @@ export default function LoginPage() {
           </h1>
           <p className="mb-8 text-center text-sm text-text-secondary">
             Check your daily store without launching the game
+          </p>
+          <p className="-mt-5 mb-8 text-center text-xs text-text-secondary/70">
+            <Link to="/catalog" className="underline underline-offset-2 hover:text-text-primary">
+              Browse the skin catalog without signing in
+            </Link>
           </p>
 
           {stage === 'start' ? (

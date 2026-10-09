@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../context/useLanguage';
 import * as api from '../api/client';
@@ -21,6 +21,8 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const navigate = useNavigate();
   const { language, setLanguage } = useLanguage();
   const { pathname } = useLocation();
+  const loggedIn = state.sessionValid;
+  const navItems = loggedIn ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.to === '/catalog');
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
 
@@ -37,7 +39,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
       el.style.opacity = '1';
     });
     return () => cancelAnimationFrame(frame);
-  }, [pathname]);
+  }, [pathname, loggedIn]);
 
   async function handleLogout() {
     await api.logout().catch(() => {});
@@ -65,7 +67,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
             >
               <span className="absolute inset-y-0 left-0 w-0.5 bg-accent-red" />
             </span>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -99,12 +101,21 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
             <option value="zh-TW">繁中</option>
             <option value="zh-CN">简中</option>
           </select>
-          <button
-            onClick={handleLogout}
-            className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97]"
-          >
-            Logout
-          </button>
+          {loggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97]"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/"
+              className="font-display rounded-sm border border-accent-red/60 px-3 py-1.5 text-xs uppercase tracking-widest text-accent-red transition-all duration-200 hover:bg-accent-red/10 active:scale-[0.97]"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </header>

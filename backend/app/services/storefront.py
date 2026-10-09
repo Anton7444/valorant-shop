@@ -252,6 +252,7 @@ async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
             content_tier_uuid=tier_uuid,
             content_tier_name=tier["name"] if tier else "Unknown",
             content_tier_color=tier["highlight_color"] if tier else "",
+            weapon=asset_cache.get_skin_weapon(skin["uuid"]),
             levels=[
                 SkinLevel(
                     uuid=level["uuid"],
@@ -262,7 +263,15 @@ async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
                 for index, level in enumerate(skin.get("levels") or [], start=1)
             ],
         )
-    return InventoryResponse(skins=sorted(skins.values(), key=lambda s: s.name.lower()))
+    owned = sorted(skins.values(), key=lambda s: s.name.lower())
+    weapons = sorted({s.weapon for s in owned if s.weapon}, key=weapon_rank)
+    return InventoryResponse(skins=owned, weapons=weapons)
+
+
+def weapon_rank(name: str) -> tuple[int, int, str]:
+    """Cheapest weapon first (the free Classic leads); melee has no shop price
+    and goes last."""
+    return (1 if name == "Melee" else 0, asset_cache.get_weapon_cost(name), name)
 
 
 def get_catalog() -> CatalogResponse:
@@ -293,11 +302,6 @@ def get_catalog() -> CatalogResponse:
                 ],
             )
         )
-    # Cheapest weapon first (the free Classic leads); melee has no shop price
-    # and goes last.
-    def weapon_rank(name: str) -> tuple[int, int, str]:
-        return (1 if name == "Melee" else 0, asset_cache.get_weapon_cost(name), name)
-
     skins.sort(key=lambda s: (weapon_rank(s.weapon), s.name.lower()))
     weapons = sorted({s.weapon for s in skins if s.weapon}, key=weapon_rank)
     return CatalogResponse(skins=skins, weapons=weapons)
