@@ -162,11 +162,6 @@ export default function LoginPage() {
           <p className="mb-8 text-center text-sm text-text-secondary">
             Check your daily store without launching the game
           </p>
-          <p className="-mt-5 mb-8 text-center text-xs text-text-secondary/70">
-            <Link to="/catalog" className="underline underline-offset-2 hover:text-text-primary">
-              Browse the skin catalog without signing in
-            </Link>
-          </p>
 
           {stage === 'start' ? (
             <>
@@ -195,6 +190,15 @@ export default function LoginPage() {
                   Get the login helper extension
                 </a>
               </p>
+
+              <div className="mt-6 border-t border-border/60 pt-5 text-center">
+                <Link
+                  to="/catalog"
+                  className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
+                >
+                  Browse skin catalog &rarr;
+                </Link>
+              </div>
 
               {error && (
                 <p className="mt-4 text-center text-sm text-accent-red">{error}</p>
