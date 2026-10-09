@@ -180,7 +180,7 @@ export default function LoginPage() {
                 a <span className="text-accent-red">"can't connect"</span> page —
                 that's normal. Copy the URL and come back here to paste it.
               </p>
-              <p className="mt-3 text-center text-xs text-text-secondary/70">
+              <p className="mt-2 text-center text-xs text-text-secondary/70">
                 Tired of copying?{' '}
                 <a
                   href={`${import.meta.env.BASE_URL}login-helper.zip`}
@@ -191,7 +191,7 @@ export default function LoginPage() {
                 </a>
               </p>
 
-              <div className="mt-6 border-t border-border/60 pt-5 text-center">
+              <div className="mt-4 border-t border-border/60 pt-3 text-center">
                 <Link
                   to="/catalog"
                   className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
