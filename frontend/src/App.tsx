@@ -32,14 +32,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/catalog"
-                element={
-                  <ProtectedRoute>
-                    <CatalogPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/catalog" element={<CatalogPage />} />
             </Routes>
           </ErrorBoundary>
         </BrowserRouter>

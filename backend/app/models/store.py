@@ -28,10 +28,11 @@ class OwnedSkin(BaseModel):
     content_tier_name: str
     content_tier_color: str
     levels: list[SkinLevel] = []
+    weapon: str = ""
 
 
 class CatalogSkin(OwnedSkin):
-    weapon: str = ""
+    pass
 
 
 class CatalogResponse(BaseModel):
@@ -41,6 +42,7 @@ class CatalogResponse(BaseModel):
 
 class InventoryResponse(BaseModel):
     skins: list[OwnedSkin]
+    weapons: list[str] = []
 
 
 class BundleItem(BaseModel):
