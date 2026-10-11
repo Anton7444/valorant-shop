@@ -12,7 +12,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://anton7444.github.io/valorant-shop/*"
+        "https://antonfong.dpdns.org/*"
       ],
       "js": [
         "content.js"
