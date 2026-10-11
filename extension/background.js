@@ -1,5 +1,5 @@
 // Where to send the Riot login result. Change this if the site lives elsewhere.
-const SITE_URL = 'https://anton7444.github.io/valorant-shop/';
+const SITE_URL = 'https://antonfong.dpdns.org/';
 
 // The site (content.js marks it) sends this very tab to Riot's login page.
 // Riot finishes by redirecting to http://localhost/redirect#access_token=...
