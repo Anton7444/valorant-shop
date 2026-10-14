@@ -1,4 +1,7 @@
+import json
 import logging
+import time
+from pathlib import Path
 
 import httpx
 
@@ -153,6 +156,45 @@ async def get_daily_store(raw_storefront: dict, owned_ids: frozenset[str] = froz
     return DailyStoreResponse(offers=offers, seconds_remaining=seconds_remaining)
 
 
+# The featured bundle is the same for every player but Riot only serves it to a
+# signed-in player, so remember the last one a signed-in player loaded and let
+# anyone view it. Kept in memory and mirrored to a file so it survives a restart.
+_BUNDLE_CACHE_FILE = Path("/tmp/featured_bundle.json")
+_bundle_cache: dict | None = None  # {"expires_at": epoch seconds, "bundles": [...]}
+
+
+def _remember_bundles(response: BundleResponse) -> None:
+    global _bundle_cache
+    secs = max((b.duration_remaining_secs for b in response.bundles), default=0)
+    if not response.bundles or secs <= 0:
+        return
+    _bundle_cache = {
+        "expires_at": time.time() + secs,
+        "bundles": [b.model_dump() for b in response.bundles],
+    }
+    try:
+        _BUNDLE_CACHE_FILE.write_text(json.dumps(_bundle_cache))
+    except OSError:
+        logger.warning("Could not persist featured bundle cache", exc_info=True)
+
+
+def get_public_bundle() -> BundleResponse:
+    """Last known featured bundle, or an empty list if none is known/current."""
+    global _bundle_cache
+    if _bundle_cache is None:
+        try:
+            _bundle_cache = json.loads(_BUNDLE_CACHE_FILE.read_text())
+        except (OSError, ValueError):
+            return BundleResponse(bundles=[])
+    remaining = int(_bundle_cache["expires_at"] - time.time())
+    if remaining <= 0:
+        return BundleResponse(bundles=[])
+    bundles = [Bundle(**b) for b in _bundle_cache["bundles"]]
+    for bundle in bundles:
+        bundle.duration_remaining_secs = remaining
+    return BundleResponse(bundles=bundles)
+
+
 async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
     """Parse featured bundles from raw storefront data."""
     featured = raw_storefront.get("FeaturedBundle", {})
@@ -213,7 +255,9 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
             duration_remaining_secs=duration,
         ))
 
-    return BundleResponse(bundles=bundles)
+    response = BundleResponse(bundles=bundles)
+    _remember_bundles(response)
+    return response
 
 
 async def fetch_owned_skin_level_ids(

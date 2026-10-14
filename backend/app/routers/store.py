@@ -36,6 +36,12 @@ def _handle_riot_error(exc: Exception) -> HTTPException:
         if status == 400:
             return HTTPException(status_code=502, detail="Riot API rejected the request")
         if status == 403:
+            # Riot returns 403 + SCHEDULED_DOWNTIME during maintenance windows.
+            if "SCHEDULED_DOWNTIME" in exc.response.text:
+                return HTTPException(
+                    status_code=503,
+                    detail="Riot's servers are down for scheduled maintenance. Try again later.",
+                )
             return HTTPException(status_code=502, detail="Access denied by Riot API")
         if status == 404:
             return HTTPException(status_code=502, detail="Store data not found. Is Valorant active on this account?")
@@ -75,6 +81,12 @@ async def featured_bundle(session: SessionData = Depends(get_session)) -> Bundle
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
     return await storefront.get_featured_bundle(raw)
+
+
+@router.get("/bundle/public", response_model=BundleResponse)
+async def public_featured_bundle() -> BundleResponse:
+    # No login needed: serves the last featured bundle a signed-in player loaded.
+    return storefront.get_public_bundle()
 
 
 @router.get("/wallet", response_model=Wallet)

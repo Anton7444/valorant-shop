@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import CatalogPage from './pages/CatalogPage';
+import BundlePage from './pages/BundlePage';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
                 }
               />
               <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/bundle" element={<BundlePage />} />
             </Routes>
           </ErrorBoundary>
         </BrowserRouter>

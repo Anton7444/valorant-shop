@@ -198,6 +198,13 @@ export default function LoginPage() {
                 >
                   Browse skin catalog &rarr;
                 </Link>
+                <span className="mx-3 text-border">|</span>
+                <Link
+                  to="/bundle"
+                  className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
+                >
+                  Featured bundle &rarr;
+                </Link>
               </div>
 
               {error && (

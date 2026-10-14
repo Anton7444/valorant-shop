@@ -10,7 +10,11 @@ const NAV_ITEMS = [
   { to: '/shop', label: 'Store' },
   { to: '/inventory', label: 'Inventory' },
   { to: '/catalog', label: 'Catalog' },
+  { to: '/bundle', label: 'Bundle' },
 ];
+
+// Pages anyone can open without signing in.
+const PUBLIC_PATHS = ['/bundle', '/catalog'];
 
 // Each page mounts its own header, so remember where the highlight last sat
 // and animate from there to the new tab instead of popping in.
@@ -22,7 +26,9 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const { language, setLanguage } = useLanguage();
   const { pathname } = useLocation();
   const loggedIn = state.sessionValid;
-  const navItems = loggedIn ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.to === '/catalog');
+  const navItems = NAV_ITEMS.filter(
+    (item) => (loggedIn ? item.to !== '/bundle' : PUBLIC_PATHS.includes(item.to)),
+  );
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
 
