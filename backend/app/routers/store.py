@@ -83,6 +83,12 @@ async def featured_bundle(session: SessionData = Depends(get_session)) -> Bundle
     return await storefront.get_featured_bundle(raw)
 
 
+@router.get("/bundle/public", response_model=BundleResponse)
+async def public_featured_bundle() -> BundleResponse:
+    # No login needed: serves the last featured bundle a signed-in player loaded.
+    return storefront.get_public_bundle()
+
+
 @router.get("/wallet", response_model=Wallet)
 async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
     try:

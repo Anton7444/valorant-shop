@@ -78,6 +78,10 @@ export function getDailyStore(): Promise<DailyStoreResponse> {
   return request('/api/store/daily');
 }
 
+export function getPublicBundles(): Promise<BundleResponse> {
+  return request('/api/store/bundle/public');
+}
+
 export function getBundles(): Promise<BundleResponse> {
   return request('/api/store/bundle');
 }
