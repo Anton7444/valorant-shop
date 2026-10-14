@@ -160,38 +160,49 @@ async def get_daily_store(raw_storefront: dict, owned_ids: frozenset[str] = froz
 # signed-in player, so remember the last one a signed-in player loaded and let
 # anyone view it. Kept in memory and mirrored to a file so it survives a restart.
 _BUNDLE_CACHE_FILE = Path("/tmp/featured_bundle.json")
-_bundle_cache: dict | None = None  # {"expires_at": epoch seconds, "bundles": [...]}
+_bundle_cache: list[dict] | None = None  # [{"expires_at": epoch seconds, "bundle": {...}}]
 
 
 def _remember_bundles(response: BundleResponse) -> None:
     global _bundle_cache
-    secs = max((b.duration_remaining_secs for b in response.bundles), default=0)
-    if not response.bundles or secs <= 0:
+    now = time.time()
+    # Each bundle has its own countdown, so keep each one's own expiry.
+    entries = [
+        {"expires_at": now + b.duration_remaining_secs, "bundle": b.model_dump()}
+        for b in response.bundles
+        if b.duration_remaining_secs > 0
+    ]
+    if not entries:
         return
-    _bundle_cache = {
-        "expires_at": time.time() + secs,
-        "bundles": [b.model_dump() for b in response.bundles],
-    }
+    _bundle_cache = entries
     try:
-        _BUNDLE_CACHE_FILE.write_text(json.dumps(_bundle_cache))
+        _BUNDLE_CACHE_FILE.write_text(json.dumps(entries))
     except OSError:
         logger.warning("Could not persist featured bundle cache", exc_info=True)
 
 
 def get_public_bundle() -> BundleResponse:
-    """Last known featured bundle, or an empty list if none is known/current."""
+    """Last known featured bundles that haven't expired yet."""
     global _bundle_cache
     if _bundle_cache is None:
         try:
             _bundle_cache = json.loads(_BUNDLE_CACHE_FILE.read_text())
         except (OSError, ValueError):
             return BundleResponse(bundles=[])
-    remaining = int(_bundle_cache["expires_at"] - time.time())
-    if remaining <= 0:
+    now = time.time()
+    bundles: list[Bundle] = []
+    try:
+        for entry in _bundle_cache:
+            remaining = int(entry["expires_at"] - now)
+            if remaining <= 0:
+                continue
+            bundle = Bundle(**entry["bundle"])
+            bundle.duration_remaining_secs = remaining
+            bundles.append(bundle)
+    except (KeyError, TypeError, ValueError):
+        # Cache written in an older format; ignore it.
+        _bundle_cache = []
         return BundleResponse(bundles=[])
-    bundles = [Bundle(**b) for b in _bundle_cache["bundles"]]
-    for bundle in bundles:
-        bundle.duration_remaining_secs = remaining
     return BundleResponse(bundles=bundles)
 
 
