@@ -36,6 +36,12 @@ def _handle_riot_error(exc: Exception) -> HTTPException:
         if status == 400:
             return HTTPException(status_code=502, detail="Riot API rejected the request")
         if status == 403:
+            # Riot returns 403 + SCHEDULED_DOWNTIME during maintenance windows.
+            if "SCHEDULED_DOWNTIME" in exc.response.text:
+                return HTTPException(
+                    status_code=503,
+                    detail="Riot's servers are down for scheduled maintenance. Try again later.",
+                )
             return HTTPException(status_code=502, detail="Access denied by Riot API")
         if status == 404:
             return HTTPException(status_code=502, detail="Store data not found. Is Valorant active on this account?")
