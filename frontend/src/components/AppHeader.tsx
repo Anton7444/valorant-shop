@@ -6,6 +6,7 @@ import * as api from '../api/client';
 import type { Wallet } from '../types';
 import WalletDisplay from './WalletDisplay';
 import LanguageSwitch from './LanguageSwitch';
+import ScrollFade from './ScrollFade';
 import { useRovingArrows } from '../hooks/useRovingArrows';
 
 const NAV_ITEMS = [
@@ -72,13 +73,15 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-bg-primary/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <div className="flex items-center gap-8">
-          <h1 className="font-display text-lg tracking-wider text-text-primary">
-            VAL<span className="text-accent-red">SHOP</span>
-          </h1>
-          <nav ref={navRef} aria-label="Main" className="relative flex items-center gap-1">
+    <header className="@container/header sticky top-0 z-40 border-b border-border/60 bg-bg-primary/80 backdrop-blur-md">
+      {/* Sizes below follow the header's own width (container queries), not the window's:
+          narrow headers drop the wallet and put the tabs on their own scrollable row. */}
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 @max-[460px]/header:gap-x-3">
+        <h1 className="font-display text-lg tracking-wider text-text-primary">
+          VAL<span className="text-accent-red">SHOP</span>
+        </h1>
+        <ScrollFade className="min-w-0 flex-1 [scrollbar-width:none] @max-[980px]/header:order-last @max-[980px]/header:basis-full [&::-webkit-scrollbar]:hidden">
+          <nav ref={navRef} aria-label="Main" className="relative flex w-max items-center gap-1">
             <span
               ref={indicatorRef}
               aria-hidden="true"
@@ -105,12 +108,16 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               </NavLink>
             ))}
           </nav>
-        </div>
+        </ScrollFade>
 
-        <div className="flex items-center gap-4">
-          {wallet && <WalletDisplay wallet={wallet} />}
+        <div className="ml-auto flex items-center gap-4 @max-[460px]/header:gap-2">
+          {wallet && (
+            <div className="@max-[1050px]/header:hidden">
+              <WalletDisplay wallet={wallet} />
+            </div>
+          )}
           {state.puuid && (
-            <span className="hidden font-mono text-[11px] text-text-secondary/70 lg:block">
+            <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1250px]/header:block">
               {state.puuid.slice(0, 8)}
             </span>
           )}
@@ -127,14 +134,14 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           {loggedIn ? (
             <button
               onClick={handleLogout}
-              className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97]"
+              className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97] @max-[460px]/header:px-2"
             >
               Logout
             </button>
           ) : (
             <Link
               to="/"
-              className="font-display rounded-sm border border-accent-red/60 px-3 py-1.5 text-xs uppercase tracking-widest text-accent-red transition-all duration-200 hover:bg-accent-red/10 active:scale-[0.97]"
+              className="font-display rounded-sm border border-accent-red/60 px-3 py-1.5 text-xs uppercase tracking-widest text-accent-red transition-all duration-200 hover:bg-accent-red/10 active:scale-[0.97] @max-[460px]/header:px-2"
             >
               Sign in
             </Link>
