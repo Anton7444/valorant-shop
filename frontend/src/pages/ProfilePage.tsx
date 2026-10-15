@@ -6,6 +6,9 @@ import type { MatchSummary, PlayerRow, ProfileResponse } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import AppHeader from '../components/AppHeader';
+import ScrollFade from '../components/ScrollFade';
+import { useRovingArrows } from '../hooks/useRovingArrows';
+import { ProfileSkeleton } from '../components/Skeletons';
 import { staggerStyle, trackPointer } from '../utils/spotlight';
 
 const QUEUE_LABELS: Record<string, string> = {
@@ -137,7 +140,7 @@ function Scoreboard({ match }: { match: MatchSummary }) {
   const noRounds = match.teams.every((t) => !t.rounds_won);
 
   return (
-    <div className="overflow-x-auto border-t border-border bg-bg-primary/40">
+    <ScrollFade className="border-t border-border bg-bg-primary/40">
       {groups.map(({ team, players }, groupIndex) => {
         const color =
           team?.won === true ? 'var(--color-accent-teal)' : team?.won === false ? 'var(--color-accent-red)' : 'var(--color-text-secondary)';
@@ -199,7 +202,7 @@ function Scoreboard({ match }: { match: MatchSummary }) {
           </table>
         );
       })}
-    </div>
+    </ScrollFade>
   );
 }
 
@@ -226,7 +229,7 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-4 p-3 text-left"
+        className="no-press flex w-full items-center gap-4 p-3 text-left"
       >
         <div className="h-10 w-0.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
         {match.agent_icon ? (
@@ -326,6 +329,8 @@ export default function ProfilePage() {
       .finally(() => setLoadingMore(false));
   }
 
+  const roleRowRef = useRovingArrows<HTMLDivElement>();
+  const modeRowRef = useRovingArrows<HTMLDivElement>();
   const [queueFilter, setQueueFilter] = useState<Set<string>>(new Set());
   // Game modes that actually appear in the loaded matches, most played first.
   const queues = useMemo(() => {
@@ -356,7 +361,7 @@ export default function ProfilePage() {
 
       <main id="main" className="mx-auto max-w-6xl space-y-12 px-4 py-10">
         {loading ? (
-          <p className="py-20 text-center text-text-secondary">Loading...</p>
+          <ProfileSkeleton />
         ) : error || !profile ? (
           <p className="py-20 text-center text-accent-red">{error ?? 'Failed to load profile'}</p>
         ) : (
@@ -397,7 +402,7 @@ export default function ProfilePage() {
                 <Unavailable what="Your agent roster" />
               ) : (
                 <>
-                <div className="mb-4 flex flex-wrap items-center gap-2">
+                <div ref={roleRowRef} className="mb-4 flex flex-wrap items-center gap-2">
                   <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Role</span>
                   {roles.map((role) => (
                     <Chip
@@ -453,7 +458,7 @@ export default function ProfilePage() {
                 <p className="py-6 text-sm text-text-secondary">No recent matches found.</p>
               ) : (
                 <>
-                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <div ref={modeRowRef} className="mb-4 flex flex-wrap items-center gap-2">
                     <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Mode</span>
                     {queues.map(([queue, count]) => (
                       <Chip

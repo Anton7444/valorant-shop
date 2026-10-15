@@ -1,4 +1,5 @@
 import { useLanguage } from '../context/useLanguage';
+import { useRovingArrows } from '../hooks/useRovingArrows';
 import { localizedName } from '../context/languageNames';
 import type { SkinTier } from '../utils/skinFilters';
 
@@ -50,10 +51,12 @@ export default function SkinFilters({
   onClear: () => void;
 }) {
   const { localizedNames } = useLanguage();
+  const weaponRow = useRovingArrows<HTMLDivElement>();
+  const tierRow = useRovingArrows<HTMLDivElement>();
 
   return (
     <div className="mb-8 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div ref={weaponRow} className="flex flex-wrap items-center gap-2">
         <span className="mr-1 w-14 text-[11px] uppercase tracking-widest text-text-secondary">Weapon</span>
         {weapons.map((w) => (
           <FilterChip key={w} active={weaponFilter.has(w)} onClick={() => onToggleWeapon(w)}>
@@ -61,7 +64,7 @@ export default function SkinFilters({
           </FilterChip>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div ref={tierRow} className="flex flex-wrap items-center gap-2">
         <span className="mr-1 w-14 text-[11px] uppercase tracking-widest text-text-secondary">Tier</span>
         {tiers.map((tier) => (
           <FilterChip key={tier.id} active={tierFilter.has(tier.id)} color={tier.color} onClick={() => onToggleTier(tier.id)}>

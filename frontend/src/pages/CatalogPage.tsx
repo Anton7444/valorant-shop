@@ -3,6 +3,8 @@ import * as api from '../api/client';
 import type { CatalogSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import AppHeader from '../components/AppHeader';
+import SearchInput from '../components/SearchInput';
+import { CardGridSkeleton } from '../components/Skeletons';
 import SkinCollectionCard from '../components/SkinCollectionCard';
 import SkinFilters from '../components/SkinFilters';
 import { filterSkins, tiersOf, toggle } from '../utils/skinFilters';
@@ -49,10 +51,10 @@ export default function CatalogPage() {
           <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">
             Skin catalog {!loading && !error && <span className="text-text-secondary">({filtered.length})</span>}
           </h2>
-          <input
+          <SearchInput
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
+            onChange={(value) => {
+              setQuery(value);
               setLimit(PAGE_SIZE);
             }}
             placeholder="Search skins..."
@@ -85,7 +87,7 @@ export default function CatalogPage() {
         )}
 
         {loading ? (
-          <p className="py-20 text-center text-text-secondary">Loading...</p>
+          <CardGridSkeleton />
         ) : error ? (
           <p className="py-20 text-center text-accent-red">{error}</p>
         ) : filtered.length === 0 ? (

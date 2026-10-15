@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as api from '../api/client';
 import type { Bundle } from '../types';
 import AppHeader from '../components/AppHeader';
+import { BundleSkeleton } from '../components/Skeletons';
 import BundleCard from '../components/BundleCard';
 
 // Public page: shows the last featured bundle a signed-in player loaded, so no
@@ -29,7 +30,7 @@ export default function BundlePage() {
         </h2>
 
         {loading ? (
-          <p className="py-20 text-center text-text-secondary">Loading...</p>
+          <BundleSkeleton />
         ) : error ? (
           <p className="py-20 text-center text-accent-red">{error}</p>
         ) : bundles.length === 0 ? (
