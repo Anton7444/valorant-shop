@@ -35,9 +35,9 @@ function queueLabel(queue: string): string {
   return QUEUE_LABELS[q] ?? q.charAt(0).toUpperCase() + q.slice(1);
 }
 
-function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+function SectionTitle({ children, hint, index = 4 }: { children: React.ReactNode; hint?: string; index?: number }) {
   return (
-    <div className="mb-4 flex items-baseline gap-3">
+    <div className="rise-in mb-4 flex items-baseline gap-3" style={staggerStyle(index)}>
       <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">{children}</h2>
       {hint && <span className="text-xs text-text-secondary">{hint}</span>}
     </div>
@@ -48,9 +48,19 @@ function Unavailable({ what }: { what: string }) {
   return <p className="py-6 text-sm text-text-secondary">{what} couldn&apos;t be loaded right now.</p>;
 }
 
-function CurrencyTile({ label, value, accent }: { label: string; value: number | undefined; accent?: string }) {
+function CurrencyTile({
+  label,
+  value,
+  accent,
+  index,
+}: {
+  label: string;
+  value: number | undefined;
+  accent?: string;
+  index: number;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-bg-card px-4 py-3">
+    <div className="rise-in rounded-lg border border-border bg-bg-card px-4 py-3" style={staggerStyle(index)}>
       <div className="text-[11px] uppercase tracking-widest text-text-secondary">{label}</div>
       <div className="mt-1 text-2xl font-semibold" style={{ color: accent ?? 'var(--color-text-primary)' }}>
         {(value ?? 0).toLocaleString()}
@@ -223,7 +233,7 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
     <li
       className="card-motion card-spotlight overflow-hidden rounded-lg border border-border bg-bg-card"
       onPointerMove={trackPointer}
-      style={staggerStyle(index)}
+      style={staggerStyle(index < 20 ? 6 + index : 0)}
     >
       <button
         type="button"
@@ -367,7 +377,7 @@ export default function ProfilePage() {
         ) : (
           <>
             <section>
-              <div className="mb-6">
+              <div className="rise-in mb-6" style={staggerStyle(0)}>
                 <h1 className="font-display text-3xl tracking-wider text-text-primary">
                   {profile.game_name ? (
                     <>
@@ -387,9 +397,9 @@ export default function ProfilePage() {
                 <Unavailable what="Your balances" />
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <CurrencyTile label="Valorant Points" value={profile.wallet.valorant_points} />
-                  <CurrencyTile label="Radianite" value={profile.wallet.radianite_points} accent="var(--color-accent-teal)" />
-                  <CurrencyTile label="Kingdom Credits" value={profile.wallet.kingdom_credits} accent="#e8c15a" />
+                  <CurrencyTile label="Valorant Points" value={profile.wallet.valorant_points} index={1} />
+                  <CurrencyTile label="Radianite" value={profile.wallet.radianite_points} accent="var(--color-accent-teal)" index={2} />
+                  <CurrencyTile label="Kingdom Credits" value={profile.wallet.kingdom_credits} accent="#e8c15a" index={3} />
                 </div>
               )}
             </section>
@@ -402,7 +412,7 @@ export default function ProfilePage() {
                 <Unavailable what="Your agent roster" />
               ) : (
                 <>
-                <div ref={roleRowRef} className="mb-4 flex flex-wrap items-center gap-2">
+                <div ref={roleRowRef} className="rise-in mb-4 flex flex-wrap items-center gap-2" style={staggerStyle(5)}>
                   <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Role</span>
                   {roles.map((role) => (
                     <Chip
@@ -430,13 +440,14 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
-                  {visibleAgents.map((agent) => {
+                  {visibleAgents.map((agent, agentIndex) => {
                     const name = localizedName(agent.uuid, agent.name, localizedNames);
                     return (
                       <div
                         key={agent.uuid}
                         title={agent.owned ? name : `${name} (locked)`}
-                        className={`overflow-hidden rounded-lg border border-border bg-bg-card text-center transition-opacity ${
+                        style={staggerStyle(5 + agentIndex)}
+                        className={`rise-in overflow-hidden rounded-lg border border-border bg-bg-card text-center ${
                           agent.owned ? '' : 'opacity-35 grayscale'
                         }`}
                       >
@@ -458,7 +469,7 @@ export default function ProfilePage() {
                 <p className="py-6 text-sm text-text-secondary">No recent matches found.</p>
               ) : (
                 <>
-                  <div ref={modeRowRef} className="mb-4 flex flex-wrap items-center gap-2">
+                  <div ref={modeRowRef} className="rise-in mb-4 flex flex-wrap items-center gap-2" style={staggerStyle(5)}>
                     <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Mode</span>
                     {queues.map(([queue, count]) => (
                       <Chip

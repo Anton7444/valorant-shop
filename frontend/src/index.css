@@ -223,6 +223,11 @@ select:focus-visible {
   opacity: 1;
 }
 
+/* Entrance only (no hover lift): for content that isn't clickable, staggered with --i */
+.rise-in {
+  animation: card-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 75ms) backwards;
+}
+
 /* Large cards (bundle): lift less so the whole panel doesn't jump */
 .card-motion-lg:hover {
   transform: translateY(-3px);
