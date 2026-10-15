@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 VP_CURRENCY_ID = "85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"
 RADIANITE_CURRENCY_ID = "e59aa87c-4cbf-517a-5983-6e81511be9b7"
+KINGDOM_CREDITS_CURRENCY_ID = "85ca954a-41f2-ce94-9b45-8ca3dd39a00d"
 
 
 def _riot_headers(access_token: str, entitlements_token: str) -> dict[str, str]:
@@ -381,4 +382,5 @@ async def get_wallet(
     return Wallet(
         valorant_points=balances.get(VP_CURRENCY_ID, 0),
         radianite_points=balances.get(RADIANITE_CURRENCY_ID, 0),
+        kingdom_credits=balances.get(KINGDOM_CREDITS_CURRENCY_ID, 0),
     )

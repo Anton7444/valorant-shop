@@ -7,6 +7,7 @@ import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import CatalogPage from './pages/CatalogPage';
 import BundlePage from './pages/BundlePage';
+import ProfilePage from './pages/ProfilePage';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
@@ -30,6 +31,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <InventoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 }
               />
