@@ -4,7 +4,7 @@ import type { CatalogSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import AppHeader from '../components/AppHeader';
 import SearchInput from '../components/SearchInput';
-import { CardGridSkeleton } from '../components/Skeletons';
+import { CardGridSkeleton, FiltersSkeleton } from '../components/Skeletons';
 import SkinCollectionCard from '../components/SkinCollectionCard';
 import SkinFilters from '../components/SkinFilters';
 import { filterSkins, tiersOf, toggle } from '../utils/skinFilters';
@@ -87,7 +87,10 @@ export default function CatalogPage() {
         )}
 
         {loading ? (
-          <CardGridSkeleton />
+          <>
+            <FiltersSkeleton />
+            <CardGridSkeleton />
+          </>
         ) : error ? (
           <p className="py-20 text-center text-accent-red">{error}</p>
         ) : filtered.length === 0 ? (
