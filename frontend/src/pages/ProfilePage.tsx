@@ -279,17 +279,43 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [dispatch, navigate]);
 
+  // Older matches fetched with "Load more" (the first 20 come with the profile).
+  const [moreMatches, setMoreMatches] = useState<MatchSummary[]>([]);
+  const [nextStart, setNextStart] = useState(20);
+  const [hasMore, setHasMore] = useState<boolean | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const canLoadMore = hasMore ?? profile?.has_more_matches ?? false;
+  const allMatches = useMemo(() => [...(profile?.matches ?? []), ...moreMatches], [profile, moreMatches]);
+
+  function loadMore() {
+    setLoadingMore(true);
+    setMoreError(null);
+    api
+      .getMatches(nextStart)
+      .then((res) => {
+        setMoreMatches((cur) => {
+          const seen = new Set(cur.map((m) => m.match_id).concat((profile?.matches ?? []).map((m) => m.match_id)));
+          return [...cur, ...res.matches.filter((m) => !seen.has(m.match_id))];
+        });
+        setNextStart((n) => n + 10);
+        setHasMore(res.has_more);
+      })
+      .catch((err) => setMoreError(err instanceof Error ? err.message : 'Failed to load more matches'))
+      .finally(() => setLoadingMore(false));
+  }
+
   const [queueFilter, setQueueFilter] = useState<Set<string>>(new Set());
   // Game modes that actually appear in the loaded matches, most played first.
   const queues = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const m of profile?.matches ?? []) {
+    for (const m of allMatches) {
       const q = normalizeQueue(m.queue);
       counts.set(q, (counts.get(q) ?? 0) + 1);
     }
     return [...counts].sort((a, b) => b[1] - a[1]);
-  }, [profile]);
-  const visibleMatches = (profile?.matches ?? []).filter(
+  }, [allMatches]);
+  const visibleMatches = allMatches.filter(
     (m) => queueFilter.size === 0 || queueFilter.has(normalizeQueue(m.queue)),
   );
   const [roleFilter, setRoleFilter] = useState<Set<string>>(new Set());
@@ -399,7 +425,7 @@ export default function ProfilePage() {
             </section>
 
             <section>
-              <SectionTitle hint="Last 20 matches · click a match for the full scoreboard">Match history</SectionTitle>
+              <SectionTitle hint="Click a match for the full scoreboard">Match history</SectionTitle>
               {unavailable.has('matches') ? (
                 <Unavailable what="Your match history" />
               ) : profile.matches.length === 0 ? (
@@ -438,6 +464,19 @@ export default function ProfilePage() {
                       <MatchRow key={match.match_id} match={match} index={index} />
                     ))}
                   </ul>
+                  {canLoadMore && (
+                    <div className="mt-6 text-center">
+                      <button
+                        type="button"
+                        onClick={loadMore}
+                        disabled={loadingMore}
+                        className="rounded-sm border border-border bg-bg-secondary px-5 py-2 text-xs font-semibold uppercase tracking-widest text-text-secondary transition-colors hover:border-accent-red hover:text-text-primary disabled:opacity-60"
+                      >
+                        {loadingMore ? 'Loading...' : 'Load more matches'}
+                      </button>
+                      {moreError && <p className="mt-2 text-xs text-accent-red">{moreError}</p>}
+                    </div>
+                  )}
                 </>
               )}
             </section>

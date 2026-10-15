@@ -63,6 +63,11 @@ class MatchSummary(BaseModel):
     players: list[PlayerRow] = []
 
 
+class MatchesResponse(BaseModel):
+    matches: list[MatchSummary]
+    has_more: bool
+
+
 class ProfileResponse(BaseModel):
     puuid: str
     game_name: str | None = None
@@ -71,5 +76,6 @@ class ProfileResponse(BaseModel):
     wallet: Wallet | None = None
     agents: list[AgentInfo] = []
     matches: list[MatchSummary] = []
+    has_more_matches: bool = False
     # Sections Riot did not return (shown as unavailable instead of failing the page).
     unavailable: list[str] = []

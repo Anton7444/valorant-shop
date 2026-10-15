@@ -3,6 +3,7 @@ import type {
   CatalogResponse,
   DailyStoreResponse,
   InventoryResponse,
+  MatchesResponse,
   ProfileResponse,
   SessionResponse,
   Wallet,
@@ -101,4 +102,8 @@ export function getCatalog(): Promise<CatalogResponse> {
 
 export function getProfile(): Promise<ProfileResponse> {
   return request('/api/profile');
+}
+
+export function getMatches(start: number): Promise<MatchesResponse> {
+  return request(`/api/profile/matches?start=${start}`);
 }
