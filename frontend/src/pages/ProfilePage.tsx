@@ -23,8 +23,12 @@ const QUEUE_LABELS: Record<string, string> = {
   custom: 'Custom',
 };
 
+// Custom games come back with an empty queue id.
+const normalizeQueue = (queue: string) => queue || 'custom';
+
 function queueLabel(queue: string): string {
-  return QUEUE_LABELS[queue] ?? (queue ? queue.charAt(0).toUpperCase() + queue.slice(1) : 'Unknown');
+  const q = normalizeQueue(queue);
+  return QUEUE_LABELS[q] ?? q.charAt(0).toUpperCase() + q.slice(1);
 }
 
 function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
@@ -275,6 +279,19 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [dispatch, navigate]);
 
+  const [queueFilter, setQueueFilter] = useState<Set<string>>(new Set());
+  // Game modes that actually appear in the loaded matches, most played first.
+  const queues = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const m of profile?.matches ?? []) {
+      const q = normalizeQueue(m.queue);
+      counts.set(q, (counts.get(q) ?? 0) + 1);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1]);
+  }, [profile]);
+  const visibleMatches = (profile?.matches ?? []).filter(
+    (m) => queueFilter.size === 0 || queueFilter.has(normalizeQueue(m.queue)),
+  );
   const [roleFilter, setRoleFilter] = useState<Set<string>>(new Set());
   const { language } = useLanguage();
   const roles = useMemo(() => {
@@ -382,17 +399,46 @@ export default function ProfilePage() {
             </section>
 
             <section>
-              <SectionTitle hint="Last 10 matches · click a match for the full scoreboard">Match history</SectionTitle>
+              <SectionTitle hint="Last 20 matches · click a match for the full scoreboard">Match history</SectionTitle>
               {unavailable.has('matches') ? (
                 <Unavailable what="Your match history" />
               ) : profile.matches.length === 0 ? (
                 <p className="py-6 text-sm text-text-secondary">No recent matches found.</p>
               ) : (
-                <ul className="space-y-3">
-                  {profile.matches.map((match, index) => (
-                    <MatchRow key={match.match_id} match={match} index={index} />
-                  ))}
-                </ul>
+                <>
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Mode</span>
+                    {queues.map(([queue, count]) => (
+                      <Chip
+                        key={queue}
+                        active={queueFilter.has(queue)}
+                        onClick={() =>
+                          setQueueFilter((cur) => {
+                            const next = new Set(cur);
+                            if (!next.delete(queue)) next.add(queue);
+                            return next;
+                          })
+                        }
+                      >
+                        {queueLabel(queue)} <span className="ml-1 opacity-60">{count}</span>
+                      </Chip>
+                    ))}
+                    {queueFilter.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setQueueFilter(new Set())}
+                        className="ml-2 text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <ul className="space-y-3">
+                    {visibleMatches.map((match, index) => (
+                      <MatchRow key={match.match_id} match={match} index={index} />
+                    ))}
+                  </ul>
+                </>
               )}
             </section>
           </>

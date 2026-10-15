@@ -10,7 +10,7 @@ from app.services.asset_cache import ITEM_TYPE_AGENT, get_agent, get_map
 
 logger = logging.getLogger(__name__)
 
-MATCH_COUNT = 10
+MATCH_COUNT = 20
 
 
 def _pd(session: SessionData) -> str:
