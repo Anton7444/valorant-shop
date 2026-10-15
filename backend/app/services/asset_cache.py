@@ -34,6 +34,7 @@ _skin_chromas_to_skin: dict[str, dict] = {}
 _skin_video_by_uuid: dict[str, str] = {}
 _skin_weapon: dict[str, str] = {}
 _weapon_cost: dict[str, int] = {}
+_maps: dict[str, dict] = {}
 _content_tiers: dict[str, dict] = {}
 _bundles: dict[str, dict] = {}
 _buddies: dict[str, dict] = {}
@@ -134,6 +135,20 @@ async def initialize() -> None:
     except Exception:
         logger.warning("Could not load weapon list", exc_info=True)
 
+    # Map names for match history (best effort, keyed by the in-game map path).
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            maps_resp = await client.get(f"{BASE_URL}/maps")
+            maps_resp.raise_for_status()
+        for game_map in maps_resp.json()["data"]:
+            if game_map.get("mapUrl"):
+                _maps[game_map["mapUrl"].lower()] = {
+                    "uuid": game_map["uuid"].lower(),
+                    "displayName": game_map.get("displayName", ""),
+                }
+    except Exception:
+        logger.warning("Could not load map list", exc_info=True)
+
     # Content tiers
     for tier in tiers_resp:
         uuid = tier["uuid"].lower()
@@ -180,6 +195,7 @@ async def initialize() -> None:
             "uuid": uuid,
             "displayName": agent.get("displayName", ""),
             "displayIcon": agent.get("displayIcon") or agent.get("fullPortrait", "") or "",
+            "isBaseContent": bool(agent.get("isBaseContent")),
         }
 
     # Client version
@@ -259,6 +275,14 @@ def get_skin_video(*uuids: str) -> str | None:
         if video:
             return video
     return None
+
+
+def all_agents() -> list[dict]:
+    return list(_agents.values())
+
+
+def get_map(map_url: str) -> dict | None:
+    return _maps.get(map_url.lower())
 
 
 def get_agent(uuid: str) -> dict | None:

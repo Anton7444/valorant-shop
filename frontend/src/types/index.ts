@@ -71,9 +71,47 @@ export interface Bundle {
   duration_remaining_secs: number;
 }
 
+export interface AgentInfo {
+  uuid: string;
+  name: string;
+  icon: string;
+  owned: boolean;
+}
+
+export interface MatchSummary {
+  match_id: string;
+  map_uuid: string | null;
+  map_name: string;
+  queue: string;
+  started_at: number;
+  length_secs: number;
+  agent_uuid: string | null;
+  agent_name: string;
+  agent_icon: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  score: number;
+  won: boolean | null;
+  rounds_won: number | null;
+  rounds_lost: number | null;
+}
+
+export interface ProfileResponse {
+  puuid: string;
+  game_name: string | null;
+  tag_line: string | null;
+  level: number | null;
+  wallet: Wallet | null;
+  agents: AgentInfo[];
+  matches: MatchSummary[];
+  unavailable: string[];
+}
+
 export interface Wallet {
   valorant_points: number;
   radianite_points: number;
+  kingdom_credits?: number;
 }
 
 export interface DailyStoreResponse {

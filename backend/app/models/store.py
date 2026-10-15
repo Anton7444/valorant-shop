@@ -68,6 +68,7 @@ class Bundle(BaseModel):
 class Wallet(BaseModel):
     valorant_points: int
     radianite_points: int
+    kingdom_credits: int = 0
 
 
 class DailyStoreResponse(BaseModel):

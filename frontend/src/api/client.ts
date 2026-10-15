@@ -3,6 +3,7 @@ import type {
   CatalogResponse,
   DailyStoreResponse,
   InventoryResponse,
+  ProfileResponse,
   SessionResponse,
   Wallet,
 } from '../types';
@@ -96,4 +97,8 @@ export function getInventory(): Promise<InventoryResponse> {
 
 export function getCatalog(): Promise<CatalogResponse> {
   return request('/api/store/catalog');
+}
+
+export function getProfile(): Promise<ProfileResponse> {
+  return request('/api/profile');
 }

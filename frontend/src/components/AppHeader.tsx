@@ -9,6 +9,7 @@ import WalletDisplay from './WalletDisplay';
 const NAV_ITEMS = [
   { to: '/shop', label: 'Store' },
   { to: '/inventory', label: 'Inventory' },
+  { to: '/profile', label: 'Profile' },
   { to: '/catalog', label: 'Catalog' },
   { to: '/bundle', label: 'Bundle' },
 ];
