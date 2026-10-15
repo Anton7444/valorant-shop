@@ -12,10 +12,11 @@ const NAV_ITEMS = [
   { to: '/profile', label: 'Profile' },
   { to: '/catalog', label: 'Catalog' },
   { to: '/bundle', label: 'Bundle' },
+  { to: '/prices', label: 'VP Prices' },
 ];
 
 // Pages anyone can open without signing in.
-const PUBLIC_PATHS = ['/bundle', '/catalog'];
+const PUBLIC_PATHS = ['/bundle', '/catalog', '/prices'];
 
 // Each page mounts its own header, so remember where the highlight last sat
 // and animate from there to the new tab instead of popping in.
