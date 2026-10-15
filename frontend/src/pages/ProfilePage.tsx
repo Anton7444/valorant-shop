@@ -443,16 +443,17 @@ export default function ProfilePage() {
                   {visibleAgents.map((agent, agentIndex) => {
                     const name = localizedName(agent.uuid, agent.name, localizedNames);
                     return (
-                      <div
-                        key={agent.uuid}
-                        title={agent.owned ? name : `${name} (locked)`}
-                        style={staggerStyle(5 + agentIndex)}
-                        className={`rise-in overflow-hidden rounded-lg border border-border bg-bg-card text-center ${
-                          agent.owned ? '' : 'opacity-35 grayscale'
-                        }`}
-                      >
-                        <img src={agent.icon} alt={name} loading="lazy" className="aspect-square w-full object-cover" />
-                        <div className="truncate px-1 py-1.5 text-[11px] text-text-primary">{name}</div>
+                      // The entrance animation drives opacity and filter on this element, so the
+                      // locked (dimmed, grey) look lives on the inner card to be there from frame one.
+                      <div key={agent.uuid} title={agent.owned ? name : `${name} (locked)`} className="rise-in" style={staggerStyle(5 + agentIndex)}>
+                        <div
+                          className={`overflow-hidden rounded-lg border border-border bg-bg-card text-center ${
+                            agent.owned ? '' : 'opacity-35 grayscale'
+                          }`}
+                        >
+                          <img src={agent.icon} alt={name} loading="lazy" className="aspect-square w-full object-cover" />
+                          <div className="truncate px-1 py-1.5 text-[11px] text-text-primary">{name}</div>
+                        </div>
                       </div>
                     );
                   })}
