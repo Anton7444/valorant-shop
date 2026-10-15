@@ -27,18 +27,28 @@ async def _get_json(client: httpx.AsyncClient, session: SessionData, url: str) -
     return resp.json()
 
 
-async def _fetch_identity(session: SessionData) -> tuple[str | None, str | None]:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+async def _lookup_names(
+    client: httpx.AsyncClient, session: SessionData, puuids: list[str]
+) -> dict[str, tuple[str | None, str | None]]:
+    """Riot ID (name, tag) per player id via the name service."""
+    names: dict[str, tuple[str | None, str | None]] = {}
+    unique = list(dict.fromkeys(puuids))
+    for i in range(0, len(unique), 50):
         resp = await client.put(
             f"{_pd(session)}/name-service/v2/players",
             headers=_headers(session),
-            json=[session.puuid],
+            json=unique[i : i + 50],
         )
         resp.raise_for_status()
-        players = resp.json()
-    if not players:
-        return None, None
-    return players[0].get("GameName"), players[0].get("TagLine")
+        for player in resp.json():
+            names[player.get("Subject", "")] = (player.get("GameName") or None, player.get("TagLine") or None)
+    return names
+
+
+async def _fetch_identity(session: SessionData) -> tuple[str | None, str | None]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        names = await _lookup_names(client, session, [session.puuid])
+    return names.get(session.puuid, (None, None))
 
 
 async def _fetch_level(session: SessionData) -> int | None:
@@ -205,14 +215,28 @@ async def _fetch_matches(session: SessionData) -> list[MatchSummary]:
             *(_get_json(client, session, f"{_pd(session)}/match-details/v1/matches/{mid}") for mid in match_ids),
             return_exceptions=True,
         )
-    matches: list[MatchSummary] = []
-    for result in results:
-        if isinstance(result, Exception):
-            logger.warning("Match details failed: %s", result)
-            continue
-        match = _parse_match(result, session.puuid)
-        if match:
-            matches.append(match)
+        matches: list[MatchSummary] = []
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning("Match details failed: %s", result)
+                continue
+            match = _parse_match(result, session.puuid)
+            if match:
+                matches.append(match)
+
+        # Match details only carry names for some players (privacy settings), so
+        # fill the gaps from the name service. If that fails, rows stay "Hidden".
+        missing = [p.puuid for m in matches for p in m.players if not p.game_name]
+        if missing:
+            try:
+                names = await _lookup_names(client, session, missing)
+            except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+                logger.warning("Name lookup failed: %s", exc)
+                names = {}
+            for m in matches:
+                for p in m.players:
+                    if not p.game_name and p.puuid in names:
+                        p.game_name, p.tag_line = names[p.puuid]
     return sorted(matches, key=lambda m: m.started_at, reverse=True)
 
 
