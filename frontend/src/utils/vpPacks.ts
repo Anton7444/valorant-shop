@@ -15,6 +15,26 @@ export const VP_PACKS: VpPack[] = [
   { vp: 11000, bonus: 1000, aud: 148 },
 ];
 
+// Packs get cheaper per VP as they get bigger, so for large amounts buy the biggest
+// pack in bulk and solve only the (small) remainder exactly. Keeping a few packs
+// back for the exact step makes the result match a full optimisation.
+const BIG_VP = VP_PACKS[VP_PACKS.length - 1];
+const KEEP_BACK = 3;
+
+function mergePurchases(a: Purchase, b: Purchase): Purchase {
+  const packs = new Map(a.packs);
+  for (const [pack, n] of b.packs) packs.set(pack, (packs.get(pack) ?? 0) + n);
+  return { vp: a.vp + b.vp, aud: Math.round((a.aud + b.aud) * 100) / 100, packs };
+}
+
+function bulk(n: number): Purchase {
+  return {
+    vp: n * BIG_VP.vp,
+    aud: Math.round(n * BIG_VP.aud * 100) / 100,
+    packs: n > 0 ? new Map([[BIG_VP, n]]) : new Map(),
+  };
+}
+
 export interface Purchase {
   vp: number;
   aud: number;
@@ -25,6 +45,11 @@ const cents = (aud: number) => Math.round(aud * 100);
 
 // Most VP for a budget (unbounded knapsack over cents).
 export function bestForBudget(budgetAud: number): Purchase {
+  const n = Math.max(0, Math.floor(budgetAud / BIG_VP.aud) - KEEP_BACK);
+  return mergePurchases(bulk(n), bestForBudgetExact(budgetAud - n * BIG_VP.aud));
+}
+
+function bestForBudgetExact(budgetAud: number): Purchase {
   const budget = cents(budgetAud);
   const best: { vp: number; spent: number; pick: number }[] = Array.from({ length: budget + 1 }, () => ({
     vp: 0,
@@ -64,6 +89,11 @@ function rebuild(best: { vp: number; spent: number; pick: number }[], from: numb
 
 // Cheapest way to reach at least `targetVp`.
 export function cheapestForVp(targetVp: number): Purchase {
+  const n = Math.max(0, Math.floor(targetVp / BIG_VP.vp) - KEEP_BACK);
+  return mergePurchases(bulk(n), cheapestForVpExact(targetVp - n * BIG_VP.vp));
+}
+
+function cheapestForVpExact(targetVp: number): Purchase {
   const max = targetVp + Math.max(...VP_PACKS.map((p) => p.vp));
   const cost: number[] = Array(max + 1).fill(Infinity);
   const pick: number[] = Array(max + 1).fill(-1);
@@ -120,7 +150,7 @@ function summarize(picks: number[]): RpPurchase {
 }
 
 // Most RP for a VP budget. VP is a multiple of 100 in every pack, so work in hundreds.
-export function bestRpForVp(vpBudget: number): RpPurchase {
+function bestRpForVpExact(vpBudget: number): RpPurchase {
   const budget = Math.floor(vpBudget / 100);
   const rp: number[] = Array(budget + 1).fill(0);
   const pick: number[] = Array(budget + 1).fill(-1); // -1 carries over the previous value
@@ -148,7 +178,7 @@ export function bestRpForVp(vpBudget: number): RpPurchase {
 }
 
 // Cheapest (in VP) way to reach at least `targetRp`.
-export function cheapestVpForRp(targetRp: number): RpPurchase {
+function cheapestVpForRpExact(targetRp: number): RpPurchase {
   const max = targetRp + Math.max(...RP_PACKS.map((p) => p.rp));
   const cost: number[] = Array(max + 1).fill(Infinity);
   const pick: number[] = Array(max + 1).fill(-1);
@@ -171,4 +201,26 @@ export function cheapestVpForRp(targetRp: number): RpPurchase {
     r = Math.max(0, r - RP_PACKS[pick[r]].rp);
   }
   return summarize(picks);
+}
+
+const BIG_RP = RP_PACKS[RP_PACKS.length - 1];
+
+function mergeRp(a: RpPurchase, b: RpPurchase): RpPurchase {
+  const packs = new Map(a.packs);
+  for (const [pack, n] of b.packs) packs.set(pack, (packs.get(pack) ?? 0) + n);
+  return { rp: a.rp + b.rp, vp: a.vp + b.vp, packs };
+}
+
+function bulkRp(n: number): RpPurchase {
+  return { rp: n * BIG_RP.rp, vp: n * BIG_RP.vp, packs: n > 0 ? new Map([[BIG_RP, n]]) : new Map() };
+}
+
+export function bestRpForVp(vpBudget: number): RpPurchase {
+  const n = Math.max(0, Math.floor(vpBudget / BIG_RP.vp) - KEEP_BACK);
+  return mergeRp(bulkRp(n), bestRpForVpExact(vpBudget - n * BIG_RP.vp));
+}
+
+export function cheapestVpForRp(targetRp: number): RpPurchase {
+  const n = Math.max(0, Math.floor(targetRp / BIG_RP.rp) - KEEP_BACK);
+  return mergeRp(bulkRp(n), cheapestVpForRpExact(targetRp - n * BIG_RP.rp));
 }

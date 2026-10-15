@@ -51,12 +51,12 @@ export default function PricesPage() {
 
   const budget = Number(audText);
   const forBudget = useMemo(
-    () => (Number.isFinite(budget) && budget >= 1 && budget <= 2000 ? bestForBudget(budget) : null),
+    () => (Number.isFinite(budget) && budget >= 1 && budget <= 1_000_000 ? bestForBudget(budget) : null),
     [budget],
   );
   const target = Number(vpText);
   const forVp = useMemo(
-    () => (Number.isFinite(target) && target >= 1 && target <= 100000 ? cheapestForVp(Math.round(target)) : null),
+    () => (Number.isFinite(target) && target >= 1 && target <= 100_000_000 ? cheapestForVp(Math.round(target)) : null),
     [target],
   );
 
@@ -64,12 +64,12 @@ export default function PricesPage() {
   const [rpText, setRpText] = useState('');
   const vpBudget = Number(vpBudgetText);
   const rpForVp = useMemo(
-    () => (Number.isFinite(vpBudget) && vpBudget >= 1600 && vpBudget <= 200000 ? bestRpForVp(vpBudget) : null),
+    () => (Number.isFinite(vpBudget) && vpBudget >= 1600 && vpBudget <= 100_000_000 ? bestRpForVp(vpBudget) : null),
     [vpBudget],
   );
   const rpTarget = Number(rpText);
   const vpForRp = useMemo(
-    () => (Number.isFinite(rpTarget) && rpTarget >= 1 && rpTarget <= 5000 ? cheapestVpForRp(Math.round(rpTarget)) : null),
+    () => (Number.isFinite(rpTarget) && rpTarget >= 1 && rpTarget <= 1_000_000 ? cheapestVpForRp(Math.round(rpTarget)) : null),
     [rpTarget],
   );
   const vpForRpInAud = useMemo(() => (vpForRp ? cheapestForVp(vpForRp.vp).aud : null), [vpForRp]);
