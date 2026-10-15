@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
+import ScrollFade from '../components/ScrollFade';
 import {
   RP_PACKS,
   VP_PACKS,
@@ -85,7 +86,7 @@ export default function PricesPage() {
           <h2 className="font-display mb-1 text-xl uppercase tracking-[0.18em] text-text-primary">VP price list</h2>
           <p className="mb-5 text-xs text-text-secondary">Valorant Points packs in Australian dollars.</p>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-bg-card">
+          <ScrollFade className="rounded-lg border border-border bg-bg-card">
             <table className="w-full min-w-[460px] border-collapse text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-text-secondary">
@@ -113,7 +114,7 @@ export default function PricesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollFade>
           <p className="mt-3 text-xs leading-relaxed text-text-secondary">
             Prices come from third-party price guides and can change or differ by payment method and store. Check the
             Riot store before you buy.
@@ -176,7 +177,7 @@ export default function PricesPage() {
             Radianite Points (RP) are bought with VP in the store and cannot be turned back into VP.
           </p>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-bg-card">
+          <ScrollFade className="rounded-lg border border-border bg-bg-card">
             <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-text-secondary">
@@ -195,7 +196,7 @@ export default function PricesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollFade>
         </section>
 
         <section className="grid gap-6 md:grid-cols-2">

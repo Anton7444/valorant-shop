@@ -5,6 +5,8 @@ import { useLanguage } from '../context/useLanguage';
 import * as api from '../api/client';
 import type { Wallet } from '../types';
 import WalletDisplay from './WalletDisplay';
+import LanguageSwitch from './LanguageSwitch';
+import { useRovingArrows } from '../hooks/useRovingArrows';
 
 const NAV_ITEMS = [
   { to: '/shop', label: 'Store' },
@@ -31,7 +33,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const navItems = NAV_ITEMS.filter(
     (item) => (loggedIn ? item.to !== '/bundle' : PUBLIC_PATHS.includes(item.to)),
   );
-  const navRef = useRef<HTMLElement>(null);
+  const navRef = useRovingArrows<HTMLElement>();
   const indicatorRef = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
@@ -61,7 +63,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [pathname, loggedIn]);
+  }, [pathname, loggedIn, navRef]);
 
   async function handleLogout() {
     await api.logout().catch(() => {});
@@ -112,17 +114,16 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               {state.puuid.slice(0, 8)}
             </span>
           )}
-          <label className="sr-only" htmlFor="language-select">Skin and bundle language</label>
-          <select
-            id="language-select"
+          <LanguageSwitch
+            label="Skin and bundle language"
             value={language}
-            onChange={(event) => setLanguage(event.target.value as typeof language)}
-            className="rounded-sm border border-border bg-bg-secondary px-2 py-1.5 text-xs text-text-secondary transition-colors hover:border-text-secondary focus:border-accent-red"
-          >
-            <option value="en-US">EN</option>
-            <option value="zh-TW">繁中</option>
-            <option value="zh-CN">简中</option>
-          </select>
+            onChange={setLanguage}
+            options={[
+              { value: 'en-US', label: 'EN' },
+              { value: 'zh-TW', label: '繁中' },
+              { value: 'zh-CN', label: '简中' },
+            ]}
+          />
           {loggedIn ? (
             <button
               onClick={handleLogout}

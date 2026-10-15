@@ -227,3 +227,83 @@ select:focus-visible {
 .card-motion-lg:hover {
   transform: translateY(-3px);
 }
+
+/* ---- Interaction polish (shape and motion only; no colour changes) ---- */
+
+/* Loading skeletons: a neutral band sweeps across with an eased "charge, then glide" curve */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: skeleton-sweep 1.8s cubic-bezier(0.714, 0.121, 0.211, 0.888) infinite;
+}
+.skeleton-line {
+  height: 0.75rem;
+  border-radius: 0.25rem;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* Edges of a horizontally scrolling area fade out only on the side that has more content.
+   Eight stops follow an eased curve so there is no visible banding. */
+.scroll-fade {
+  --fade-l: 0px;
+  --fade-r: 0px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.05) calc(var(--fade-l) * 0.15),
+    rgba(0, 0, 0, 0.15) calc(var(--fade-l) * 0.3),
+    rgba(0, 0, 0, 0.5) calc(var(--fade-l) * 0.6),
+    rgba(0, 0, 0, 0.85) calc(var(--fade-l) * 0.87),
+    #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)),
+    rgba(0, 0, 0, 0.85) calc(100% - var(--fade-r) * 0.87),
+    rgba(0, 0, 0, 0.5) calc(100% - var(--fade-r) * 0.6),
+    rgba(0, 0, 0, 0.15) calc(100% - var(--fade-r) * 0.3),
+    rgba(0, 0, 0, 0.05) calc(100% - var(--fade-r) * 0.15),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.05) calc(var(--fade-l) * 0.15),
+    rgba(0, 0, 0, 0.15) calc(var(--fade-l) * 0.3),
+    rgba(0, 0, 0, 0.5) calc(var(--fade-l) * 0.6),
+    rgba(0, 0, 0, 0.85) calc(var(--fade-l) * 0.87),
+    #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)),
+    rgba(0, 0, 0, 0.85) calc(100% - var(--fade-r) * 0.87),
+    rgba(0, 0, 0, 0.5) calc(100% - var(--fade-r) * 0.6),
+    rgba(0, 0, 0, 0.15) calc(100% - var(--fade-r) * 0.3),
+    rgba(0, 0, 0, 0.05) calc(100% - var(--fade-r) * 0.15),
+    transparent 100%
+  );
+}
+
+/* Hairline borders on high-density screens (0.5px instead of 1px) */
+@media (min-resolution: 2dppx) {
+  .border { border-width: 0.5px; }
+  .border-t { border-top-width: 0.5px; }
+  .border-b { border-bottom-width: 0.5px; }
+}
+
+/* Buttons dip slightly when pressed. Large row-style buttons opt out with .no-press */
+button:not(:disabled):not(.no-press) {
+  transition-property: transform, color, background-color, border-color, opacity;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+button:not(:disabled):not(.no-press):active {
+  transform: scale(0.97);
+}

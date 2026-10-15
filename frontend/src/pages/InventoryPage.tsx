@@ -5,6 +5,8 @@ import * as api from '../api/client';
 import type { OwnedSkin } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import AppHeader from '../components/AppHeader';
+import SearchInput from '../components/SearchInput';
+import { CardGridSkeleton } from '../components/Skeletons';
 import SkinFilters from '../components/SkinFilters';
 import { filterSkins, tiersOf, toggle } from '../utils/skinFilters';
 import SkinCollectionCard from '../components/SkinCollectionCard';
@@ -56,9 +58,9 @@ export default function InventoryPage() {
           <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">
             My skins {!loading && !error && <span className="text-text-secondary">({skins.length})</span>}
           </h2>
-          <input
+          <SearchInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="Search skins..."
             className="rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-secondary/50 focus:border-accent-red"
           />
@@ -82,7 +84,7 @@ export default function InventoryPage() {
         )}
 
         {loading ? (
-          <p className="py-20 text-center text-text-secondary">Loading...</p>
+          <CardGridSkeleton />
         ) : error ? (
           <p className="py-20 text-center text-accent-red">{error}</p>
         ) : filtered.length === 0 ? (
