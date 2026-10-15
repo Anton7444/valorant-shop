@@ -35,18 +35,32 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const indicatorRef = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
-    const active = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const nav = navRef.current;
     const el = indicatorRef.current;
-    if (!active || !el) return;
-    // Defer one frame so the browser paints the old position first and the
-    // transition has something to slide from.
-    const frame = requestAnimationFrame(() => {
+    if (!nav || !el) return;
+
+    const place = () => {
+      const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!active) return;
       lastIndicator = { left: active.offsetLeft, width: active.offsetWidth };
       el.style.width = `${lastIndicator.width}px`;
       el.style.transform = `translateX(${lastIndicator.left}px)`;
       el.style.opacity = '1';
-    });
-    return () => cancelAnimationFrame(frame);
+    };
+
+    // Defer one frame so the browser paints the old position first and the
+    // transition has something to slide from.
+    const frame = requestAnimationFrame(place);
+    // Tab widths change once the web font loads or the window resizes; measure
+    // again so the highlight never sits off its tab.
+    void document.fonts?.ready.then(place);
+    const observer = new ResizeObserver(place);
+    observer.observe(nav);
+    nav.querySelectorAll('a').forEach((link) => observer.observe(link));
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [pathname, loggedIn]);
 
   async function handleLogout() {
@@ -80,7 +94,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `font-display relative z-10 rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
+                  `font-display relative z-10 whitespace-nowrap rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
                     isActive ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary'
                   }`
                 }
