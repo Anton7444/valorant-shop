@@ -191,20 +191,20 @@ export default function LoginPage() {
                 </a>
               </p>
 
-              <div className="mt-4 border-t border-border/60 pt-3 text-center">
-                <Link
-                  to="/catalog"
-                  className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
-                >
-                  Browse skin catalog &rarr;
-                </Link>
-                <span className="mx-3 text-border">|</span>
-                <Link
-                  to="/bundle"
-                  className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
-                >
-                  Featured bundle &rarr;
-                </Link>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
+                {[
+                  { to: '/catalog', label: 'Skin catalog' },
+                  { to: '/bundle', label: 'Featured bundle' },
+                  { to: '/prices', label: 'VP prices' },
+                ].map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className="font-display text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red"
+                  >
+                    {link.label} &rarr;
+                  </Link>
+                ))}
               </div>
 
               {error && (
