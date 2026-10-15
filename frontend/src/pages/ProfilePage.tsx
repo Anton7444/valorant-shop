@@ -228,6 +228,22 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   const minutes = Math.round(match.length_secs / 60);
   const kd = match.deaths === 0 ? match.kills.toFixed(1) : (match.kills / match.deaths).toFixed(2);
   const [open, setOpen] = useState(false);
+  // The scoreboard is built the first time a match is opened, then kept so it can animate shut.
+  const [built, setBuilt] = useState(false);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (built) {
+      setOpen(true);
+      return;
+    }
+    // Mount it collapsed first, then open on a later frame so the height can animate.
+    setBuilt(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
+  }
 
   return (
     <li
@@ -237,7 +253,7 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-expanded={open}
         className="no-press flex w-full items-center gap-4 p-3 text-left"
       >
@@ -284,7 +300,19 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {open && match.players.length > 0 && <Scoreboard match={match} />}
+      {built && match.players.length > 0 && (
+        // 0fr -> 1fr animates the height without measuring it
+        <div
+          inert={!open}
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <Scoreboard match={match} />
+          </div>
+        </div>
+      )}
     </li>
   );
 }

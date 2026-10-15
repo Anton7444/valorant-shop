@@ -41,7 +41,7 @@ export default function LanguageSwitch<T extends string>({
           role="radio"
           aria-checked={option.value === value}
           onClick={() => onChange(option.value)}
-          className={`relative z-10 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200 ${
+          className={`relative z-10 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium @max-[460px]/header:px-1.5 transition-colors duration-200 ${
             option.value === value ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
