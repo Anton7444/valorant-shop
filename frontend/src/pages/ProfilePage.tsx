@@ -18,6 +18,7 @@ const QUEUE_LABELS: Record<string, string> = {
   swiftplay: 'Swiftplay',
   hurm: 'Team Deathmatch',
   premier: 'Premier',
+  abilitydraftarena: 'Ability Draft Arena',
   snowball: 'Snowball Fight',
   newmap: 'New Map',
   custom: 'Custom',
@@ -109,15 +110,31 @@ const COLUMNS: { key: string; label: string; render: (p: PlayerRow) => React.Rea
   { key: 'fd', label: 'FD', render: (p) => p.first_deaths },
 ];
 
+// "TEAM_1" -> "Team 1"; names like "Red" / "Blue" are kept.
+function teamLabel(teamId: string): string {
+  const numbered = /^team_?(\d+)$/i.exec(teamId);
+  return numbered ? `Team ${numbered[1]}` : teamId;
+}
+
 function Scoreboard({ match }: { match: MatchSummary }) {
   const { localizedNames } = useLanguage();
-  // Group players by team (a mode without teams is one group).
+  // Group players by team (a mode without teams is one group), best team first:
+  // winners, then rounds won, then the team's combined score.
   const groups = match.teams.length
-    ? match.teams.map((team) => ({
-        team,
-        players: match.players.filter((p) => p.team_id === team.team_id),
-      }))
-    : [{ team: null, players: match.players }];
+    ? match.teams
+        .map((team) => {
+          const players = match.players.filter((p) => p.team_id === team.team_id);
+          return { team, players, total: players.reduce((sum, p) => sum + p.score, 0) };
+        })
+        .sort(
+          (a, b) =>
+            Number(b.team.won === true) - Number(a.team.won === true) ||
+            (b.team.rounds_won ?? 0) - (a.team.rounds_won ?? 0) ||
+            b.total - a.total,
+        )
+    : [{ team: null, players: match.players, total: 0 }];
+
+  const noRounds = match.teams.every((t) => !t.rounds_won);
 
   return (
     <div className="overflow-x-auto border-t border-border bg-bg-primary/40">
@@ -129,7 +146,9 @@ function Scoreboard({ match }: { match: MatchSummary }) {
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-text-secondary" style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }}>
                 <th className="px-3 py-2 text-left font-semibold" style={{ color }}>
-                  {team ? `${team.team_id}${team.rounds_won !== null ? ` · ${team.rounds_won}` : ''}` : 'Players'}
+                  {team
+                    ? `${groups.length > 2 ? `#${groupIndex + 1} · ` : ''}${teamLabel(team.team_id)}${team.rounds_won !== null && !noRounds ? ` · ${team.rounds_won}` : ''}`
+                    : 'Players'}
                 </th>
                 <th className="px-2 py-2 text-left font-semibold">Rank</th>
                 {COLUMNS.map((c) => (
@@ -163,7 +182,7 @@ function Scoreboard({ match }: { match: MatchSummary }) {
                             {player.game_name ?? <span className="text-text-secondary">Hidden</span>}
                             {player.tag_line && <span className="ml-1 text-xs text-text-secondary">#{player.tag_line}</span>}
                           </div>
-                          <div className="truncate text-[11px] text-text-secondary">{agent}</div>
+                          {player.agent_uuid && <div className="truncate text-[11px] text-text-secondary">{agent}</div>}
                         </div>
                       </div>
                     </td>
@@ -186,7 +205,9 @@ function Scoreboard({ match }: { match: MatchSummary }) {
 
 function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   const { localizedNames } = useLanguage();
-  const result = match.won === true ? 'Win' : match.won === false ? 'Loss' : 'Draw';
+  // Modes without round wins (e.g. Ability Draft Arena) report 0:0 for everyone.
+  const noRounds = match.rounds_won === 0 && match.rounds_lost === 0;
+  const result = noRounds ? 'Match' : match.won === true ? 'Win' : match.won === false ? 'Loss' : 'Draw';
   const color =
     match.won === true ? 'var(--color-accent-teal)' : match.won === false ? 'var(--color-accent-red)' : 'var(--color-text-secondary)';
   const agent = match.agent_uuid ? localizedName(match.agent_uuid, match.agent_name, localizedNames) : match.agent_name;
@@ -218,14 +239,14 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
             <span className="font-display text-sm uppercase tracking-widest" style={{ color }}>
               {result}
             </span>
-            {match.rounds_won !== null && match.rounds_lost !== null && (
+            {!noRounds && match.rounds_won !== null && match.rounds_lost !== null && (
               <span className="text-sm font-semibold text-text-primary">
                 {match.rounds_won} : {match.rounds_lost}
               </span>
             )}
           </div>
           <div className="truncate text-xs text-text-secondary">
-            {mapName} · {agent} · {queueLabel(match.queue)}
+            {[mapName, match.agent_uuid ? agent : null, queueLabel(match.queue)].filter(Boolean).join(' · ')}
           </div>
         </div>
         <div className="hidden text-right text-xs text-text-secondary sm:block">

@@ -126,9 +126,18 @@ def _round_stats(details: dict) -> dict[str, dict[str, int]]:
     return stats
 
 
+def _placeholder_icon() -> str:
+    """Icon shown when a mode has no agent (e.g. Ability Draft Arena): KAY/O."""
+    for agent in asset_cache.all_agents():
+        if agent["displayName"].lower() == "kay/o":
+            return agent["displayIcon"]
+    return ""
+
+
 def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
     info = details.get("matchInfo", {})
     raw_players = details.get("players", [])
+    placeholder = _placeholder_icon()
     me = next((p for p in raw_players if p.get("subject") == puuid), None)
     if not me:
         return None
@@ -166,7 +175,7 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
                 team_id=p.get("teamId", ""),
                 agent_uuid=ag["uuid"] if ag else None,
                 agent_name=ag["displayName"] if ag else "",
-                agent_icon=ag["displayIcon"] if ag else "",
+                agent_icon=ag["displayIcon"] if ag else placeholder,
                 level=p.get("accountLevel"),
                 rank=_rank_name(p.get("competitiveTier", 0)),
                 score=st.get("score", 0),
@@ -195,7 +204,7 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
         length_secs=int(info.get("gameLengthMillis", 0) // 1000),
         agent_uuid=agent["uuid"] if agent else None,
         agent_name=agent["displayName"] if agent else "Unknown",
-        agent_icon=agent["displayIcon"] if agent else "",
+        agent_icon=agent["displayIcon"] if agent else placeholder,
         kills=stats.get("kills", 0),
         deaths=stats.get("deaths", 0),
         assists=stats.get("assists", 0),
