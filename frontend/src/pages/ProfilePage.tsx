@@ -110,15 +110,31 @@ const COLUMNS: { key: string; label: string; render: (p: PlayerRow) => React.Rea
   { key: 'fd', label: 'FD', render: (p) => p.first_deaths },
 ];
 
+// "TEAM_1" -> "Team 1"; names like "Red" / "Blue" are kept.
+function teamLabel(teamId: string): string {
+  const numbered = /^team_?(\d+)$/i.exec(teamId);
+  return numbered ? `Team ${numbered[1]}` : teamId;
+}
+
 function Scoreboard({ match }: { match: MatchSummary }) {
   const { localizedNames } = useLanguage();
-  // Group players by team (a mode without teams is one group).
+  // Group players by team (a mode without teams is one group), best team first:
+  // winners, then rounds won, then the team's combined score.
   const groups = match.teams.length
-    ? match.teams.map((team) => ({
-        team,
-        players: match.players.filter((p) => p.team_id === team.team_id),
-      }))
-    : [{ team: null, players: match.players }];
+    ? match.teams
+        .map((team) => {
+          const players = match.players.filter((p) => p.team_id === team.team_id);
+          return { team, players, total: players.reduce((sum, p) => sum + p.score, 0) };
+        })
+        .sort(
+          (a, b) =>
+            Number(b.team.won === true) - Number(a.team.won === true) ||
+            (b.team.rounds_won ?? 0) - (a.team.rounds_won ?? 0) ||
+            b.total - a.total,
+        )
+    : [{ team: null, players: match.players, total: 0 }];
+
+  const noRounds = match.teams.every((t) => !t.rounds_won);
 
   return (
     <div className="overflow-x-auto border-t border-border bg-bg-primary/40">
@@ -130,7 +146,9 @@ function Scoreboard({ match }: { match: MatchSummary }) {
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-text-secondary" style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }}>
                 <th className="px-3 py-2 text-left font-semibold" style={{ color }}>
-                  {team ? `${team.team_id}${team.rounds_won !== null ? ` · ${team.rounds_won}` : ''}` : 'Players'}
+                  {team
+                    ? `${groups.length > 2 ? `#${groupIndex + 1} · ` : ''}${teamLabel(team.team_id)}${team.rounds_won !== null && !noRounds ? ` · ${team.rounds_won}` : ''}`
+                    : 'Players'}
                 </th>
                 <th className="px-2 py-2 text-left font-semibold">Rank</th>
                 {COLUMNS.map((c) => (
