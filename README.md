@@ -9,7 +9,7 @@ Check your Valorant daily store from any device — without launching the game.
 
 A web app that lets Valorant players view their personalized daily shop rotation, featured bundles, and wallet balance from a browser. Built with a Python/FastAPI backend that handles Riot's OAuth authentication, and a React/TypeScript frontend with a Valorant-themed dark UI.
 
-![Daily Store View](docs/valscreenshot.PNG)
+![Daily Store View](valscreenshot.PNG)
 
 > **Disclaimer:** This application is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
