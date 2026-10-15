@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
-import type { MatchSummary, ProfileResponse } from '../types';
+import type { MatchSummary, PlayerRow, ProfileResponse } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import AppHeader from '../components/AppHeader';
@@ -51,6 +51,135 @@ function CurrencyTile({ label, value, accent }: { label: string; value: number |
   );
 }
 
+const ROLE_ORDER = ['Duelist', 'Initiator', 'Controller', 'Sentinel'];
+
+const ROLE_NAMES: Record<string, Record<string, string>> = {
+  'zh-TW': { Duelist: '決鬥者', Initiator: '先鋒', Controller: '控場者', Sentinel: '哨衛' },
+  'zh-CN': { Duelist: '决斗者', Initiator: '先锋', Controller: '控场者', Sentinel: '哨卫' },
+};
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-sm border px-2.5 py-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+        active
+          ? 'border-accent-red bg-accent-red/10 text-text-primary'
+          : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+const COLUMNS: { key: string; label: string; render: (p: PlayerRow) => React.ReactNode }[] = [
+  { key: 'acs', label: 'ACS', render: (p) => p.acs },
+  { key: 'k', label: 'K', render: (p) => p.kills },
+  { key: 'd', label: 'D', render: (p) => p.deaths },
+  { key: 'a', label: 'A', render: (p) => p.assists },
+  {
+    key: 'pm',
+    label: '+/-',
+    render: (p) => (
+      <span className={p.plus_minus > 0 ? 'text-accent-teal' : p.plus_minus < 0 ? 'text-accent-red' : ''}>
+        {p.plus_minus > 0 ? `+${p.plus_minus}` : p.plus_minus}
+      </span>
+    ),
+  },
+  { key: 'kd', label: 'K/D', render: (p) => p.kd.toFixed(1) },
+  {
+    key: 'dda',
+    label: 'DDΔ',
+    render: (p) => (
+      <span className={p.dda > 0 ? 'text-accent-teal' : p.dda < 0 ? 'text-accent-red' : ''}>
+        {p.dda > 0 ? `+${p.dda}` : p.dda}
+      </span>
+    ),
+  },
+  { key: 'adr', label: 'ADR', render: (p) => p.adr.toFixed(1) },
+  { key: 'hs', label: 'HS%', render: (p) => `${p.hs_pct}%` },
+  { key: 'fk', label: 'FK', render: (p) => p.first_kills },
+  { key: 'fd', label: 'FD', render: (p) => p.first_deaths },
+];
+
+function Scoreboard({ match }: { match: MatchSummary }) {
+  const { localizedNames } = useLanguage();
+  // Group players by team (a mode without teams is one group).
+  const groups = match.teams.length
+    ? match.teams.map((team) => ({
+        team,
+        players: match.players.filter((p) => p.team_id === team.team_id),
+      }))
+    : [{ team: null, players: match.players }];
+
+  return (
+    <div className="overflow-x-auto border-t border-border bg-bg-primary/40">
+      {groups.map(({ team, players }, groupIndex) => {
+        const color =
+          team?.won === true ? 'var(--color-accent-teal)' : team?.won === false ? 'var(--color-accent-red)' : 'var(--color-text-secondary)';
+        return (
+          <table key={team?.team_id ?? groupIndex} className="w-full min-w-[820px] border-collapse text-sm">
+            <thead>
+              <tr className="text-[11px] uppercase tracking-wider text-text-secondary" style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }}>
+                <th className="px-3 py-2 text-left font-semibold" style={{ color }}>
+                  {team ? `${team.team_id}${team.rounds_won !== null ? ` · ${team.rounds_won}` : ''}` : 'Players'}
+                </th>
+                <th className="px-2 py-2 text-left font-semibold">Rank</th>
+                {COLUMNS.map((c) => (
+                  <th key={c.key} className="px-2 py-2 text-right font-semibold">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((player) => {
+                const agent = player.agent_uuid ? localizedName(player.agent_uuid, player.agent_name, localizedNames) : player.agent_name;
+                return (
+                  <tr key={player.puuid} className={player.is_me ? 'bg-white/5' : ''}>
+                    <td className="px-3 py-1.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative shrink-0">
+                          {player.agent_icon ? (
+                            <img src={player.agent_icon} alt={agent} loading="lazy" className="h-9 w-9 rounded-sm bg-bg-secondary object-cover" />
+                          ) : (
+                            <div className="h-9 w-9 rounded-sm bg-bg-secondary" />
+                          )}
+                          {player.level !== null && (
+                            <span className="absolute -bottom-1 left-0 rounded-sm bg-black/70 px-1 text-[9px] leading-tight text-white">
+                              {player.level}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-text-primary">
+                            {player.game_name ?? <span className="text-text-secondary">Hidden</span>}
+                            {player.tag_line && <span className="ml-1 text-xs text-text-secondary">#{player.tag_line}</span>}
+                          </div>
+                          <div className="truncate text-[11px] text-text-secondary">{agent}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-xs text-text-secondary">{player.rank}</td>
+                    {COLUMNS.map((c) => (
+                      <td key={c.key} className="px-2 py-1.5 text-right font-semibold tabular-nums text-text-primary">
+                        {c.render(player)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        );
+      })}
+    </div>
+  );
+}
+
 function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   const { localizedNames } = useLanguage();
   const result = match.won === true ? 'Win' : match.won === false ? 'Loss' : 'Draw';
@@ -60,44 +189,64 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   const mapName = match.map_uuid ? localizedName(match.map_uuid, match.map_name, localizedNames) : match.map_name;
   const minutes = Math.round(match.length_secs / 60);
   const kd = match.deaths === 0 ? match.kills.toFixed(1) : (match.kills / match.deaths).toFixed(2);
+  const [open, setOpen] = useState(false);
 
   return (
     <li
-      className="card-motion card-spotlight flex items-center gap-4 overflow-hidden rounded-lg border border-border bg-bg-card p-3"
+      className="card-motion card-spotlight overflow-hidden rounded-lg border border-border bg-bg-card"
       onPointerMove={trackPointer}
       style={staggerStyle(index)}
     >
-      <div className="h-10 w-0.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
-      {match.agent_icon ? (
-        <img src={match.agent_icon} alt={agent} loading="lazy" className="h-12 w-12 shrink-0 rounded-sm bg-bg-secondary object-cover" />
-      ) : (
-        <div className="h-12 w-12 shrink-0 rounded-sm bg-bg-secondary" />
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-display text-sm uppercase tracking-widest" style={{ color }}>
-            {result}
-          </span>
-          {match.rounds_won !== null && match.rounds_lost !== null && (
-            <span className="text-sm font-semibold text-text-primary">
-              {match.rounds_won} : {match.rounds_lost}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-4 p-3 text-left"
+      >
+        <div className="h-10 w-0.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
+        {match.agent_icon ? (
+          <img src={match.agent_icon} alt={agent} loading="lazy" className="h-12 w-12 shrink-0 rounded-sm bg-bg-secondary object-cover" />
+        ) : (
+          <div className="h-12 w-12 shrink-0 rounded-sm bg-bg-secondary" />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-sm uppercase tracking-widest" style={{ color }}>
+              {result}
             </span>
-          )}
+            {match.rounds_won !== null && match.rounds_lost !== null && (
+              <span className="text-sm font-semibold text-text-primary">
+                {match.rounds_won} : {match.rounds_lost}
+              </span>
+            )}
+          </div>
+          <div className="truncate text-xs text-text-secondary">
+            {mapName} · {agent} · {queueLabel(match.queue)}
+          </div>
         </div>
-        <div className="truncate text-xs text-text-secondary">
-          {mapName} · {agent} · {queueLabel(match.queue)}
+        <div className="hidden text-right text-xs text-text-secondary sm:block">
+          <div>{new Date(match.started_at).toLocaleString()}</div>
+          <div>{minutes} min</div>
         </div>
-      </div>
-      <div className="hidden text-right text-xs text-text-secondary sm:block">
-        <div>{new Date(match.started_at).toLocaleString()}</div>
-        <div>{minutes} min</div>
-      </div>
-      <div className="shrink-0 text-right">
-        <div className="text-sm font-semibold text-text-primary">
-          {match.kills} / {match.deaths} / {match.assists}
+        <div className="shrink-0 text-right">
+          <div className="text-sm font-semibold text-text-primary">
+            {match.kills} / {match.deaths} / {match.assists}
+          </div>
+          <div className="text-[11px] text-text-secondary">K/D {kd}</div>
         </div>
-        <div className="text-[11px] text-text-secondary">K/D {kd}</div>
-      </div>
+        <svg
+          className={`h-4 w-4 shrink-0 text-text-secondary transition-transform ${open ? 'rotate-180' : ''}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && match.players.length > 0 && <Scoreboard match={match} />}
     </li>
   );
 }
@@ -126,6 +275,14 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [dispatch, navigate]);
 
+  const [roleFilter, setRoleFilter] = useState<Set<string>>(new Set());
+  const { language } = useLanguage();
+  const roles = useMemo(() => {
+    const present = new Set((profile?.agents ?? []).map((a) => a.role).filter(Boolean));
+    return [...ROLE_ORDER.filter((r) => present.has(r)), ...[...present].filter((r) => !ROLE_ORDER.includes(r))];
+  }, [profile]);
+  const visibleAgents = (profile?.agents ?? []).filter((a) => roleFilter.size === 0 || roleFilter.has(a.role));
+  const roleLabel = (role: string) => ROLE_NAMES[language]?.[role] ?? role;
   const ownedCount = profile?.agents.filter((a) => a.owned).length ?? 0;
   const unavailable = new Set(profile?.unavailable ?? []);
 
@@ -175,8 +332,36 @@ export default function ProfilePage() {
               {unavailable.has('agents') ? (
                 <Unavailable what="Your agent roster" />
               ) : (
+                <>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="mr-1 text-[11px] uppercase tracking-widest text-text-secondary">Role</span>
+                  {roles.map((role) => (
+                    <Chip
+                      key={role}
+                      active={roleFilter.has(role)}
+                      onClick={() =>
+                        setRoleFilter((cur) => {
+                          const next = new Set(cur);
+                          if (!next.delete(role)) next.add(role);
+                          return next;
+                        })
+                      }
+                    >
+                      {roleLabel(role)}
+                    </Chip>
+                  ))}
+                  {roleFilter.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setRoleFilter(new Set())}
+                      className="ml-2 text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
-                  {profile.agents.map((agent) => {
+                  {visibleAgents.map((agent) => {
                     const name = localizedName(agent.uuid, agent.name, localizedNames);
                     return (
                       <div
@@ -192,11 +377,12 @@ export default function ProfilePage() {
                     );
                   })}
                 </div>
+                </>
               )}
             </section>
 
             <section>
-              <SectionTitle hint="Last 10 matches">Match history</SectionTitle>
+              <SectionTitle hint="Last 10 matches · click a match for the full scoreboard">Match history</SectionTitle>
               {unavailable.has('matches') ? (
                 <Unavailable what="Your match history" />
               ) : profile.matches.length === 0 ? (
