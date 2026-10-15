@@ -196,6 +196,7 @@ async def initialize() -> None:
             "displayName": agent.get("displayName", ""),
             "displayIcon": agent.get("displayIcon") or agent.get("fullPortrait", "") or "",
             "isBaseContent": bool(agent.get("isBaseContent")),
+            "role": (agent.get("role") or {}).get("displayName", ""),
         }
 
     # Client version

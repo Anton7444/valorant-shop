@@ -76,6 +76,38 @@ export interface AgentInfo {
   name: string;
   icon: string;
   owned: boolean;
+  role: string;
+}
+
+export interface PlayerRow {
+  puuid: string;
+  game_name: string | null;
+  tag_line: string | null;
+  team_id: string;
+  agent_uuid: string | null;
+  agent_name: string;
+  agent_icon: string;
+  level: number | null;
+  rank: string;
+  score: number;
+  acs: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  plus_minus: number;
+  kd: number;
+  dda: number;
+  adr: number;
+  hs_pct: number;
+  first_kills: number;
+  first_deaths: number;
+  is_me: boolean;
+}
+
+export interface TeamSummary {
+  team_id: string;
+  won: boolean | null;
+  rounds_won: number | null;
 }
 
 export interface MatchSummary {
@@ -95,6 +127,8 @@ export interface MatchSummary {
   won: boolean | null;
   rounds_won: number | null;
   rounds_lost: number | null;
+  teams: TeamSummary[];
+  players: PlayerRow[];
 }
 
 export interface ProfileResponse {

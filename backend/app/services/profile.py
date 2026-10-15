@@ -4,7 +4,7 @@ import logging
 import httpx
 
 from app.models.auth import SessionData
-from app.models.profile import AgentInfo, MatchSummary, ProfileResponse
+from app.models.profile import AgentInfo, MatchSummary, PlayerRow, ProfileResponse, TeamSummary
 from app.services import asset_cache, storefront
 from app.services.asset_cache import ITEM_TYPE_AGENT, get_agent, get_map
 
@@ -60,15 +60,58 @@ async def _fetch_agents(session: SessionData) -> list[AgentInfo]:
             icon=a["displayIcon"],
             # The starter agents are free for everyone and not always listed.
             owned=a["uuid"] in owned_ids or a.get("isBaseContent", False),
+            role=a.get("role", ""),
         )
         for a in asset_cache.all_agents()
     ]
     return sorted(agents, key=lambda a: (not a.owned, a.name.lower()))
 
 
+_RANK_NAMES = ["Iron", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ascendant", "Immortal"]
+
+
+def _rank_name(tier: int) -> str:
+    """Competitive tier number -> label (3..26 are Iron 1..Immortal 3, 27 Radiant)."""
+    if tier >= 27:
+        return "Radiant"
+    if tier < 3:
+        return "Unranked"
+    return f"{_RANK_NAMES[(tier - 3) // 3]} {(tier - 3) % 3 + 1}"
+
+
+def _round_stats(details: dict) -> dict[str, dict[str, int]]:
+    """Per-player damage, headshot, first-kill numbers computed from the round results."""
+    stats: dict[str, dict[str, int]] = {}
+
+    def row(puuid: str) -> dict[str, int]:
+        return stats.setdefault(
+            puuid,
+            {"dealt": 0, "received": 0, "head": 0, "shots": 0, "fk": 0, "fd": 0},
+        )
+
+    for rnd in details.get("roundResults") or []:
+        kills: list[dict] = []
+        for player in rnd.get("playerStats") or []:
+            subject = player.get("subject", "")
+            kills.extend(player.get("kills") or [])
+            for hit in player.get("damage") or []:
+                dmg = hit.get("damage", 0)
+                row(subject)["dealt"] += dmg
+                row(hit.get("receiver", ""))["received"] += dmg
+                head = hit.get("headshots", 0)
+                row(subject)["head"] += head
+                row(subject)["shots"] += head + hit.get("bodyshots", 0) + hit.get("legshots", 0)
+        if kills:
+            first = min(kills, key=lambda k: k.get("timeSinceRoundStartMillis", 0))
+            row(first.get("killer", ""))["fk"] += 1
+            row(first.get("victim", ""))["fd"] += 1
+    return stats
+
+
 def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
     info = details.get("matchInfo", {})
-    me = next((p for p in details.get("players", []) if p.get("subject") == puuid), None)
+    raw_players = details.get("players", [])
+    me = next((p for p in raw_players if p.get("subject") == puuid), None)
     if not me:
         return None
     stats = me.get("stats") or {}
@@ -87,6 +130,44 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
             if rounds_won == rounds_lost:
                 won = None  # draw
 
+    round_stats = _round_stats(details)
+    total_rounds = len(details.get("roundResults") or [])
+    rows: list[PlayerRow] = []
+    for p in raw_players:
+        st = p.get("stats") or {}
+        rs = round_stats.get(p.get("subject", ""), {})
+        rounds = st.get("roundsPlayed") or total_rounds or 1
+        ag = get_agent(p.get("characterId", "")) if p.get("characterId") else None
+        kills, deaths = st.get("kills", 0), st.get("deaths", 0)
+        shots = rs.get("shots", 0)
+        rows.append(
+            PlayerRow(
+                puuid=p.get("subject", ""),
+                game_name=p.get("gameName") or None,
+                tag_line=p.get("tagLine") or None,
+                team_id=p.get("teamId", ""),
+                agent_uuid=ag["uuid"] if ag else None,
+                agent_name=ag["displayName"] if ag else "",
+                agent_icon=ag["displayIcon"] if ag else "",
+                level=p.get("accountLevel"),
+                rank=_rank_name(p.get("competitiveTier", 0)),
+                score=st.get("score", 0),
+                acs=round(st.get("score", 0) / rounds),
+                kills=kills,
+                deaths=deaths,
+                assists=st.get("assists", 0),
+                plus_minus=kills - deaths,
+                kd=round(kills / deaths, 2) if deaths else float(kills),
+                dda=round((rs.get("dealt", 0) - rs.get("received", 0)) / rounds),
+                adr=round(rs.get("dealt", 0) / rounds, 1),
+                hs_pct=round(100 * rs.get("head", 0) / shots) if shots else 0,
+                first_kills=rs.get("fk", 0),
+                first_deaths=rs.get("fd", 0),
+                is_me=p.get("subject") == puuid,
+            )
+        )
+    rows.sort(key=lambda r: r.acs, reverse=True)
+
     return MatchSummary(
         match_id=info.get("matchId", ""),
         map_uuid=game_map["uuid"] if game_map else None,
@@ -104,6 +185,11 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
         won=won,
         rounds_won=rounds_won,
         rounds_lost=rounds_lost,
+        teams=[
+            TeamSummary(team_id=t.get("teamId", ""), won=t.get("won"), rounds_won=t.get("roundsWon"))
+            for t in teams
+        ],
+        players=rows,
     )
 
 
