@@ -131,6 +131,11 @@ export interface MatchSummary {
   players: PlayerRow[];
 }
 
+export interface MatchesResponse {
+  matches: MatchSummary[];
+  has_more: boolean;
+}
+
 export interface ProfileResponse {
   puuid: string;
   game_name: string | null;
@@ -139,6 +144,7 @@ export interface ProfileResponse {
   wallet: Wallet | null;
   agents: AgentInfo[];
   matches: MatchSummary[];
+  has_more_matches: boolean;
   unavailable: string[];
 }
 

@@ -4,13 +4,21 @@ import logging
 import httpx
 
 from app.models.auth import SessionData
-from app.models.profile import AgentInfo, MatchSummary, PlayerRow, ProfileResponse, TeamSummary
+from app.models.profile import (
+    AgentInfo,
+    MatchesResponse,
+    MatchSummary,
+    PlayerRow,
+    ProfileResponse,
+    TeamSummary,
+)
 from app.services import asset_cache, storefront
 from app.services.asset_cache import ITEM_TYPE_AGENT, get_agent, get_map
 
 logger = logging.getLogger(__name__)
 
-MATCH_COUNT = 20
+MATCH_COUNT = 20  # matches in the first profile load
+MATCH_PAGE = 10  # matches per "load more"
 
 
 def _pd(session: SessionData) -> str:
@@ -203,14 +211,17 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
     )
 
 
-async def _fetch_matches(session: SessionData) -> list[MatchSummary]:
+async def _fetch_matches(
+    session: SessionData, start: int = 0, count: int = MATCH_COUNT
+) -> tuple[list[MatchSummary], bool]:
+    """Matches [start, start+count) of the player's history, and whether more may exist."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         history = await _get_json(
             client,
             session,
-            f"{_pd(session)}/match-history/v1/history/{session.puuid}?startIndex=0&endIndex={MATCH_COUNT}",
+            f"{_pd(session)}/match-history/v1/history/{session.puuid}?startIndex={start}&endIndex={start + count}",
         )
-        match_ids = [m["MatchID"] for m in history.get("History", [])][:MATCH_COUNT]
+        match_ids = [m["MatchID"] for m in history.get("History", [])][:count]
         results = await asyncio.gather(
             *(_get_json(client, session, f"{_pd(session)}/match-details/v1/matches/{mid}") for mid in match_ids),
             return_exceptions=True,
@@ -237,7 +248,13 @@ async def _fetch_matches(session: SessionData) -> list[MatchSummary]:
                 for p in m.players:
                     if not p.game_name and p.puuid in names:
                         p.game_name, p.tag_line = names[p.puuid]
-    return sorted(matches, key=lambda m: m.started_at, reverse=True)
+    has_more = len(match_ids) >= count
+    return sorted(matches, key=lambda m: m.started_at, reverse=True), has_more
+
+
+async def get_matches(session: SessionData, start: int) -> MatchesResponse:
+    matches, has_more = await _fetch_matches(session, start, MATCH_PAGE)
+    return MatchesResponse(matches=matches, has_more=has_more)
 
 
 async def get_profile(session: SessionData) -> ProfileResponse:
@@ -270,6 +287,7 @@ async def get_profile(session: SessionData) -> ProfileResponse:
         level=ok("level"),
         wallet=ok("wallet"),
         agents=ok("agents") or [],
-        matches=ok("matches") or [],
+        matches=(ok("matches") or ([], False))[0],
+        has_more_matches=(ok("matches") or ([], False))[1],
         unavailable=[k for k in ("level", "wallet", "agents", "matches") if k in failures],
     )

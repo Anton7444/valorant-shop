@@ -1,8 +1,8 @@
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.models.auth import SessionData
-from app.models.profile import ProfileResponse
+from app.models.profile import MatchesResponse, ProfileResponse
 from app.routers.store import _handle_riot_error, get_session
 from app.services import profile
 
@@ -13,5 +13,13 @@ router = APIRouter()
 async def get_profile(session: SessionData = Depends(get_session)) -> ProfileResponse:
     try:
         return await profile.get_profile(session)
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        raise _handle_riot_error(exc)
+
+
+@router.get("/matches", response_model=MatchesResponse)
+async def get_matches(start: int = Query(0, ge=0, le=1000), session: SessionData = Depends(get_session)) -> MatchesResponse:
+    try:
+        return await profile.get_matches(session, start)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
