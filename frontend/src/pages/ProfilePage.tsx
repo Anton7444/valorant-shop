@@ -18,6 +18,7 @@ const QUEUE_LABELS: Record<string, string> = {
   swiftplay: 'Swiftplay',
   hurm: 'Team Deathmatch',
   premier: 'Premier',
+  abilitydraftarena: 'Ability Draft Arena',
   snowball: 'Snowball Fight',
   newmap: 'New Map',
   custom: 'Custom',
@@ -163,7 +164,7 @@ function Scoreboard({ match }: { match: MatchSummary }) {
                             {player.game_name ?? <span className="text-text-secondary">Hidden</span>}
                             {player.tag_line && <span className="ml-1 text-xs text-text-secondary">#{player.tag_line}</span>}
                           </div>
-                          <div className="truncate text-[11px] text-text-secondary">{agent}</div>
+                          {player.agent_uuid && <div className="truncate text-[11px] text-text-secondary">{agent}</div>}
                         </div>
                       </div>
                     </td>
@@ -186,7 +187,9 @@ function Scoreboard({ match }: { match: MatchSummary }) {
 
 function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   const { localizedNames } = useLanguage();
-  const result = match.won === true ? 'Win' : match.won === false ? 'Loss' : 'Draw';
+  // Modes without round wins (e.g. Ability Draft Arena) report 0:0 for everyone.
+  const noRounds = match.rounds_won === 0 && match.rounds_lost === 0;
+  const result = noRounds ? 'Match' : match.won === true ? 'Win' : match.won === false ? 'Loss' : 'Draw';
   const color =
     match.won === true ? 'var(--color-accent-teal)' : match.won === false ? 'var(--color-accent-red)' : 'var(--color-text-secondary)';
   const agent = match.agent_uuid ? localizedName(match.agent_uuid, match.agent_name, localizedNames) : match.agent_name;
@@ -218,14 +221,14 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
             <span className="font-display text-sm uppercase tracking-widest" style={{ color }}>
               {result}
             </span>
-            {match.rounds_won !== null && match.rounds_lost !== null && (
+            {!noRounds && match.rounds_won !== null && match.rounds_lost !== null && (
               <span className="text-sm font-semibold text-text-primary">
                 {match.rounds_won} : {match.rounds_lost}
               </span>
             )}
           </div>
           <div className="truncate text-xs text-text-secondary">
-            {mapName} · {agent} · {queueLabel(match.queue)}
+            {[mapName, match.agent_uuid ? agent : null, queueLabel(match.queue)].filter(Boolean).join(' · ')}
           </div>
         </div>
         <div className="hidden text-right text-xs text-text-secondary sm:block">
