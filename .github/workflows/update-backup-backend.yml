@@ -1,0 +1,74 @@
+name: Update Backup Backend (InstaBox)
+
+# Keeps the standby backend on the InstaBox VM in sync with master.
+# The primary backend on Render still deploys on its own (autoDeploy).
+#
+# Requires the repository secret INSTABOX_API_KEY (an InstaBox API key with the
+# machines:write scope). Without it this workflow just prints a warning and exits.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-backend
+  cancel-in-progress: false
+
+env:
+  INSTABOX_MACHINE: m_agqunmd6dwdqhz2ppue6hneh74
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update backup backend on the InstaBox VM
+        env:
+          INSTABOX_API_KEY: ${{ secrets.INSTABOX_API_KEY }}
+        run: |
+          if [ -z "$INSTABOX_API_KEY" ]; then
+            echo "::warning::INSTABOX_API_KEY secret is not set; skipping the backup update."
+            exit 0
+          fi
+
+          API="https://api.instabox.sh/v1/machines/$INSTABOX_MACHINE"
+          AUTH="Authorization: Bearer $INSTABOX_API_KEY"
+
+          # Wake the VM if it was idle-suspended (no-op when it is already running).
+          curl -sS -m 60 -X POST -H "$AUTH" "$API/wake" -o /dev/null \
+            -w "wake: HTTP %{http_code}\n" || true
+
+          # Runs inside the VM. The app is served from the repo checkout, so a
+          # fetch + reset is enough for code changes; the pip install only matters
+          # when backend/pyproject.toml dependencies change.
+          REMOTE='set -e
+          cd ~/valorant-backup/repo
+          git fetch --depth 1 origin master
+          git reset --hard FETCH_HEAD
+          cd ..
+          uv pip install --quiet --python venv/bin/python ./repo/backend
+          ./start.sh
+          sleep 6
+          curl -fsS localhost:8000/api/health
+          echo
+          git -C repo log --oneline -1'
+
+          PAYLOAD=$(jq -n --arg cmd "$REMOTE" '{cmd: $cmd, timeoutSeconds: 300}')
+          RESP=$(curl -sS -m 330 -X POST -H "$AUTH" -H "Content-Type: application/json" \
+            "$API/exec" -d "$PAYLOAD")
+
+          echo "$RESP" | jq -r '.stdout // empty'
+          echo "$RESP" | jq -r '.stderr // empty' >&2
+
+          CODE=$(echo "$RESP" | jq -r '.exitCode // "missing"')
+          if [ "$CODE" != "0" ]; then
+            echo "::error::Backup update failed (exit code: $CODE)"
+            echo "$RESP" | jq -r '.error.message // empty'
+            exit 1
+          fi
+          echo "Backup backend updated."
