@@ -468,7 +468,11 @@ export default function ProfilePage() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
+                <div
+                  // Keyed by the filter so choosing or clearing roles remounts the tiles and replays the entrance animation.
+                  key={[...roleFilter].sort().join(',')}
+                  className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9"
+                >
                   {visibleAgents.map((agent, agentIndex) => {
                     const name = localizedName(agent.uuid, agent.name, localizedNames);
                     return (
@@ -526,7 +530,7 @@ export default function ProfilePage() {
                       </button>
                     )}
                   </div>
-                  <ul className="space-y-3">
+                  <ul key={[...queueFilter].sort().join(',')} className="space-y-3">
                     {visibleMatches.map((match, index) => (
                       <MatchRow key={match.match_id} match={match} index={index} />
                     ))}
