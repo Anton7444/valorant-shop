@@ -1,4 +1,6 @@
 import SkinImage from './SkinImage';
+import ReflectiveLayer from './reflective/ReflectiveLayer';
+import { useMetalCards } from '../utils/metalCards';
 import { useRef, useState } from 'react';
 import type { SkinOffer } from '../types';
 import { useLanguage } from '../context/useLanguage';
@@ -27,6 +29,7 @@ interface SkinCardProps {
 
 export default function SkinCard({ skin, startRevealed = false, index = 0 }: SkinCardProps) {
   const { localizedNames } = useLanguage();
+  const metal = useMetalCards();
   const name = localizedName(skin.uuid, skin.name, localizedNames);
   const tierColor = getTierColor(skin.content_tier_name, skin.content_tier_color);
 
@@ -57,6 +60,13 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
         '--glow-color': tierColor,
       } as React.CSSProperties}
     >
+      {metal && (
+        <ReflectiveLayer
+          radius={8}
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full opacity-60 mix-blend-soft-light"
+        />
+      )}
+
       {/* Tier accent line at top -- visible even before reveal as a rarity hint */}
       <div className="h-0.5" style={{ backgroundColor: tierColor }} />
 

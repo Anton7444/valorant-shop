@@ -9,6 +9,7 @@ import CatalogPage from './pages/CatalogPage';
 import BundlePage from './pages/BundlePage';
 import PricesPage from './pages/PricesPage';
 import AccessoryPage from './pages/AccessoryPage';
+import ReflectivePage from './pages/ReflectivePage';
 import ProfilePage from './pages/ProfilePage';
 import { LanguageProvider } from './context/LanguageContext';
 
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/bundle" element={<BundlePage />} />
               <Route path="/prices" element={<PricesPage />} />
+              <Route path="/reflective" element={<ReflectivePage />} />
             </Routes>
           </ErrorBoundary>
         </BrowserRouter>
