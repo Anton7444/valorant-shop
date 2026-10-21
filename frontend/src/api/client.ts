@@ -48,10 +48,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // Auth
 
 export interface LoginResponse {
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'mfa';
   session_token?: string | null;
   puuid?: string | null;
   promo?: boolean;
+  pending_id?: string | null;
   error?: string | null;
 }
 
@@ -63,6 +64,20 @@ export function submitToken(url: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
     body: JSON.stringify({ url }),
+  });
+}
+
+export function passwordLogin(username: string, password: string): Promise<LoginResponse> {
+  return request('/api/auth/password', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function passwordMfa(pending_id: string, code: string): Promise<LoginResponse> {
+  return request('/api/auth/password/mfa', {
+    method: 'POST',
+    body: JSON.stringify({ pending_id, code }),
   });
 }
 

@@ -54,10 +54,11 @@ class TokenSubmitRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    status: str  # "success" | "error"
+    status: str  # "success" | "mfa" | "error"
     session_token: str | None = None
     puuid: str | None = None
     promo: bool = False
+    pending_id: str | None = None
     error: str | None = None
 
 
@@ -69,13 +70,10 @@ async def get_login_url() -> AuthUrlResponse:
     return AuthUrlResponse(auth_url=riot_auth.get_auth_url())
 
 
-@router.post("/token", response_model=LoginResponse)
-async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginResponse:
-    """Accept the pasted redirect URL, extract tokens, and create a session."""
-    _check_rate_limit(request.client.host if request.client else "unknown")
-
+async def _login_from_url(url: str) -> LoginResponse:
+    """Turn a Riot redirect URL (with tokens) into a server session."""
     try:
-        tokens = riot_auth.extract_tokens(body.url)
+        tokens = riot_auth.extract_tokens(url)
         access_token = tokens["access_token"]
         id_token = tokens.get("id_token", "")
 
@@ -116,6 +114,58 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
     except Exception:
         logger.exception("Token submission failed")
         return LoginResponse(status="error", error="Authentication failed unexpectedly")
+
+
+@router.post("/token", response_model=LoginResponse)
+async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginResponse:
+    """Accept the pasted redirect URL, extract tokens, and create a session."""
+    _check_rate_limit(request.client.host if request.client else "unknown")
+    return await _login_from_url(body.url)
+
+
+class PasswordLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class MfaRequest(BaseModel):
+    pending_id: str
+    code: str
+
+
+async def _password_step(call) -> LoginResponse:
+    try:
+        status, uri, pending_id = await call()
+    except riot_auth.AuthenticationError as e:
+        return LoginResponse(status="error", error=str(e))
+    except riot_auth.RateLimitError:
+        return LoginResponse(status="error", error="Rate limited by Riot servers. Try again shortly.")
+    except httpx.RequestError:
+        return LoginResponse(status="error", error="Could not reach Riot servers. Try again.")
+    except Exception:
+        # Deliberately no details: the request body holds the password.
+        logger.error("Password sign-in failed unexpectedly")
+        return LoginResponse(status="error", error="Sign-in failed unexpectedly")
+    if status == "mfa":
+        return LoginResponse(status="mfa", pending_id=pending_id)
+    return await _login_from_url(uri)
+
+
+@router.post("/password", response_model=LoginResponse)
+async def password_login(body: PasswordLoginRequest, request: Request) -> LoginResponse:
+    """Experimental: sign in with Riot username/password from this server."""
+    _check_rate_limit(request.client.host if request.client else "unknown")
+    return await _password_step(lambda: riot_auth.password_login(body.username, body.password))
+
+
+@router.post("/password/mfa", response_model=LoginResponse)
+async def password_mfa(body: MfaRequest, request: Request) -> LoginResponse:
+    _check_rate_limit(request.client.host if request.client else "unknown")
+
+    async def call():
+        return "done", await riot_auth.submit_mfa(body.pending_id, body.code), None
+
+    return await _password_step(call)
 
 
 @router.post("/logout")
