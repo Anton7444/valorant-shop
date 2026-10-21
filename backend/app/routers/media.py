@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
-ALLOWED_HOSTS = {"media.valorant-api.com"}
+ALLOWED_HOSTS = {"media.valorant-api.com", "valorant.dyn.riotcdn.net"}
 FORWARD_REQUEST_HEADERS = ("range", "if-range")
 FORWARD_RESPONSE_HEADERS = ("content-type", "content-length", "content-range", "accept-ranges", "etag", "last-modified")
 
