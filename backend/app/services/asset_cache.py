@@ -68,6 +68,15 @@ def _index_with_levels(
             levels_store[level["uuid"].lower()] = parsed
 
 
+def _alt_icons(skin: dict, primary: str) -> list[str]:
+    """Other pictures of the same skin, used when the main icon is a placeholder."""
+    urls: list[str] = []
+    for chroma in skin.get("chromas", []):
+        urls += [chroma.get("fullRender"), chroma.get("displayIcon")]
+    urls += [level.get("displayIcon") for level in skin.get("levels", [])]
+    return list(dict.fromkeys(u for u in urls if u and u != primary))
+
+
 async def initialize() -> None:
     """Fetch all asset data from valorant-api.com. Also used to refresh the cache later."""
     global _client_version, _last_refresh
@@ -95,6 +104,7 @@ async def initialize() -> None:
             "contentTierUuid": (skin.get("contentTierUuid") or "").lower(),
             "levels": skin.get("levels", []),
         }
+        skin_entry["altIcons"] = _alt_icons(skin, skin_entry["displayIcon"])
         _skins[uuid] = skin_entry
 
         # Map each level UUID to the parent skin, and each level's own demo
@@ -118,6 +128,7 @@ async def initialize() -> None:
                 "displayName": skin.get("displayName", ""),
                 "displayIcon": chroma.get("fullRender") or chroma.get("displayIcon") or skin_entry["displayIcon"],
                 "contentTierUuid": skin_entry["contentTierUuid"],
+                "altIcons": skin_entry["altIcons"],
             }
             if chroma.get("streamedVideo"):
                 _skin_video_by_uuid[chroma_uuid] = chroma["streamedVideo"]

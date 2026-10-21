@@ -1,3 +1,4 @@
+import SkinImage from './SkinImage';
 import { useRef, useState } from 'react';
 import type { SkinOffer } from '../types';
 import { useLanguage } from '../context/useLanguage';
@@ -126,8 +127,9 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
                 style={{ cursor: hasVideo ? 'pointer' : 'default' }}
               >
                 {skin.display_icon ? (
-                  <img
+                  <SkinImage
                     src={skin.display_icon}
+                    alts={skin.alt_icons}
                     alt={name}
                     className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105"
                   />
