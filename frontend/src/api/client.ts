@@ -1,4 +1,5 @@
 import type {
+  AccessoryStoreResponse,
   BundleResponse,
   CatalogResponse,
   DailyStoreResponse,
@@ -78,6 +79,10 @@ export function checkSession(): Promise<SessionResponse> {
 
 export function getDailyStore(): Promise<DailyStoreResponse> {
   return request('/api/store/daily');
+}
+
+export function getAccessoryStore(): Promise<AccessoryStoreResponse> {
+  return request('/api/store/accessories');
 }
 
 export function getPublicBundles(): Promise<BundleResponse> {

@@ -81,3 +81,16 @@ class DailyStoreResponse(BaseModel):
 
 class BundleResponse(BaseModel):
     bundles: list[Bundle]
+
+
+class AccessoryOffer(BaseModel):
+    uuid: str
+    item_type: str  # "spray" | "buddy" | "card" | "title" | "other"
+    name: str
+    display_icon: str = ""
+    cost: int
+
+
+class AccessoryStoreResponse(BaseModel):
+    offers: list[AccessoryOffer]
+    seconds_remaining: int

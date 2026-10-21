@@ -6,6 +6,8 @@ from pathlib import Path
 import httpx
 
 from app.models.store import (
+    AccessoryOffer,
+    AccessoryStoreResponse,
     BundleItem,
     BundleResponse,
     Bundle,
@@ -27,7 +29,11 @@ from app.services.asset_cache import (
     get_item_ensured,
     get_skin_ensured,
     get_skin_video,
+    ITEM_TYPE_BUDDY,
+    ITEM_TYPE_PLAYER_CARD,
     ITEM_TYPE_SKIN,
+    ITEM_TYPE_SPRAY,
+    ITEM_TYPE_TITLE,
     ITEM_TYPE_SKIN_VARIANT,
 )
 
@@ -156,6 +162,40 @@ async def get_daily_store(raw_storefront: dict, owned_ids: frozenset[str] = froz
             offers.append(skin_offer)
 
     return DailyStoreResponse(offers=offers, seconds_remaining=seconds_remaining)
+
+
+ACCESSORY_TYPE_NAMES = {
+    ITEM_TYPE_SPRAY: "spray",
+    ITEM_TYPE_BUDDY: "buddy",
+    ITEM_TYPE_PLAYER_CARD: "card",
+    ITEM_TYPE_TITLE: "title",
+}
+
+
+async def get_accessory_store(raw_storefront: dict) -> AccessoryStoreResponse:
+    """Parse the weekly accessory store (sprays, buddies, cards, titles; paid in Kingdom Credits)."""
+    panel = raw_storefront.get("AccessoryStore", {})
+    seconds_remaining = panel.get("AccessoryStoreRemainingDurationInSeconds", 0)
+
+    offers: list[AccessoryOffer] = []
+    for raw in panel.get("AccessoryStoreOffers", []):
+        offer = raw.get("Offer", {})
+        reward = (offer.get("Rewards") or [{}])[0]
+        item_type_id = reward.get("ItemTypeID", "")
+        item_uuid = reward.get("ItemID", "")
+        item = await get_item_ensured(item_type_id, item_uuid) if item_uuid else None
+        if not item:
+            logger.warning("Unknown accessory: uuid=%s item_type=%s", item_uuid, item_type_id)
+        cost = next(iter((offer.get("Cost") or {}).values()), 0)
+        offers.append(AccessoryOffer(
+            uuid=item_uuid,
+            item_type=ACCESSORY_TYPE_NAMES.get(item_type_id.lower(), "other"),
+            name=item["displayName"] if item else "Unknown",
+            display_icon=(item.get("displayIcon", "") if item else "") or "",
+            cost=cost,
+        ))
+
+    return AccessoryStoreResponse(offers=offers, seconds_remaining=seconds_remaining)
 
 
 # The featured bundle is the same for every player but Riot only serves it to a

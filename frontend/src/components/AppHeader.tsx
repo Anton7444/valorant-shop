@@ -11,6 +11,7 @@ import { useRovingArrows } from '../hooks/useRovingArrows';
 
 const NAV_ITEMS = [
   { to: '/shop', label: 'Store' },
+  { to: '/accessories', label: 'Accessories' },
   { to: '/inventory', label: 'Inventory' },
   { to: '/profile', label: 'Profile' },
   { to: '/catalog', label: 'Catalog' },

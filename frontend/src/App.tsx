@@ -8,6 +8,7 @@ import InventoryPage from './pages/InventoryPage';
 import CatalogPage from './pages/CatalogPage';
 import BundlePage from './pages/BundlePage';
 import PricesPage from './pages/PricesPage';
+import AccessoryPage from './pages/AccessoryPage';
 import ProfilePage from './pages/ProfilePage';
 import { LanguageProvider } from './context/LanguageContext';
 
@@ -40,6 +41,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/accessories"
+                element={
+                  <ProtectedRoute>
+                    <AccessoryPage />
                   </ProtectedRoute>
                 }
               />
