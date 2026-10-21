@@ -14,11 +14,14 @@ export default function CountdownTimer({ secondsRemaining, onExpire }: Countdown
     setRemaining(secondsRemaining);
   }
 
+  // Only a timer that actually counted down to zero should report expiry; a store that
+  // arrives with no time left must not trigger an endless reload loop.
   const isExpired = remaining <= 0;
+  const canExpire = secondsRemaining > 0;
 
   useEffect(() => {
     if (isExpired) {
-      onExpire?.();
+      if (canExpire) onExpire?.();
       return;
     }
 
@@ -34,7 +37,7 @@ export default function CountdownTimer({ secondsRemaining, onExpire }: Countdown
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isExpired, onExpire]);
+  }, [isExpired, canExpire, onExpire]);
 
   const days = Math.floor(remaining / 86400);
   const hours = Math.floor((remaining % 86400) / 3600);
