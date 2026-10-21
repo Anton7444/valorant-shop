@@ -312,3 +312,14 @@ button:not(:disabled):not(.no-press) {
 button:not(:disabled):not(.no-press):active {
   transform: scale(0.97);
 }
+
+.roll-column {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roll-column {
+    transition: none !important;
+  }
+}

@@ -1,3 +1,4 @@
+import RollingNumber from '../components/RollingNumber';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -63,7 +64,7 @@ function CurrencyTile({
     <div className="rise-in rounded-lg border border-border bg-bg-card px-4 py-3" style={staggerStyle(index)}>
       <div className="text-[11px] uppercase tracking-widest text-text-secondary">{label}</div>
       <div className="mt-1 text-2xl font-semibold" style={{ color: accent ?? 'var(--color-text-primary)' }}>
-        {(value ?? 0).toLocaleString()}
+        <RollingNumber value={value ?? 0} />
       </div>
     </div>
   );
