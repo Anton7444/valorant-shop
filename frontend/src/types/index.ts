@@ -15,6 +15,7 @@ export interface SkinLevel {
 }
 
 export interface SkinOffer {
+  alt_icons?: string[];
   uuid: string;
   name: string;
   display_icon: string;
@@ -27,6 +28,7 @@ export interface SkinOffer {
 }
 
 export interface OwnedSkin {
+  alt_icons?: string[];
   uuid: string;
   name: string;
   display_icon: string;
@@ -52,6 +54,7 @@ export interface InventoryResponse {
 }
 
 export interface BundleItem {
+  alt_icons?: string[];
   uuid: string;
   name: string;
   display_icon: string;

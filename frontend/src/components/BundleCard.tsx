@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Bundle, BundleItem } from '../types';
 import { staggerStyle, trackPointer } from '../utils/spotlight';
 import SkinVideoModal from './SkinVideoModal';
+import SkinImage from './SkinImage';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 
@@ -123,7 +124,7 @@ function BundleItemTile({ item, index }: { item: BundleItem; index: number }) {
         style={{ cursor: hasVideo ? 'pointer' : 'default' }}
       >
         {item.display_icon ? (
-          <img src={item.display_icon} alt={name} className="h-full w-full object-contain" />
+          <SkinImage src={item.display_icon} alts={item.alt_icons} alt={name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-text-secondary">No image</div>
         )}

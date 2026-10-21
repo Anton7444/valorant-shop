@@ -4,6 +4,7 @@ import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import { staggerStyle, trackPointer } from '../utils/spotlight';
 import SkinVideoModal from './SkinVideoModal';
+import SkinImage from './SkinImage';
 
 function tierColor(skin: OwnedSkin): string {
   return skin.content_tier_color ? `#${skin.content_tier_color.slice(0, 6)}` : 'var(--color-text-secondary)';
@@ -33,7 +34,7 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         style={{ cursor: hasVideo ? 'pointer' : 'default' }}
       >
         {skin.display_icon ? (
-          <img src={skin.display_icon} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
+          <SkinImage src={skin.display_icon} alts={skin.alt_icons} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
         ) : (
           <span className="text-sm text-text-secondary">No image</span>
         )}

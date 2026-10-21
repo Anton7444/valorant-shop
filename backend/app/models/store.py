@@ -18,6 +18,7 @@ class SkinOffer(BaseModel):
     cost: int
     levels: list[SkinLevel] = []
     owned: bool = False
+    alt_icons: list[str] = []
 
 
 class OwnedSkin(BaseModel):
@@ -29,6 +30,7 @@ class OwnedSkin(BaseModel):
     content_tier_color: str
     levels: list[SkinLevel] = []
     weapon: str = ""
+    alt_icons: list[str] = []
 
 
 class CatalogSkin(OwnedSkin):
@@ -53,6 +55,7 @@ class BundleItem(BaseModel):
     discounted_price: int
     discount_percent: float
     levels: list[SkinLevel] = []
+    alt_icons: list[str] = []
 
 
 class Bundle(BaseModel):
