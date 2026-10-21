@@ -1,3 +1,4 @@
+import { setVideoViaServer, useVideoViaServer } from '../utils/videoRoute';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -113,8 +114,24 @@ export default function ShopPage() {
             )}
           </>
         )}
+        <VideoRouteOption />
       </main>
     </div>
+  );
+}
+
+function VideoRouteOption() {
+  const viaServer = useVideoViaServer();
+  return (
+    <label className="mt-16 flex cursor-pointer items-center justify-center gap-2 text-[11px] text-text-secondary/40 transition-colors hover:text-text-secondary focus-within:text-text-secondary">
+      <input
+        type="checkbox"
+        checked={viaServer}
+        onChange={(e) => setVideoViaServer(e.target.checked)}
+        className="h-3 w-3 accent-[var(--color-accent-red)]"
+      />
+      Load videos through the server
+    </label>
   );
 }
 
