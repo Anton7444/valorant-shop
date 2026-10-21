@@ -181,3 +181,16 @@ export type AuthAction =
   | { type: 'LOGIN_ERROR'; error: string }
   | { type: 'LOGOUT' }
   | { type: 'SESSION_RESTORED'; puuid: string };
+
+export interface AccessoryOffer {
+  uuid: string;
+  item_type: 'spray' | 'buddy' | 'card' | 'title' | 'other';
+  name: string;
+  display_icon: string;
+  cost: number;
+}
+
+export interface AccessoryStoreResponse {
+  offers: AccessoryOffer[];
+  seconds_remaining: number;
+}
