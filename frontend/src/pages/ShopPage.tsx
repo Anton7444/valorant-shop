@@ -115,7 +115,33 @@ export default function ShopPage() {
           </>
         )}
         <VideoRouteOption />
+        <LoginCodeOption />
       </main>
+    </div>
+  );
+}
+
+function LoginCodeOption() {
+  const [code, setCode] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  async function make() {
+    setError(false);
+    try {
+      setCode((await api.createLoginCode()).code);
+    } catch {
+      setError(true);
+    }
+  }
+
+  return (
+    <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-text-secondary/40 transition-colors hover:text-text-secondary focus-within:text-text-secondary">
+      <button type="button" onClick={make} className="underline-offset-2 hover:underline">
+        Create a one-time login code
+      </button>
+      {code && <span className="font-mono tracking-widest text-text-primary">{code}</span>}
+      {code && <span>(10 min, one use)</span>}
+      {error && <span className="text-accent-red">failed</span>}
     </div>
   );
 }

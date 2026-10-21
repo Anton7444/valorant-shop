@@ -1,5 +1,7 @@
 import asyncio
+import dataclasses
 import logging
+import secrets
 import threading
 import time
 
@@ -137,3 +139,57 @@ async def check_session(request: Request) -> dict:
         return {"valid": False}
 
     return {"valid": True, "puuid": session.puuid}
+
+
+# --- Login codes: carry a signed-in session to another browser ---
+
+CODE_TTL = 600.0
+CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+_codes_lock = threading.Lock()
+_codes: dict[str, tuple[str, float]] = {}
+
+
+class CodeRedeemRequest(BaseModel):
+    code: str
+
+
+@router.post("/code")
+async def create_login_code(request: Request) -> dict:
+    """Make a one-time code (10 minutes) that signs another browser in as this session."""
+    token = _get_token_from_header(request)
+    if not token or not store.get_valid(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    now = time.monotonic()
+    code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))
+    with _codes_lock:
+        for key in [k for k, (_, exp) in _codes.items() if exp <= now]:
+            del _codes[key]
+        _codes[code] = (token, now + CODE_TTL)
+    return {"code": code, "expires_in": int(CODE_TTL)}
+
+
+@router.post("/code/redeem", response_model=LoginResponse)
+async def redeem_login_code(body: CodeRedeemRequest, request: Request) -> LoginResponse:
+    _check_rate_limit(request.client.host if request.client else "unknown")
+
+    code = body.code.strip().upper()
+    with _codes_lock:
+        entry = _codes.pop(code, None)
+    if not entry or entry[1] <= time.monotonic():
+        return LoginResponse(status="error", error="That code is invalid or has expired.")
+
+    source = store.get_valid(entry[0])
+    if not source:
+        return LoginResponse(status="error", error="The signed-in session has expired. Sign in again.")
+
+    session_data = dataclasses.replace(source)
+    new_token = store.create(session_data)
+    # Same Riot tokens, so keep the original expiry rather than granting a fresh 3 hours.
+    session_data.expires_at = source.expires_at
+    return LoginResponse(
+        status="success",
+        session_token=new_token,
+        puuid=source.puuid,
+        promo=settings.is_promo_target(source.puuid),
+    )

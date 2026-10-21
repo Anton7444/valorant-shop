@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginCode, setLoginCode] = useState('');
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
 
   // The login helper extension sends the browser back here with the Riot
@@ -126,6 +127,27 @@ export default function LoginPage() {
     }
   }
 
+  async function handleCodeLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!loginCode.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.redeemLoginCode(loginCode.trim());
+      if (res.status === 'success' && res.puuid && res.session_token) {
+        api.storeToken(res.session_token);
+        dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+        navigate('/shop');
+      } else {
+        setError(res.error ?? 'Could not sign in with that code');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign in with that code');
+      setLoading(false);
+    }
+  }
+
   function handleSubmitUrl(e: React.FormEvent) {
     e.preventDefault();
     if (!pastedUrl.trim()) return;
@@ -206,6 +228,28 @@ export default function LoginPage() {
                   </Link>
                 ))}
               </div>
+
+              <details className="mt-3 text-center text-xs text-text-secondary">
+                <summary className="cursor-pointer select-none hover:text-text-primary">Have a login code?</summary>
+                <form onSubmit={handleCodeLogin} className="mt-2 flex items-center justify-center gap-2">
+                  <input
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value)}
+                    maxLength={8}
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    aria-label="Login code"
+                    className="w-32 rounded-sm border border-border bg-bg-secondary px-2 py-1 text-center font-mono uppercase tracking-widest text-text-primary outline-none focus:border-accent-red"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !loginCode.trim()}
+                    className="rounded-sm border border-border px-3 py-1 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                  >
+                    Go
+                  </button>
+                </form>
+              </details>
 
               {error && (
                 <p className="mt-4 text-center text-sm text-accent-red">{error}</p>

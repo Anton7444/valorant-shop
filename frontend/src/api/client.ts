@@ -66,6 +66,17 @@ export function submitToken(url: string): Promise<LoginResponse> {
   });
 }
 
+export function createLoginCode(): Promise<{ code: string; expires_in: number }> {
+  return request('/api/auth/code', { method: 'POST' });
+}
+
+export function redeemLoginCode(code: string): Promise<LoginResponse> {
+  return request('/api/auth/code/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
 export function logout(): Promise<{ status: string }> {
   return request('/api/auth/logout', { method: 'POST' });
 }
