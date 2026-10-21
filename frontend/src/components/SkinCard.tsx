@@ -63,7 +63,8 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
       {metal && (
         <ReflectiveLayer
           radius={8}
-          className="pointer-events-none absolute inset-0 z-10 h-full w-full opacity-60 mix-blend-soft-light"
+          intensity={0.4}
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full opacity-35 mix-blend-soft-light"
         />
       )}
 

@@ -71,6 +71,8 @@ interface ReflectiveLayerProps {
   radius?: number;
   /** Also tilt the parent element with CSS, using the same spring angles as the normal. */
   tiltParent?: boolean;
+  /** 0..1: how strong the highlights are (1 = full metal). */
+  intensity?: number;
   className?: string;
 }
 
@@ -79,7 +81,7 @@ interface ReflectiveLayerProps {
  * parent drives a spring (k=120, c=16, +-12deg); the same angles tilt the surface normal
  * and, with `tiltParent`, the parent's CSS transform. Leaving the parent springs back to flat.
  */
-export default function ReflectiveLayer({ radius = 24, tiltParent = false, className = '' }: ReflectiveLayerProps) {
+export default function ReflectiveLayer({ radius = 24, tiltParent = false, intensity = 1, className = '' }: ReflectiveLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const supported = hasWebGL2();
 
@@ -193,6 +195,7 @@ export default function ReflectiveLayer({ radius = 24, tiltParent = false, class
       const uRadius = gl.getUniformLocation(cardProgram, 'uRadius');
       const uBevel = gl.getUniformLocation(cardProgram, 'uBevel');
       const uTilt = gl.getUniformLocation(cardProgram, 'uTilt');
+      gl.uniform1f(gl.getUniformLocation(cardProgram, 'uIntensity'), intensity);
 
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -262,7 +265,7 @@ export default function ReflectiveLayer({ radius = 24, tiltParent = false, class
     }
 
     return cleanup;
-  }, [supported, radius, tiltParent]);
+  }, [supported, radius, tiltParent, intensity]);
 
   if (!supported) {
     // No WebGL2: a static brushed-steel gradient instead.

@@ -32,6 +32,7 @@ uniform sampler2D uEnv;   // blurred flat environment map
 uniform vec2 uRes;        // drawing buffer size, device px
 uniform float uRadius;    // corner radius, device px
 uniform float uBevel;     // bevel width, device px
+uniform float uIntensity; // 1 = full metal, lower flattens highlights toward mid grey
 uniform vec2 uTilt;       // (rotateY, rotateX) in radians, same values as the CSS transform
 
 float sdRoundBox(vec2 p, vec2 halfSize, float r) {
@@ -76,7 +77,8 @@ void main() {
   vec3 env = texture(uEnv, clamp(uv, 0.0, 1.0)).rgb;
   float lum = dot(env, vec3(0.299, 0.587, 0.114));   // desaturate: steel, not a photo
   float metal = clamp(pow(lum, 0.85) * 1.35, 0.0, 1.0);
-  vec3 col = vec3(metal) * vec3(0.90, 0.94, 1.0) + slope * 0.16;
+  metal = mix(0.42, metal, uIntensity);
+  vec3 col = vec3(metal) * vec3(0.90, 0.94, 1.0) + slope * 0.16 * uIntensity;
 
   float coverage = 1.0 - smoothstep(-1.0, 1.0, d);
   outColor = vec4(col * coverage, coverage);
