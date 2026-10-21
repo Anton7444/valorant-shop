@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SkinLevel } from '../types';
+import { useVideoViaServer, videoSrc } from '../utils/videoRoute';
 
 interface OriginRect {
   top: number;
@@ -24,6 +25,7 @@ const FOOTER_HEIGHT = 52;
 
 export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
   const rect = originRect;
+  const viaServer = useVideoViaServer();
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const firstWithVideo = levels.findIndex((level) => level.video_url);
@@ -120,7 +122,7 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
           {selected.video_url ? (
             <video
               key={selected.video_url}
-              src={selected.video_url}
+              src={videoSrc(selected.video_url, viaServer)}
               className="h-full w-full bg-black object-contain"
               autoPlay
               loop
