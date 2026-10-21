@@ -212,13 +212,11 @@ async def password_login(username: str, password: str) -> tuple[str, str | None,
         init = await client.post(
             RSO_URL,
             json={
-                # The web client id is the one Riot's auth API accepts for
-                # password sign-ins; "riot-client" is only valid in the browser flow.
-                "client_id": "play-valorant-web-prod",
+                "client_id": "riot-client",
                 "nonce": "1",
-                "redirect_uri": "https://playvalorant.com/opt_in",
+                "redirect_uri": "http://localhost/redirect",
                 "response_type": "token id_token",
-                "scope": "account openid",
+                "scope": "openid link ban lol_region account",
             },
         )
         _check_rate_limit(init)
@@ -227,9 +225,6 @@ async def password_login(username: str, password: str) -> tuple[str, str | None,
                 "Riot blocked the sign-in from this server (Cloudflare/captcha). "
                 "Use the browser sign-in instead."
             )
-        init_error = init.json().get("error") if init.headers.get("content-type", "").startswith("application/json") else None
-        if init_error:
-            raise AuthenticationError(f"Riot refused to start the sign-in ({init_error}).")
         data = await _rso_put(
             client,
             {"type": "auth", "username": username, "password": password, "remember": False, "language": "en_US"},
