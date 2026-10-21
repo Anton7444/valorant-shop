@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../context/useLanguage';
@@ -25,7 +25,10 @@ export default function AccessoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const lastLoad = useRef(0);
+
   const load = useCallback(async () => {
+    lastLoad.current = Date.now();
     setLoading(true);
     setError(null);
     try {
@@ -44,6 +47,11 @@ export default function AccessoryPage() {
       setLoading(false);
     }
   }, [dispatch, navigate]);
+
+  // The timer reaching zero reloads the store, but never more than once every 30s.
+  const reloadWhenExpired = useCallback(() => {
+    if (Date.now() - lastLoad.current > 30_000) void load();
+  }, [load]);
 
   useEffect(() => {
     void load();
@@ -85,7 +93,7 @@ export default function AccessoryPage() {
         ) : (
           <>
             <div className="mb-8 flex justify-center">
-              <CountdownTimer secondsRemaining={secondsRemaining} onExpire={load} />
+              <CountdownTimer secondsRemaining={secondsRemaining} onExpire={reloadWhenExpired} />
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {offers.map((offer, index) => (
