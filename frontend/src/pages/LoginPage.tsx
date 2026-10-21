@@ -1,4 +1,3 @@
-import PasswordLogin from '../components/PasswordLogin';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -103,28 +102,26 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await handleLoginResponse(await api.submitToken(url));
+      const res = await api.submitToken(url);
+
+      if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
+        sessionStorage.removeItem('login_stage');
+        setPromoSession({ token: res.session_token, puuid: res.puuid });
+        setLoading(false);
+        return;
+      }
+
+      if (res.status === 'success' && res.puuid && res.session_token) {
+        sessionStorage.removeItem('login_stage');
+        api.storeToken(res.session_token);
+        dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+        navigate('/shop');
+      } else {
+        setError(res.error ?? 'Authentication failed');
+        setLoading(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
-      setLoading(false);
-    }
-  }
-
-  async function handleLoginResponse(res: api.LoginResponse) {
-    if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
-      sessionStorage.removeItem('login_stage');
-      setPromoSession({ token: res.session_token, puuid: res.puuid });
-      setLoading(false);
-      return;
-    }
-
-    if (res.status === 'success' && res.puuid && res.session_token) {
-      sessionStorage.removeItem('login_stage');
-      api.storeToken(res.session_token);
-      dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
-      navigate('/shop');
-    } else {
-      setError(res.error ?? 'Authentication failed');
       setLoading(false);
     }
   }
@@ -209,8 +206,6 @@ export default function LoginPage() {
                   </Link>
                 ))}
               </div>
-
-              <PasswordLogin onResponse={handleLoginResponse} onError={setError} />
 
               {error && (
                 <p className="mt-4 text-center text-sm text-accent-red">{error}</p>
