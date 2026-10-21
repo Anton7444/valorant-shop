@@ -36,7 +36,8 @@ export default function CountdownTimer({ secondsRemaining, onExpire }: Countdown
     return () => clearInterval(interval);
   }, [isExpired, onExpire]);
 
-  const hours = Math.floor(remaining / 3600);
+  const days = Math.floor(remaining / 86400);
+  const hours = Math.floor((remaining % 86400) / 3600);
   const minutes = Math.floor((remaining % 3600) / 60);
   const seconds = remaining % 60;
 
@@ -49,6 +50,7 @@ export default function CountdownTimer({ secondsRemaining, onExpire }: Countdown
       <span className="text-lg font-semibold tracking-wide">
         Store refreshes in{' '}
         <span className="font-bold">
+          {days > 0 && `${days}d `}
           {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
         </span>
       </span>

@@ -1,3 +1,4 @@
+import { setMetalCards, useMetalCards } from '../utils/metalCards';
 import { setVideoViaServer, useVideoViaServer } from '../utils/videoRoute';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -115,8 +116,24 @@ export default function ShopPage() {
           </>
         )}
         <VideoRouteOption />
+        <MetalCardsOption />
       </main>
     </div>
+  );
+}
+
+function MetalCardsOption() {
+  const on = useMetalCards();
+  return (
+    <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 text-[11px] text-text-secondary/40 transition-colors hover:text-text-secondary focus-within:text-text-secondary">
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => setMetalCards(e.target.checked)}
+        className="h-3 w-3 accent-[var(--color-accent-red)]"
+      />
+      Metal card effect
+    </label>
   );
 }
 

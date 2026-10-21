@@ -54,13 +54,10 @@ export default function AccessoryPage() {
       <AppHeader />
 
       <main id="main" className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-8 flex items-center gap-3">
           <span className="h-5 w-1 bg-accent-red" aria-hidden="true" />
           <h2 className="font-display text-xl uppercase tracking-[0.18em] text-text-primary">Accessory store</h2>
         </div>
-        <p className="mb-8 text-sm text-text-secondary">
-          Player cards, sprays, gun buddies and titles you can buy with Kingdom Credits. Rotates weekly.
-        </p>
 
         {loading ? (
           <div className="animate-pulse">
