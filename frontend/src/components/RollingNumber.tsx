@@ -11,7 +11,7 @@ export default function RollingNumber({ value }: { value: number }) {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const text = value.toLocaleString();
+  const text = String(value);
   const last = text.length - 1;
 
   return (
