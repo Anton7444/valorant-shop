@@ -134,7 +134,7 @@ function Scoreboard({ match }: { match: MatchSummary }) {
   const { localizedNames } = useLanguage();
   // Group players by team (a mode without teams is one group), best team first:
   // winners, then rounds won, then the team's combined score.
-  const groups = match.teams.length
+  const grouped = match.teams.length
     ? match.teams
         .map((team) => {
           const players = match.players.filter((p) => p.team_id === team.team_id);
@@ -147,6 +147,13 @@ function Scoreboard({ match }: { match: MatchSummary }) {
             b.total - a.total,
         )
     : [{ team: null, players: match.players, total: 0 }];
+
+  // Free-for-all modes (e.g. Ability Draft Arena) make every player their own "team" with a
+  // player-id as its name; show one ranked list instead of a header per player.
+  const freeForAll = grouped.length > 2 && grouped.every((g) => g.players.length <= 1);
+  const groups = freeForAll
+    ? [{ team: null, players: grouped.flatMap((g) => g.players), total: 0 }]
+    : grouped;
 
   const noRounds = match.teams.every((t) => !t.rounds_won);
 
