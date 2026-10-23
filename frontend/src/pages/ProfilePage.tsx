@@ -154,6 +154,11 @@ function Scoreboard({ match }: { match: MatchSummary }) {
   const groups = freeForAll
     ? [{ team: null, players: grouped.flatMap((g) => g.players), total: 0 }]
     : grouped;
+  // In a free-for-all every player is their own team: show their placement, green for the winner.
+  const placements = new Map<string, { place: number; won: boolean | null }>();
+  if (freeForAll) {
+    grouped.forEach((g, i) => g.players.forEach((p) => placements.set(p.puuid, { place: i + 1, won: g.team?.won ?? null })));
+  }
 
   const noRounds = match.teams.every((t) => !t.rounds_won);
 
@@ -186,6 +191,21 @@ function Scoreboard({ match }: { match: MatchSummary }) {
                   <tr key={player.puuid} className={player.is_me ? 'bg-white/5' : ''}>
                     <td className="px-3 py-1.5">
                       <div className="flex items-center gap-2.5">
+                        {placements.has(player.puuid) && (
+                          <span
+                            className="w-7 shrink-0 text-right text-xs font-bold"
+                            style={{
+                              color:
+                                placements.get(player.puuid)!.won === true
+                                  ? 'var(--color-accent-teal)'
+                                  : placements.get(player.puuid)!.won === false
+                                    ? 'var(--color-accent-red)'
+                                    : 'var(--color-text-secondary)',
+                            }}
+                          >
+                            #{placements.get(player.puuid)!.place}
+                          </span>
+                        )}
                         <div className="relative shrink-0">
                           {player.agent_icon ? (
                             <img src={player.agent_icon} alt={agent} loading="lazy" className="h-9 w-9 rounded-sm bg-bg-secondary object-cover" />
