@@ -15,15 +15,38 @@ export default function NavMore({ items }: NavMoreProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const active = items.some((item) => item.to === pathname);
 
-  function toggle() {
-    if (open) {
-      setOpen(false);
-      return;
-    }
+  const closeTimer = useRef<number>(0);
+
+  function show() {
+    window.clearTimeout(closeTimer.current);
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect) setPos({ left: rect.left, top: rect.bottom + 6 });
     setOpen(true);
   }
+
+  // Mouse: open on hover and close shortly after the pointer leaves both the tab and the menu.
+  // Touch and keyboard still use the click toggle.
+  function hoverShow(event: React.PointerEvent) {
+    if (event.pointerType === 'mouse') show();
+  }
+  function hoverHide(event: React.PointerEvent) {
+    if (event.pointerType !== 'mouse') return;
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(false), 140);
+  }
+
+  const lastPointer = useRef('mouse');
+
+  function toggle() {
+    if (open) {
+      // A mouse click right after the hover-open should not slam the menu shut again.
+      if (lastPointer.current !== 'mouse') setOpen(false);
+      return;
+    }
+    show();
+  }
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +82,11 @@ export default function NavMore({ items }: NavMoreProps) {
         aria-expanded={open}
         aria-current={active ? 'page' : undefined}
         onClick={toggle}
+        onPointerDown={(e) => {
+          lastPointer.current = e.pointerType;
+        }}
+        onPointerEnter={hoverShow}
+        onPointerLeave={hoverHide}
         className={`font-display relative z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
           active || open ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary'
         }`}
@@ -86,6 +114,8 @@ export default function NavMore({ items }: NavMoreProps) {
             aria-label="More pages"
             className="fixed z-50 w-44 overflow-hidden rounded-md border border-border bg-bg-card py-1 shadow-xl shadow-black/40"
             style={{ left: pos.left, top: pos.top }}
+            onPointerEnter={hoverShow}
+            onPointerLeave={hoverHide}
           >
             {items.map((item) => (
               <Link
