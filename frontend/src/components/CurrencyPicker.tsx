@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { hasRegionPrices } from '../utils/regionPrices';
 
 interface CurrencyPickerProps {
   code: string;
@@ -96,7 +97,7 @@ export default function CurrencyPicker({ code, options, onChange, className = ''
           ref={listRef}
           role="listbox"
           aria-label="Currency"
-          className="absolute left-0 top-full z-30 mt-1.5 max-h-64 w-28 overflow-y-auto rounded-md border border-border bg-bg-card py-1 shadow-xl shadow-black/40"
+          className="absolute left-0 top-full z-30 mt-1.5 max-h-64 w-32 overflow-y-auto rounded-md border border-border bg-bg-card py-1 shadow-xl shadow-black/40"
         >
           {options.map((option, index) => (
             <li
@@ -109,7 +110,12 @@ export default function CurrencyPicker({ code, options, onChange, className = ''
                 index === active ? 'bg-bg-secondary text-text-primary' : 'text-text-secondary'
               }`}
             >
-              {option}
+              <span>
+                {option}
+                {!hasRegionPrices(option) && (
+                  <span className="ml-1.5 text-[9px] font-normal uppercase tracking-wider text-text-secondary/60">est.</span>
+                )}
+              </span>
               {option === code && <span className="h-1.5 w-1.5 rounded-full bg-accent-red" aria-hidden="true" />}
             </li>
           ))}

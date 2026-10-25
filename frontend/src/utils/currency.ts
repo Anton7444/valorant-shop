@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { REGION_PRICES, decimalsFor, hasRegionPrices } from './regionPrices';
 
 // Prices in the app are stored in AUD; other currencies are converted at today's rate.
 const CACHE_KEY = 'fx-rates-aud';
@@ -55,13 +56,13 @@ export interface CurrencyState {
   /** Currencies that can be chosen, preferred ones first. */
   options: string[];
   setCode: (code: string) => void;
-  /** AUD -> `code` multiplier. */
+  /** AUD -> `code` multiplier (only used for currencies without their own regional prices). */
   rate: number;
+  /** True when the prices are the AUD packs converted at today's rate rather than the region's own. */
+  estimated: boolean;
   status: 'ready' | 'loading' | 'failed';
   /** Format an amount that is already in `code`. */
   money: (amount: number) => string;
-  /** Format an AUD amount in `code`. */
-  fromAud: (aud: number) => string;
 }
 
 export function useCurrency(): CurrencyState {
@@ -94,14 +95,14 @@ export function useCurrency(): CurrencyState {
   }, [cache]);
 
   const rates = cache?.rates ?? null;
-  const code = rates && rates[choice] ? choice : 'AUD';
+  // Regions with their own price list work without exchange rates; the rest need them.
+  const code = hasRegionPrices(choice) || rates?.[choice] ? choice : 'AUD';
   const rate = rates?.[code] ?? 1;
 
   const options = useMemo(() => {
-    if (!rates) return ['AUD'];
-    const all = Object.keys(rates).filter((c) => /^[A-Z]{3}$/.test(c));
-    const preferred = PREFERRED.filter((c) => all.includes(c));
-    const rest = all.filter((c) => !preferred.includes(c)).sort();
+    const all = new Set([...Object.keys(REGION_PRICES), ...Object.keys(rates ?? {}).filter((c) => /^[A-Z]{3}$/.test(c))]);
+    const preferred = PREFERRED.filter((c) => all.has(c));
+    const rest = [...all].filter((c) => !preferred.includes(c)).sort();
     return [...preferred, ...rest];
   }, [rates]);
 
@@ -117,23 +118,28 @@ export function useCurrency(): CurrencyState {
   const money = useCallback(
     (amount: number) => {
       if (code === 'AUD') return `A$${amount.toFixed(2)}`;
+      const digits = decimalsFor(code, rate);
       try {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(amount);
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: code,
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        }).format(amount);
       } catch {
-        return `${amount.toFixed(2)} ${code}`;
+        return `${amount.toFixed(digits)} ${code}`;
       }
     },
-    [code],
+    [code, rate],
   );
-  const fromAud = useCallback((aud: number) => money(aud * rate), [money, rate]);
 
   return {
     code,
     options,
     setCode,
     rate,
+    estimated: !hasRegionPrices(code),
     status: rates ? 'ready' : failed ? 'failed' : 'loading',
     money,
-    fromAud,
   };
 }

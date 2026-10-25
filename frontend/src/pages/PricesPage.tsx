@@ -3,9 +3,9 @@ import AppHeader from '../components/AppHeader';
 import ScrollFade from '../components/ScrollFade';
 import CurrencyPicker from '../components/CurrencyPicker';
 import { useCurrency, type CurrencyState } from '../utils/currency';
+import { REGION_PRICES, getPackSet } from '../utils/regionPrices';
 import {
   RP_PACKS,
-  VP_PACKS,
   bestForBudget,
   bestRpForVp,
   cheapestForVp,
@@ -21,7 +21,7 @@ function PackList({ purchase, fx }: { purchase: Purchase; fx: CurrencyState }) {
     <ul className="mt-2 space-y-0.5 text-xs text-text-secondary">
       {rows.map(([pack, count]) => (
         <li key={pack.vp}>
-          {count} × {pack.vp.toLocaleString()} VP ({fx.fromAud(pack.aud)})
+          {count} × {pack.vp.toLocaleString()} VP ({fx.money(pack.price)})
         </li>
       ))}
     </ul>
@@ -51,16 +51,20 @@ export default function PricesPage() {
   const [audText, setAudText] = useState('');
   const [vpText, setVpText] = useState('');
 
+  const set = useMemo(() => getPackSet(fx.code, fx.rate), [fx.code, fx.rate]);
+  const maxPrice = Math.max(...set.packs.map((p) => p.price));
+  const minPrice = Math.min(...set.packs.map((p) => p.price));
+
   const budget = Number(audText); // in the selected currency
-  const budgetAud = budget / fx.rate;
   const forBudget = useMemo(
-    () => (Number.isFinite(budgetAud) && budgetAud >= 1 && budgetAud <= 1_000_000 ? bestForBudget(budgetAud) : null),
-    [budgetAud],
+    () =>
+      Number.isFinite(budget) && budget >= minPrice && budget <= maxPrice * 10_000 ? bestForBudget(set, budget) : null,
+    [budget, set, minPrice, maxPrice],
   );
   const target = Number(vpText);
   const forVp = useMemo(
-    () => (Number.isFinite(target) && target >= 1 && target <= 100_000_000 ? cheapestForVp(Math.round(target)) : null),
-    [target],
+    () => (Number.isFinite(target) && target >= 1 && target <= 100_000_000 ? cheapestForVp(set, Math.round(target)) : null),
+    [target, set],
   );
 
   const [vpBudgetText, setVpBudgetText] = useState('');
@@ -75,9 +79,10 @@ export default function PricesPage() {
     () => (Number.isFinite(rpTarget) && rpTarget >= 1 && rpTarget <= 1_000_000 ? cheapestVpForRp(Math.round(rpTarget)) : null),
     [rpTarget],
   );
-  const vpForRpInAud = useMemo(() => (vpForRp ? cheapestForVp(vpForRp.vp).aud : null), [vpForRp]);
+  const vpForRpPrice = useMemo(() => (vpForRp ? cheapestForVp(set, vpForRp.vp).price : null), [vpForRp, set]);
 
-  const bestRate = Math.min(...VP_PACKS.map((p) => p.aud / p.vp));
+  const bestRate = Math.min(...set.packs.map((p) => p.price / p.vp));
+  const region = REGION_PRICES[fx.code];
 
   return (
     <div className="min-h-dvh">
@@ -103,16 +108,16 @@ export default function PricesPage() {
                 </tr>
               </thead>
               <tbody>
-                {VP_PACKS.map((pack) => {
-                  const rate = (pack.aud / pack.vp) * 100;
-                  const isBest = pack.aud / pack.vp === bestRate;
+                {set.packs.map((pack) => {
+                  const rate = (pack.price / pack.vp) * 100;
+                  const isBest = pack.price / pack.vp === bestRate;
                   return (
                     <tr key={pack.vp} className="border-t border-border">
                       <td className="px-4 py-3 font-semibold text-text-primary">{pack.vp.toLocaleString()} VP</td>
                       <td className="px-4 py-3 text-text-secondary">{pack.bonus ? `+${pack.bonus.toLocaleString()}` : '—'}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{fx.fromAud(pack.aud)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{fx.money(pack.price)}</td>
                       <td className={`px-4 py-3 text-right ${isBest ? 'text-accent-teal' : 'text-text-secondary'}`}>
-                        {fx.fromAud(rate)}
+                        {fx.money(rate)}
                         {isBest && <span className="ml-2 text-[10px] uppercase tracking-wider">best value</span>}
                       </td>
                     </tr>
@@ -122,12 +127,18 @@ export default function PricesPage() {
             </table>
           </ScrollFade>
           <p className="mt-3 text-xs leading-relaxed text-text-secondary">
-            Prices come from third-party price guides (Australian store) and can change or differ by payment method and
-            store.
-            {fx.code !== 'AUD' && (
-              <> Other currencies are the AUD price converted at today's exchange rate, so they are estimates: Riot sets its own price in each region.</>
+            {region ? (
+              <>
+                Pack sizes and prices are those sold in this region ({region.confidence} confidence).
+                {region.note && <> {region.note}</>}
+              </>
+            ) : (
+              <>
+                No regional price list for {fx.code} yet: these are the Australian packs converted at today's exchange
+                rate, so they are estimates and Riot's real {fx.code} packs and prices may differ.
+              </>
             )}{' '}
-            Check the Riot store before you buy.
+            Prices come from Riot's wiki and third-party guides and can change. Check the Riot store before you buy.
           </p>
         </section>
 
@@ -152,7 +163,7 @@ export default function PricesPage() {
               <div className="mt-4">
                 <div className="text-2xl font-semibold text-text-primary">{forBudget.vp.toLocaleString()} VP</div>
                 <div className="text-xs text-text-secondary">
-                  for {fx.fromAud(forBudget.aud)} (change left: {fx.money(Math.max(0, budget - forBudget.aud * fx.rate))})
+                  for {fx.money(forBudget.price)} (change left: {fx.money(Math.max(0, budget - forBudget.price))})
                 </div>
                 <PackList purchase={forBudget} fx={fx} />
               </div>
@@ -177,7 +188,7 @@ export default function PricesPage() {
             />
             {forVp && (
               <div className="mt-4">
-                <div className="text-2xl font-semibold text-text-primary">{fx.fromAud(forVp.aud)}</div>
+                <div className="text-2xl font-semibold text-text-primary">{fx.money(forVp.price)}</div>
                 <div className="text-xs text-text-secondary">
                   for {forVp.vp.toLocaleString()} VP ({(forVp.vp - Math.round(target)).toLocaleString()} VP left over)
                 </div>
@@ -258,7 +269,7 @@ export default function PricesPage() {
                 <div className="text-2xl font-semibold text-text-primary">{vpForRp.vp.toLocaleString()} VP</div>
                 <div className="text-xs text-text-secondary">
                   for {vpForRp.rp} RP ({vpForRp.rp - Math.round(rpTarget)} RP left over)
-                  {vpForRpInAud !== null && <> · about {fx.fromAud(vpForRpInAud)} in VP packs</>}
+                  {vpForRpPrice !== null && <> · about {fx.money(vpForRpPrice)} in VP packs</>}
                 </div>
                 <RpPackList purchase={vpForRp} />
               </div>
