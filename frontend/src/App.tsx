@@ -10,6 +10,7 @@ import BundlePage from './pages/BundlePage';
 import PricesPage from './pages/PricesPage';
 import AccessoryPage from './pages/AccessoryPage';
 import ReflectivePage from './pages/ReflectivePage';
+import BattlePassPage from './pages/BattlePassPage';
 import ProfilePage from './pages/ProfilePage';
 import { LanguageProvider } from './context/LanguageContext';
 
@@ -42,6 +43,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/battlepass"
+                element={
+                  <ProtectedRoute>
+                    <BattlePassPage />
                   </ProtectedRoute>
                 }
               />

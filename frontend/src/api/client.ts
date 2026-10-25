@@ -1,4 +1,5 @@
 import type {
+  BattlePassResponse,
   AccessoryStoreResponse,
   BundleResponse,
   CatalogResponse,
@@ -107,6 +108,10 @@ export function getCatalog(): Promise<CatalogResponse> {
 
 export function getProfile(): Promise<ProfileResponse> {
   return request('/api/profile');
+}
+
+export function getBattlePass(): Promise<BattlePassResponse> {
+  return request('/api/profile/battlepass');
 }
 
 export function getMatches(start: number): Promise<MatchesResponse> {

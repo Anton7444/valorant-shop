@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/accessories', label: 'Accessories' },
   { to: '/inventory', label: 'Inventory' },
   { to: '/profile', label: 'Profile' },
+  { to: '/battlepass', label: 'Battle Pass' },
   { to: '/catalog', label: 'Catalog' },
   { to: '/bundle', label: 'Bundle' },
   { to: '/prices', label: 'VP Prices' },
