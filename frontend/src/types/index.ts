@@ -194,3 +194,34 @@ export interface AccessoryStoreResponse {
   offers: AccessoryOffer[];
   seconds_remaining: number;
 }
+
+export interface PassReward {
+  uuid: string;
+  kind: 'skin' | 'buddy' | 'spray' | 'card' | 'title' | 'currency' | 'agent' | 'other';
+  name: string;
+  icon: string;
+  amount: number;
+}
+
+export interface PassLevel {
+  level: number;
+  chapter: number;
+  epilogue: boolean;
+  xp: number;
+  cumulative_xp: number;
+  reached: boolean;
+  reward: PassReward | null;
+}
+
+export interface BattlePassResponse {
+  name: string;
+  icon: string;
+  level: number;
+  max_level: number;
+  total_xp: number;
+  xp_into_level: number;
+  xp_for_next: number;
+  xp_remaining: number;
+  ends_at: string | null;
+  levels: PassLevel[];
+}
