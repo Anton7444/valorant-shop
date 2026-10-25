@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../context/useLanguage';
 import * as api from '../api/client';
-import type { BattlePassResponse, PassLevel } from '../types';
+import type { BattlePassResponse, FreeReward, PassLevel } from '../types';
 import AppHeader from '../components/AppHeader';
 import RollingNumber from '../components/RollingNumber';
 import { localizedName } from '../context/languageNames';
@@ -94,6 +94,8 @@ function PassView({ pass }: { pass: BattlePassResponse }) {
   const percentNext = done ? 100 : Math.min(100, Math.round((pass.xp_into_level / pass.xp_for_next) * 100));
   const percentAll = pass.max_level ? Math.round((pass.level / pass.max_level) * 100) : 0;
   const left = daysLeft(pass.ends_at);
+  const locked = pass.premium_owned === false;
+  const chapterNumbers = [...new Set(pass.levels.map((l) => l.chapter))];
   return (
     <>
       <section className="rise-in mb-10 rounded-lg border border-border bg-bg-card p-6" style={staggerStyle(0)}>
@@ -129,17 +131,60 @@ function PassView({ pass }: { pass: BattlePassResponse }) {
           <Stat label="XP left to finish" value={pass.xp_remaining.toLocaleString()} />
           <Stat label="Pass complete" value={`${percentAll}%`} />
         </dl>
+
+        <p className="mt-5 border-t border-border pt-4 text-xs text-text-secondary">
+          Premium pass:{' '}
+          <span className={pass.premium_owned ? 'font-semibold text-accent-teal' : 'font-semibold text-text-primary'}>
+            {pass.premium_owned === true ? 'Owned' : pass.premium_owned === false ? 'Not owned' : 'Unknown'}
+          </span>
+          {pass.premium_owned === false && ' — you only earn the free rewards; the premium tiers below are what the pass would give.'}
+          {pass.premium_owned === null && ' — it could not be worked out yet (it is detected from the premium skins you have reached).'}
+        </p>
       </section>
 
-      <ul className="mb-8 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
-        {pass.levels.map((level) => (
-          <LevelTile key={level.level} level={level} isNext={level.level === pass.level + 1} />
-        ))}
-      </ul>
+      {chapterNumbers.map((chapter) => {
+        const levels = pass.levels.filter((l) => l.chapter === chapter);
+        const frees = pass.free_rewards.filter((f) => f.chapter === chapter);
+        const first = levels[0]?.level;
+        const last = levels[levels.length - 1]?.level;
+        const doneCount = levels.filter((l) => l.reached).length;
+        return (
+          <section key={chapter} className="mb-8">
+            <div className="mb-3 flex flex-wrap items-baseline gap-x-3">
+              <h3 className="font-display text-sm uppercase tracking-[0.18em] text-text-primary">
+                {levels[0]?.epilogue ? 'Epilogue' : `Chapter ${chapter}`}
+              </h3>
+              <span className="text-xs text-text-secondary">
+                Tiers {first}–{last} · {doneCount}/{levels.length}
+              </span>
+              {locked && doneCount > 0 && <span className="text-xs text-text-secondary/70">premium locked</span>}
+            </div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+              <ul className="grid flex-1 grid-cols-3 gap-3 sm:grid-cols-5">
+                {levels.map((level) => (
+                  <LevelTile key={level.level} level={level} isNext={level.level === pass.level + 1} locked={locked} />
+                ))}
+              </ul>
+              {frees.length > 0 && (
+                <>
+                  <div className="hidden w-px self-stretch bg-border lg:block" aria-hidden="true" />
+                  <div className="flex items-stretch gap-3">
+                    <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:flex">
+                      {frees.map((free, i) => (
+                        <FreeTile key={i} free={free} />
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        );
+      })}
 
       <p className="text-xs leading-relaxed text-text-secondary">
-        Tiers and rewards are the premium track; whether you own the premium pass, and the free-track rewards, are not
-        shown. The tier is worked out from your total XP and the pass's XP table.
+        The tier is worked out from your total XP and the pass's XP table. Premium ownership is detected from whether you
+        own the premium skins of the tiers you have reached.
       </p>
     </>
   );
@@ -154,7 +199,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LevelTile({ level, isNext }: { level: PassLevel; isNext: boolean }) {
+function LevelTile({ level, isNext, locked }: { level: PassLevel; isNext: boolean; locked: boolean }) {
   const { localizedNames } = useLanguage();
   const reward = level.reward;
   const name = reward ? localizedName(reward.uuid, reward.name, localizedNames) : '';
@@ -162,23 +207,24 @@ function LevelTile({ level, isNext }: { level: PassLevel; isNext: boolean }) {
   return (
     <li
       className={`rise-in relative flex flex-col overflow-hidden rounded-lg border bg-bg-card ${
-        isNext ? 'border-accent-red' : level.reached ? 'border-accent-teal/50' : 'border-border'
+        isNext ? 'border-accent-red' : level.reached && !locked ? 'border-accent-teal/50' : 'border-border'
       }`}
       style={staggerStyle(Math.min(level.level, 24))}
       title={reward ? `${name}${reward.amount > 1 ? ` ×${reward.amount}` : ''}` : undefined}
     >
       <div className="flex items-center justify-between px-2 pt-1.5 text-[10px] font-semibold uppercase tracking-wider">
-        <span className={isNext ? 'text-accent-red' : level.reached ? 'text-accent-teal' : 'text-text-secondary'}>
+        <span className={isNext ? 'text-accent-red' : level.reached && !locked ? 'text-accent-teal' : 'text-text-secondary'}>
           {level.level}
         </span>
         {level.epilogue && <span className="ml-auto mr-1 text-[9px] font-normal text-text-secondary/70">Epilogue</span>}
-        {level.reached && (
+        {level.reached && locked && <LockIcon />}
+        {level.reached && !locked && (
           <svg className="h-3 w-3 text-accent-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-label="Reached">
             <path d="M5 12.5l4.5 4.5L19 7.5" />
           </svg>
         )}
       </div>
-      <div className={`flex h-20 items-center justify-center p-2 ${level.reached ? '' : 'opacity-60'}`}>
+      <div className={`flex h-20 items-center justify-center p-2 ${level.reached && !locked ? '' : 'opacity-60'}`}>
         {reward?.icon ? (
           <img src={reward.icon} alt={name} loading="lazy" className="max-h-full max-w-full object-contain" />
         ) : reward ? (
@@ -191,6 +237,52 @@ function LevelTile({ level, isNext }: { level: PassLevel; isNext: boolean }) {
           {reward && reward.amount > 1 ? ` ×${reward.amount.toLocaleString()}` : ''}
         </p>
         <p className="text-[10px] uppercase tracking-wider text-text-secondary">{reward ? KIND_LABELS[reward.kind] : ''}</p>
+      </div>
+    </li>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className="h-3 w-3 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-label="Locked">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 018 0v3" />
+    </svg>
+  );
+}
+
+function FreeTile({ free }: { free: FreeReward }) {
+  const { localizedNames } = useLanguage();
+  const { reward } = free;
+  const name = localizedName(reward.uuid, reward.name, localizedNames);
+
+  return (
+    <li
+      className={`rise-in relative flex flex-col overflow-hidden rounded-lg border bg-bg-card lg:w-32 ${free.reached ? 'border-accent-teal/50' : 'border-border'}`}
+      style={staggerStyle(Math.min(free.chapter, 24))}
+      title={`${name}${reward.amount > 1 ? ` ×${reward.amount}` : ''}`}
+    >
+      <div className="flex items-center justify-between px-2 pt-1.5 text-[10px] font-semibold uppercase tracking-wider">
+        <span className={free.reached ? 'text-accent-teal' : 'text-text-secondary'}>Free</span>
+        {free.reached && (
+          <svg className="h-3 w-3 text-accent-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-label="Reached">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        )}
+      </div>
+      <div className={`flex h-20 items-center justify-center p-2 ${free.reached ? '' : 'opacity-60'}`}>
+        {reward.icon ? (
+          <img src={reward.icon} alt={name} loading="lazy" className="max-h-full max-w-full object-contain" />
+        ) : (
+          <span className="line-clamp-3 text-center font-display text-xs uppercase tracking-wider text-text-primary">{name}</span>
+        )}
+      </div>
+      <div className="mt-auto px-2 pb-2">
+        <p className="line-clamp-1 text-[11px] text-text-primary">
+          {name}
+          {reward.amount > 1 ? ` ×${reward.amount.toLocaleString()}` : ''}
+        </p>
+        <p className="text-[10px] uppercase tracking-wider text-text-secondary">{KIND_LABELS[reward.kind]}</p>
       </div>
     </li>
   );

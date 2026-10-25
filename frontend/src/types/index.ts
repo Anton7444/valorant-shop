@@ -213,6 +213,13 @@ export interface PassLevel {
   reward: PassReward | null;
 }
 
+export interface FreeReward {
+  chapter: number;
+  level_required: number;
+  reached: boolean;
+  reward: PassReward;
+}
+
 export interface BattlePassResponse {
   name: string;
   icon: string;
@@ -223,5 +230,7 @@ export interface BattlePassResponse {
   xp_for_next: number;
   xp_remaining: number;
   ends_at: string | null;
+  premium_owned: boolean | null;
   levels: PassLevel[];
+  free_rewards: FreeReward[];
 }
