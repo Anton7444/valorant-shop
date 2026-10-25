@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import httpx
 
 from app.models.auth import SessionData
-from app.models.battlepass import BattlePassResponse, PassLevel, PassReward
+from app.models.battlepass import BattlePassResponse, FreeReward, PassLevel, PassReward
 from app.services import asset_cache, storefront
 from app.services.asset_cache import (
     ITEM_TYPE_AGENT,
@@ -117,10 +117,13 @@ async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
     total_xp = int(progress.get("TotalProgressionEarned") or 0)
 
     levels: list[PassLevel] = []
+    raw_rewards: dict[int, dict] = {}  # level -> raw reward, to check ownership below
+    free_rewards: list[FreeReward] = []
     cumulative = 0
     chapters = (definition.get("content") or {}).get("chapters", [])
     for chapter_index, chapter in enumerate(chapters, start=1):
         for raw_level in chapter.get("levels", []):
+            raw_rewards[len(levels) + 1] = raw_level.get("reward") or {}
             cumulative += int(raw_level.get("xp") or 0)
             levels.append(PassLevel(
                 level=len(levels) + 1,
@@ -131,7 +134,18 @@ async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
                 reached=total_xp >= cumulative,
                 reward=await _reward(raw_level.get("reward")),
             ))
+        # Free-track rewards arrive when the chapter is finished (i.e. its last level is reached).
+        for raw_free in chapter.get("freeRewards") or []:
+            reward = await _reward(raw_free)
+            if reward and levels:
+                free_rewards.append(FreeReward(
+                    chapter=chapter_index,
+                    level_required=len(levels),
+                    reached=total_xp >= cumulative,
+                    reward=reward,
+                ))
 
+    premium_owned = await _premium_owned(session, levels, raw_rewards)
     reached = sum(1 for lv in levels if lv.reached)
     nxt = levels[reached] if reached < len(levels) else None
     previous_total = levels[reached - 1].cumulative_xp if reached else 0
@@ -145,5 +159,31 @@ async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
         xp_for_next=nxt.xp if nxt else 0,
         xp_remaining=max(0, (levels[-1].cumulative_xp if levels else 0) - total_xp),
         ends_at=ends.isoformat() if ends else None,
+        premium_owned=premium_owned,
         levels=levels,
+        free_rewards=free_rewards,
     )
+
+
+async def _premium_owned(session: SessionData, levels: list[PassLevel], raw_rewards: dict[int, dict]) -> bool | None:
+    """Whether the premium pass is bought.
+
+    Riot's contract data does not say, but premium rewards are granted as tiers are reached. If any
+    skin among the reached premium tiers is owned, the pass is bought; if skins were reached and none
+    is owned, it is not. With no reached skin tier there is nothing to tell, so the answer is unknown.
+    """
+    skin_rewards = [
+        raw_rewards[lv.level]["uuid"].lower()
+        for lv in levels
+        if lv.reached and raw_rewards.get(lv.level, {}).get("type") == "EquippableSkinLevel"
+    ]
+    if not skin_rewards:
+        return None
+    try:
+        owned = await storefront.fetch_owned_skin_level_ids(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError):
+        logger.warning("Could not check owned skins for battle pass ownership")
+        return None
+    return any(uuid in owned for uuid in skin_rewards)

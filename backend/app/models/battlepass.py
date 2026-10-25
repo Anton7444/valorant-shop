@@ -19,6 +19,13 @@ class PassLevel(BaseModel):
     reward: PassReward | None = None
 
 
+class FreeReward(BaseModel):
+    chapter: int
+    level_required: int  # the chapter's last level: the reward comes with finishing the chapter
+    reached: bool
+    reward: PassReward
+
+
 class BattlePassResponse(BaseModel):
     name: str
     icon: str = ""
@@ -29,4 +36,6 @@ class BattlePassResponse(BaseModel):
     xp_for_next: int  # 0 when every level is done
     xp_remaining: int  # XP left to finish the whole pass
     ends_at: str | None = None  # ISO timestamp of the season end
+    premium_owned: bool | None = None  # None when it could not be worked out
     levels: list[PassLevel]
+    free_rewards: list[FreeReward] = []
