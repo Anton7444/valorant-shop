@@ -7,6 +7,7 @@ import type { Wallet } from '../types';
 import WalletDisplay from './WalletDisplay';
 import LanguageSwitch from './LanguageSwitch';
 import ScrollFade from './ScrollFade';
+import NavMore from './NavMore';
 import { useRovingArrows } from '../hooks/useRovingArrows';
 
 const NAV_ITEMS = [
@@ -23,6 +24,9 @@ const NAV_ITEMS = [
 // Pages anyone can open without signing in.
 const PUBLIC_PATHS = ['/bundle', '/catalog', '/prices'];
 
+// Signed in, the everyday pages stay as tabs and the rest tuck into a "More" menu so the row never overflows.
+const PRIMARY_PATHS = ['/shop', '/inventory', '/profile', '/battlepass'];
+
 // Each page mounts its own header, so remember where the highlight last sat
 // and animate from there to the new tab instead of popping in.
 let lastIndicator: { left: number; width: number } | null = null;
@@ -33,9 +37,11 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const { language, setLanguage } = useLanguage();
   const { pathname } = useLocation();
   const loggedIn = state.sessionValid;
-  const navItems = NAV_ITEMS.filter(
+  const visibleItems = NAV_ITEMS.filter(
     (item) => (loggedIn ? item.to !== '/bundle' : PUBLIC_PATHS.includes(item.to)),
   );
+  const navItems = loggedIn ? visibleItems.filter((item) => PRIMARY_PATHS.includes(item.to)) : visibleItems;
+  const moreItems = loggedIn ? visibleItems.filter((item) => !PRIMARY_PATHS.includes(item.to)) : [];
   const navRef = useRovingArrows<HTMLElement>();
   const indicatorRef = useRef<HTMLSpanElement>(null);
 
@@ -109,17 +115,18 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
                 {item.label}
               </NavLink>
             ))}
+            {moreItems.length > 0 && <NavMore items={moreItems} />}
           </nav>
         </ScrollFade>
 
         <div className="ml-auto flex items-center gap-4 @max-[460px]/header:gap-2">
           {wallet && (
-            <div className="@max-[1050px]/header:hidden">
+            <div className="@max-[1140px]/header:hidden">
               <WalletDisplay wallet={wallet} />
             </div>
           )}
           {state.puuid && (
-            <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1250px]/header:block">
+            <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1400px]/header:block">
               {state.puuid.slice(0, 8)}
             </span>
           )}
