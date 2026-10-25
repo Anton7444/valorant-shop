@@ -1,107 +1,113 @@
-// Valorant Points packs sold in the Australian store (prices in AUD).
-// Reported by third-party price guides and may change: confirm in the Riot store.
+// Valorant Points packs. Each region sells its own pack sizes in its own currency, so every
+// calculation works on a PackSet (see regionPrices.ts) instead of one global price list.
 export interface VpPack {
   vp: number; // total VP received, bonus included
   bonus: number; // part of `vp` that is bonus
-  aud: number;
+  price: number; // in the PackSet's currency
 }
 
-export const VP_PACKS: VpPack[] = [
-  { vp: 475, bonus: 0, aud: 7.25 },
-  { vp: 1000, bonus: 50, aud: 14.75 },
-  { vp: 2050, bonus: 100, aud: 30 },
-  { vp: 3650, bonus: 150, aud: 52 },
-  { vp: 5350, bonus: 350, aud: 74 },
-  { vp: 11000, bonus: 1000, aud: 148 },
-];
-
-// Packs get cheaper per VP as they get bigger, so for large amounts buy the biggest
-// pack in bulk and solve only the (small) remainder exactly. Keeping a few packs
-// back for the exact step makes the result match a full optimisation.
-const BIG_VP = VP_PACKS[VP_PACKS.length - 1];
-const KEEP_BACK = 3;
-
-function mergePurchases(a: Purchase, b: Purchase): Purchase {
-  const packs = new Map(a.packs);
-  for (const [pack, n] of b.packs) packs.set(pack, (packs.get(pack) ?? 0) + n);
-  return { vp: a.vp + b.vp, aud: Math.round((a.aud + b.aud) * 100) / 100, packs };
-}
-
-function bulk(n: number): Purchase {
-  return {
-    vp: n * BIG_VP.vp,
-    aud: Math.round(n * BIG_VP.aud * 100) / 100,
-    packs: n > 0 ? new Map([[BIG_VP, n]]) : new Map(),
-  };
+export interface PackSet {
+  packs: VpPack[];
+  decimals: number; // fraction digits of the currency (KRW 0, USD 2)
 }
 
 export interface Purchase {
   vp: number;
-  aud: number;
+  price: number;
   packs: Map<VpPack, number>;
 }
 
-const cents = (aud: number) => Math.round(aud * 100);
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
 
-// Most VP for a budget (unbounded knapsack over cents).
-export function bestForBudget(budgetAud: number): Purchase {
-  const n = Math.max(0, Math.floor(budgetAud / BIG_VP.aud) - KEEP_BACK);
-  return mergePurchases(bulk(n), bestForBudgetExact(budgetAud - n * BIG_VP.aud));
+// Prices as whole numbers of the smallest step (cents, or e.g. 50,000 IDR when every pack is a
+// multiple of that) so the dynamic programming tables stay small.
+function stepOf(set: PackSet) {
+  const scale = 10 ** set.decimals;
+  const units = set.packs.map((p) => Math.round(p.price * scale));
+  const step = units.reduce(gcd, 0) || 1;
+  return { scale, step, cost: (pack: VpPack) => Math.round(pack.price * scale) / step };
 }
 
-function bestForBudgetExact(budgetAud: number): Purchase {
-  const budget = cents(budgetAud);
-  const best: { vp: number; spent: number; pick: number }[] = Array.from({ length: budget + 1 }, () => ({
-    vp: 0,
-    spent: 0,
-    pick: -1,
-  }));
+// The pack with the lowest price per VP: for large amounts buy it in bulk and solve only the
+// (small) remainder exactly. Keeping a few packs back for the exact step makes the result match
+// a full optimisation.
+function bigPack(set: PackSet): VpPack {
+  return set.packs.reduce((best, p) => (p.price / p.vp < best.price / best.vp ? p : best));
+}
+const KEEP_BACK = 3;
+
+function mergePurchases(a: Purchase, b: Purchase, set: PackSet): Purchase {
+  const packs = new Map(a.packs);
+  for (const [pack, n] of b.packs) packs.set(pack, (packs.get(pack) ?? 0) + n);
+  const scale = 10 ** set.decimals;
+  return { vp: a.vp + b.vp, price: Math.round((a.price + b.price) * scale) / scale, packs };
+}
+
+function bulk(n: number, big: VpPack): Purchase {
+  return { vp: n * big.vp, price: n * big.price, packs: n > 0 ? new Map([[big, n]]) : new Map() };
+}
+
+// Most VP for a budget (unbounded knapsack).
+export function bestForBudget(set: PackSet, budget: number): Purchase {
+  const big = bigPack(set);
+  const n = Math.max(0, Math.floor(budget / big.price) - KEEP_BACK);
+  return mergePurchases(bulk(n, big), bestForBudgetExact(set, budget - n * big.price), set);
+}
+
+function bestForBudgetExact(set: PackSet, budgetAmount: number): Purchase {
+  const { scale, step, cost } = stepOf(set);
+  const budget = Math.floor(Math.round(budgetAmount * scale) / step);
+  const best: { vp: number; pick: number }[] = Array.from({ length: budget + 1 }, () => ({ vp: 0, pick: -1 }));
   for (let b = 1; b <= budget; b++) {
-    best[b] = { ...best[b - 1], pick: -2 }; // carry over the previous best (unused change)
-    VP_PACKS.forEach((pack, i) => {
-      const c = cents(pack.aud);
+    best[b] = { vp: best[b - 1].vp, pick: -2 }; // carry over the previous best (unused change)
+    set.packs.forEach((pack, i) => {
+      const c = cost(pack);
       if (c <= b && best[b - c].vp + pack.vp > best[b].vp) {
-        best[b] = { vp: best[b - c].vp + pack.vp, spent: best[b - c].spent + c, pick: i };
+        best[b] = { vp: best[b - c].vp + pack.vp, pick: i };
       }
     });
   }
-  return rebuild(best, budget);
-}
-
-function rebuild(best: { vp: number; spent: number; pick: number }[], from: number): Purchase {
   const packs = new Map<VpPack, number>();
-  let b = from;
+  let b = budget;
   while (b > 0 && best[b].vp > 0) {
     if (best[b].pick === -2) {
       b -= 1;
       continue;
     }
-    const pack = VP_PACKS[best[b].pick];
+    const pack = set.packs[best[b].pick];
     packs.set(pack, (packs.get(pack) ?? 0) + 1);
-    b -= cents(pack.aud);
+    b -= cost(pack);
   }
-  const total = [...packs].reduce((acc, [pack, n]) => ({ vp: acc.vp + pack.vp * n, aud: acc.aud + pack.aud * n }), {
-    vp: 0,
-    aud: 0,
-  });
-  return { ...total, aud: Math.round(total.aud * 100) / 100, packs };
+  return totalOf(set, packs);
+}
+
+function totalOf(set: PackSet, packs: Map<VpPack, number>): Purchase {
+  const scale = 10 ** set.decimals;
+  let vp = 0;
+  let price = 0;
+  for (const [pack, n] of packs) {
+    vp += pack.vp * n;
+    price += pack.price * n;
+  }
+  return { vp, price: Math.round(price * scale) / scale, packs };
 }
 
 // Cheapest way to reach at least `targetVp`.
-export function cheapestForVp(targetVp: number): Purchase {
-  const n = Math.max(0, Math.floor(targetVp / BIG_VP.vp) - KEEP_BACK);
-  return mergePurchases(bulk(n), cheapestForVpExact(targetVp - n * BIG_VP.vp));
+export function cheapestForVp(set: PackSet, targetVp: number): Purchase {
+  const big = bigPack(set);
+  const n = Math.max(0, Math.floor(targetVp / big.vp) - KEEP_BACK);
+  return mergePurchases(bulk(n, big), cheapestForVpExact(set, targetVp - n * big.vp), set);
 }
 
-function cheapestForVpExact(targetVp: number): Purchase {
-  const max = targetVp + Math.max(...VP_PACKS.map((p) => p.vp));
+function cheapestForVpExact(set: PackSet, targetVp: number): Purchase {
+  const { cost: unitCost } = stepOf(set);
+  const max = targetVp + Math.max(...set.packs.map((p) => p.vp));
   const cost: number[] = Array(max + 1).fill(Infinity);
   const pick: number[] = Array(max + 1).fill(-1);
   cost[0] = 0;
   for (let v = 1; v <= max; v++) {
-    VP_PACKS.forEach((pack, i) => {
-      const prev = Math.max(0, v - pack.vp);
-      const c = cost[prev] + cents(pack.aud);
+    set.packs.forEach((pack, i) => {
+      const c = cost[Math.max(0, v - pack.vp)] + unitCost(pack);
       if (c < cost[v]) {
         cost[v] = c;
         pick[v] = i;
@@ -113,12 +119,11 @@ function cheapestForVpExact(targetVp: number): Purchase {
   const packs = new Map<VpPack, number>();
   let v = end;
   while (v > 0) {
-    const pack = VP_PACKS[pick[v]];
+    const pack = set.packs[pick[v]];
     packs.set(pack, (packs.get(pack) ?? 0) + 1);
     v = Math.max(0, v - pack.vp);
   }
-  const vp = [...packs].reduce((sum, [pack, n]) => sum + pack.vp * n, 0);
-  return { vp, aud: cost[end] / 100, packs };
+  return totalOf(set, packs);
 }
 
 // Radianite Points packs, bought with VP in the store (VP cannot be recovered).
