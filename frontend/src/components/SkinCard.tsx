@@ -38,6 +38,8 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
   const imageWrapRef = useRef<HTMLDivElement>(null);
   const hasVideo = !skin.owned && skin.levels.some((level) => level.video_url);
+  const colors = skin.chromas ?? [];
+  const canPreview = !skin.owned && (hasVideo || colors.length > 1);
 
   function handleReveal() {
     if (revealed) return;
@@ -47,7 +49,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
   }
 
   function handleOpenVideo() {
-    if (!hasVideo || !imageWrapRef.current) return;
+    if (!canPreview || !imageWrapRef.current) return;
     setVideoOrigin(imageWrapRef.current.getBoundingClientRect());
   }
 
@@ -132,10 +134,10 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
               <div
                 ref={imageWrapRef}
                 onClick={handleOpenVideo}
-                role={hasVideo ? 'button' : undefined}
-                aria-label={hasVideo ? `Play ${name} demo video` : undefined}
+                role={canPreview ? 'button' : undefined}
+                aria-label={canPreview ? `Preview ${name}` : undefined}
                 className="relative flex aspect-video items-center justify-center p-4"
-                style={{ cursor: hasVideo ? 'pointer' : 'default' }}
+                style={{ cursor: canPreview ? 'pointer' : 'default' }}
               >
                 {skin.display_icon ? (
                   <SkinImage
@@ -185,7 +187,8 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
                   </div>
                 )}
 
-                {hasVideo && (
+                {colors.length > 1 && !skin.owned && <ColorChip count={colors.length} />}
+                {canPreview && (
                   <div
                     className="pointer-events-none absolute inset-0 rounded-t-md opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                     style={{ boxShadow: 'inset 0 0 0 2px var(--glow-color), inset 0 0 18px -6px var(--glow-color)' }}
@@ -231,9 +234,10 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
         }}
       />
 
-      {videoOrigin && hasVideo && (
+      {videoOrigin && canPreview && (
         <SkinVideoModal
           levels={skin.levels}
+          chromas={colors}
           fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
@@ -241,5 +245,14 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
         />
       )}
     </div>
+  );
+}
+
+function ColorChip({ count }: { count: number }) {
+  return (
+    <span className="pointer-events-none absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-bg-primary/75 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary backdrop-blur-sm">
+      <span className="h-2 w-2 rounded-full bg-gradient-to-br from-accent-red via-accent-teal to-sky-400" aria-hidden="true" />
+      {count} colors
+    </span>
   );
 }

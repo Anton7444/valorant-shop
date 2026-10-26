@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { SkinLevel } from '../types';
+import type { SkinChroma, SkinLevel } from '../types';
+import { useLanguage } from '../context/useLanguage';
 import { useVideoViaServer, videoSrc } from '../utils/videoRoute';
 
 interface OriginRect {
@@ -12,6 +13,7 @@ interface OriginRect {
 
 interface SkinVideoModalProps {
   levels: SkinLevel[];
+  chromas?: SkinChroma[];
   fallbackIcon: string;
   name: string;
   originRect: OriginRect;
@@ -23,7 +25,8 @@ const CLOSE_MS = 300;
 const CLOSE_FADE_MS = 300;
 const FOOTER_HEIGHT = 52;
 
-export default function SkinVideoModal({ levels, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
+export default function SkinVideoModal({ levels, chromas = [], fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
+  const { localizedNames } = useLanguage();
   const rect = originRect;
   const viaServer = useVideoViaServer();
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
@@ -32,7 +35,16 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
     return firstWithVideo === -1 ? 0 : firstWithVideo;
   });
 
+  // Colour variants: -1 shows the skin itself (its levels), otherwise the chosen colour.
+  const [chromaIndex, setChromaIndex] = useState(-1);
+  const hasColors = chromas.length > 1;
+  const chroma = chromaIndex >= 0 ? chromas[chromaIndex] : null;
+  const chromaName = (c: SkinChroma) => localizedNames[`chroma:${c.uuid}`] ?? c.name;
+
   const selected = levels[selectedIndex];
+  const mediaVideo = chroma ? chroma.video_url : selected.video_url;
+  const mediaImage = chroma ? chroma.display_icon : selected.display_icon || fallbackIcon;
+  const mediaTitle = chroma ? chromaName(chroma) : name;
   const showThumbStrip = levels.length > 1;
 
   const videoWidth = Math.min(window.innerWidth * 0.9, 960);
@@ -107,7 +119,11 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
           transition: `transform ${transformMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${opacityMs}ms ease`,
         }}
       >
-        <div className="relative min-h-0 flex-1 bg-black">
+        <div
+          className={`relative min-h-0 flex-1 ${
+            mediaVideo ? 'bg-black' : 'bg-[radial-gradient(ellipse_at_center,#243247_0%,#0c121a_75%)]'
+          }`}
+        >
           <button
             type="button"
             onClick={requestClose}
@@ -119,10 +135,41 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
             </svg>
           </button>
 
-          {selected.video_url ? (
+          {hasColors && (
+            <div
+              role="group"
+              aria-label="Colours"
+              className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-4.5rem)] items-center gap-1.5 overflow-x-auto rounded-full bg-bg-primary/70 p-1.5 backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {chromas.map((c, index) => {
+                const active = index === (chromaIndex === -1 ? 0 : chromaIndex);
+                return (
+                  <button
+                    key={c.uuid}
+                    type="button"
+                    title={chromaName(c)}
+                    aria-label={chromaName(c)}
+                    aria-pressed={active}
+                    onClick={() => setChromaIndex(index === 0 ? -1 : index)}
+                    className={`h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 bg-bg-secondary transition-transform duration-200 hover:scale-110 ${
+                      active ? 'scale-110 border-text-primary' : 'border-transparent'
+                    }`}
+                  >
+                    {c.swatch ? (
+                      <img src={c.swatch} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="block h-full w-full text-[9px] leading-5 text-text-secondary">{index + 1}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {mediaVideo ? (
             <video
-              key={selected.video_url}
-              src={videoSrc(selected.video_url, viaServer)}
+              key={mediaVideo}
+              src={videoSrc(mediaVideo, viaServer)}
               className="h-full w-full bg-black object-contain"
               autoPlay
               loop
@@ -140,9 +187,10 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
             />
           ) : (
             <img
-              src={selected.display_icon || fallbackIcon}
-              alt={name}
-              className="h-full w-full object-contain p-8"
+              key={mediaImage}
+              src={mediaImage}
+              alt={mediaTitle}
+              className="h-full w-full animate-[fade-in_300ms_ease] object-contain p-8"
             />
           )}
 
@@ -156,7 +204,7 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
             className="min-w-0 truncate text-sm text-text-primary"
             style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600 }}
           >
-            {name}
+            {mediaTitle}
           </h3>
 
           {showThumbStrip && (
@@ -165,9 +213,12 @@ export default function SkinVideoModal({ levels, fallbackIcon, name, originRect,
                 <button
                   key={level.uuid}
                   type="button"
-                  onClick={() => setSelectedIndex(index)}
+                  onClick={() => {
+                    setSelectedIndex(index);
+                    setChromaIndex(-1);
+                  }}
                   className={`rounded-md border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                    index === selectedIndex
+                    index === selectedIndex && !chroma
                       ? 'border-accent-red bg-bg-card text-text-primary'
                       : 'border-border bg-bg-card/50 text-text-secondary hover:border-text-secondary'
                   }`}

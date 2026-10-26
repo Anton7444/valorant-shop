@@ -106,6 +106,8 @@ function BundleItemTile({ item, index }: { item: BundleItem; index: number }) {
   const name = localizedName(item.uuid, item.name, localizedNames);
   const levels = item.levels ?? [];
   const hasVideo = levels.some((level) => level.video_url);
+  const colors = item.chromas ?? [];
+  const canPreview = hasVideo || colors.length > 1;
   const imageRef = useRef<HTMLDivElement>(null);
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
 
@@ -117,11 +119,11 @@ function BundleItemTile({ item, index }: { item: BundleItem; index: number }) {
     >
       <div
         ref={imageRef}
-        onClick={() => hasVideo && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}
-        role={hasVideo ? 'button' : undefined}
-        aria-label={hasVideo ? `Play ${name} demo video` : undefined}
+        onClick={() => canPreview && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}
+        role={canPreview ? 'button' : undefined}
+        aria-label={canPreview ? `Preview ${name}` : undefined}
         className="mb-2 h-16 w-full"
-        style={{ cursor: hasVideo ? 'pointer' : 'default' }}
+        style={{ cursor: canPreview ? 'pointer' : 'default' }}
       >
         {item.display_icon ? (
           <SkinImage src={item.display_icon} alts={item.alt_icons} alt={name} className="h-full w-full object-contain" />
@@ -136,9 +138,10 @@ function BundleItemTile({ item, index }: { item: BundleItem; index: number }) {
         </svg>
         {item.discounted_price.toLocaleString()}
       </div>
-      {videoOrigin && hasVideo && (
+      {videoOrigin && canPreview && (
         <SkinVideoModal
           levels={levels}
+          chromas={colors}
           fallbackIcon={item.display_icon}
           name={name}
           originRect={videoOrigin}

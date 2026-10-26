@@ -8,6 +8,14 @@ class SkinLevel(BaseModel):
     video_url: str | None = None
 
 
+class SkinChroma(BaseModel):
+    uuid: str
+    name: str
+    display_icon: str  # full render of this colour
+    swatch: str = ""  # small colour chip
+    video_url: str | None = None
+
+
 class SkinOffer(BaseModel):
     uuid: str
     name: str
@@ -19,6 +27,7 @@ class SkinOffer(BaseModel):
     levels: list[SkinLevel] = []
     owned: bool = False
     alt_icons: list[str] = []
+    chromas: list[SkinChroma] = []
 
 
 class OwnedSkin(BaseModel):
@@ -31,6 +40,7 @@ class OwnedSkin(BaseModel):
     levels: list[SkinLevel] = []
     weapon: str = ""
     alt_icons: list[str] = []
+    chromas: list[SkinChroma] = []
 
 
 class CatalogSkin(OwnedSkin):
@@ -56,6 +66,7 @@ class BundleItem(BaseModel):
     discount_percent: float
     levels: list[SkinLevel] = []
     alt_icons: list[str] = []
+    chromas: list[SkinChroma] = []
 
 
 class Bundle(BaseModel):
