@@ -117,7 +117,34 @@ export default function ShopPage() {
         )}
         <VideoRouteOption />
         <MetalCardsOption />
+        <LoginCodeOption />
       </main>
+    </div>
+  );
+}
+
+function LoginCodeOption() {
+  const [code, setCode] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function make() {
+    setMessage(null);
+    try {
+      setCode((await api.createLoginCode()).code);
+    } catch (err) {
+      setCode(null);
+      setMessage(err instanceof Error ? err.message : 'Could not create a code');
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 text-[11px] text-text-secondary/40 transition-colors hover:text-text-secondary focus-within:text-text-secondary">
+      <button type="button" onClick={make} className="underline-offset-2 hover:underline">
+        Show a login code
+      </button>
+      {code && <span className="font-mono tracking-widest text-text-primary">{code}</span>}
+      {code && <span>(24 hours)</span>}
+      {message && <span className="max-w-md text-center text-accent-red">{message}</span>}
     </div>
   );
 }

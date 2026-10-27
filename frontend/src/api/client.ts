@@ -61,10 +61,28 @@ export function getAuthUrl(): Promise<{ auth_url: string }> {
   return request('/api/auth/url');
 }
 
-export function submitToken(url: string): Promise<LoginResponse> {
+export function submitToken(url: string, ssid?: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, ssid }),
+  });
+}
+
+export function ssidLogin(ssid: string): Promise<LoginResponse> {
+  return request('/api/auth/ssid', {
+    method: 'POST',
+    body: JSON.stringify({ ssid }),
+  });
+}
+
+export function createLoginCode(): Promise<{ code: string; expires_in: number }> {
+  return request('/api/auth/code', { method: 'POST' });
+}
+
+export function redeemLoginCode(code: string): Promise<LoginResponse> {
+  return request('/api/auth/code/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
   });
 }
 
