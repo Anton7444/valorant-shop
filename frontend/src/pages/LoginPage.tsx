@@ -24,6 +24,7 @@ export default function LoginPage() {
   );
   const [pastedUrl, setPastedUrl] = useState('');
   const [ssidText, setSsidText] = useState('');
+  const [codeText, setCodeText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
@@ -35,7 +36,9 @@ export default function LoginPage() {
     if (!hash.includes('access_token=')) return;
     // Drop the tokens from the address bar / history right away.
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    void finishLogin(`http://localhost/redirect${hash}`);
+    // The helper extension also passes Riot's session cookie (ssid) so the site can renew the login.
+    const ssid = new URLSearchParams(hash.slice(1)).get('ssid') ?? undefined;
+    void finishLogin(`http://localhost/redirect${hash}`, ssid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,12 +101,12 @@ export default function LoginPage() {
     }
   }
 
-  async function finishLogin(url: string) {
+  async function finishLogin(url: string, ssid?: string) {
     setLoading(true);
     setError(null);
 
     try {
-      await handleLoginResponse(await api.submitToken(url));
+      await handleLoginResponse(await api.submitToken(url, ssid));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
       setLoading(false);
@@ -125,6 +128,19 @@ export default function LoginPage() {
       navigate('/shop');
     } else {
       setError(res.error ?? 'Authentication failed');
+      setLoading(false);
+    }
+  }
+
+  async function handleCodeLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codeText.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await handleLoginResponse(await api.redeemLoginCode(codeText.trim()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign in with that code');
       setLoading(false);
     }
   }
@@ -213,8 +229,33 @@ export default function LoginPage() {
                   Can't open Riot's login page here?
                 </summary>
                 <div className="mt-3 space-y-3 leading-relaxed">
+                  <form onSubmit={handleCodeLogin} className="space-y-2 rounded-sm border border-border/60 p-3">
+                    <p>
+                      Have a <span className="font-semibold text-text-primary">school code</span>? On a computer where you
+                      signed in with the login helper extension, the Store page (very bottom) can show one.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={codeText}
+                        onChange={(e) => setCodeText(e.target.value)}
+                        placeholder="XXXXX-XXXXX"
+                        aria-label="School code"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                        autoComplete="off"
+                        className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center font-mono uppercase tracking-widest text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                      />
+                      <button
+                        type="submit"
+                        disabled={loading || !codeText.trim()}
+                        className="rounded-sm border border-border px-4 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                      >
+                        Go
+                      </button>
+                    </div>
+                  </form>
                   <p>
-                    Sign in to Riot once on a computer or phone that can (Google, Xbox or password all work), copy the
+                    Or sign in to Riot once on a computer or phone that can (Google, Xbox or password all work), copy the
                     value of the <span className="font-semibold text-text-primary">ssid</span> cookie, and paste it
                     here. This computer then never has to open Riot's page.
                   </p>

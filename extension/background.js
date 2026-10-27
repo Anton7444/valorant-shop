@@ -13,7 +13,16 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     if (hashIndex === -1) return;
     const fragment = details.url.slice(hashIndex);
     if (!fragment.includes('access_token=')) return;
-    chrome.tabs.update(details.tabId, { url: SITE_URL + fragment });
+    // Also hand over Riot's own session cookie (ssid), which the page cannot read itself. With it the
+    // site can renew this login on its own and offer a code to sign in elsewhere. Nothing is sent
+    // anywhere but this tab's address, which goes to the site.
+    chrome.cookies
+      .get({ url: 'https://auth.riotgames.com/', name: 'ssid' })
+      .catch(() => null)
+      .then((cookie) => {
+        const extra = cookie && cookie.value ? '&ssid=' + encodeURIComponent(cookie.value) : '';
+        chrome.tabs.update(details.tabId, { url: SITE_URL + fragment + extra });
+      });
   },
   { url: [{ urlPrefix: 'http://localhost/redirect' }] },
 );
