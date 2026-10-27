@@ -12,7 +12,7 @@ Environment:
     RELAY_HOST                bind address, default 0.0.0.0
     RELAY_PORT                listen port, default 8899
     RELAY_ALLOW               comma-separated host suffixes that may be reached,
-                              default ".riotgames.com,.pvp.net"
+                              default ".riotgames.com,.pvp.net,.riotcdn.net,.rgpub.io,.hcaptcha.com"
     RELAY_TARGET_PORTS        comma-separated destination ports, default "443"
     RELAY_MAX_CONNECTIONS     simultaneous tunnels, default 64
 """
@@ -28,7 +28,7 @@ USER = os.environ.get("RELAY_USER", "")
 PASSWORD = os.environ.get("RELAY_PASS", "")
 HOST = os.environ.get("RELAY_HOST", "0.0.0.0")
 PORT = int(os.environ.get("RELAY_PORT", "8899"))
-ALLOW = tuple(s.strip().lower() for s in os.environ.get("RELAY_ALLOW", ".riotgames.com,.pvp.net").split(",") if s.strip())
+ALLOW = tuple(s.strip().lower() for s in os.environ.get("RELAY_ALLOW", ".riotgames.com,.pvp.net,.riotcdn.net,.rgpub.io,.hcaptcha.com").split(",") if s.strip())
 TARGET_PORTS = {int(p) for p in os.environ.get("RELAY_TARGET_PORTS", "443").split(",") if p.strip()}
 MAX_CONNECTIONS = int(os.environ.get("RELAY_MAX_CONNECTIONS", "64"))
 HEADER_LIMIT = 16 * 1024
