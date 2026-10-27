@@ -75,7 +75,7 @@ export function ssidLogin(ssid: string): Promise<LoginResponse> {
   });
 }
 
-export function createLoginCode(): Promise<{ code: string; expires_in: number }> {
+export function createLoginCode(): Promise<{ code: string; expires_in: number; renews: boolean }> {
   return request('/api/auth/code', { method: 'POST' });
 }
 

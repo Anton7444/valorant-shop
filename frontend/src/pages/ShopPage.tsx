@@ -124,13 +124,14 @@ export default function ShopPage() {
 }
 
 function LoginCodeOption() {
-  const [code, setCode] = useState<string | null>(null);
+  const [code, setCode] = useState<{ code: string; minutes: number; renews: boolean } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function make() {
     setMessage(null);
     try {
-      setCode((await api.createLoginCode()).code);
+      const res = await api.createLoginCode();
+      setCode({ code: res.code, minutes: Math.round(res.expires_in / 60), renews: res.renews });
     } catch (err) {
       setCode(null);
       setMessage(err instanceof Error ? err.message : 'Could not create a code');
@@ -142,8 +143,14 @@ function LoginCodeOption() {
       <button type="button" onClick={make} className="underline-offset-2 hover:underline">
         Show a login code
       </button>
-      {code && <span className="font-mono tracking-widest text-text-primary">{code}</span>}
-      {code && <span>(24 hours)</span>}
+      {code && <span className="font-mono tracking-widest text-text-primary">{code.code}</span>}
+      {code && (
+        <span>
+          {code.renews
+            ? '(valid 24 hours)'
+            : `(works for about ${code.minutes} min; sign in with the login helper extension to make it last)`}
+        </span>
+      )}
       {message && <span className="max-w-md text-center text-accent-red">{message}</span>}
     </div>
   );

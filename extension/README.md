@@ -30,7 +30,7 @@ keeps it in memory only and uses it to renew your Riot tokens by itself, so the 
 
 That also lets you sign in on a computer that cannot open Riot's login page: scroll to the bottom of the
 Store page and press **Show a login code**, then type that code in the login page's
-"Can't open Riot's login page here?" box on the other computer. The code works for 24 hours.
-This needs the extension at home; the manual way (copying the `ssid` cookie yourself) is described on the login page.
+"Can't open Riot's login page here?" box on the other computer. The code works for 24 hours when the extension was used.
+Without the extension the code still works, but only while Riot's current tokens are valid (under an hour), and it cannot be renewed. With the extension at home it lasts 24 hours. The manual way (copying the `ssid` cookie yourself) is described on the login page.
 
 The permission it adds is `cookies`, limited to `https://auth.riotgames.com/`.

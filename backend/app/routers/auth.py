@@ -1,6 +1,7 @@
 import asyncio
+import dataclasses
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import threading
 import time
@@ -172,35 +173,37 @@ class CodeRedeemRequest(BaseModel):
     code: str
 
 
+def _token_seconds_left(session: SessionData) -> float:
+    """Riot's tokens last about an hour from when they were issued."""
+    return 55 * 60 - (datetime.now(timezone.utc) - session.refreshed_at).total_seconds()
+
+
 def _normalise_code(code: str) -> str:
     return "".join(ch for ch in code.upper() if ch in CODE_ALPHABET)
 
 
 @router.post("/code")
 async def create_login_code(request: Request) -> dict:
-    """Make a code (valid 24h) that signs another browser in as this account.
+    """Make a code that signs another browser in as this account.
 
-    Needs a session that has Riot's ssid cookie (signed in through the login helper extension or
-    the ssid box), because that cookie is what lets the server renew the tokens later.
+    With Riot's ssid cookie behind the session (login helper extension or the ssid box) the server
+    can renew the tokens, so the code lasts 24h. Without it the code only works while the current
+    Riot tokens are still valid (under an hour).
     """
     token = _get_token_from_header(request)
     session = store.get_valid(token) if token else None
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if not session.ssid:
-        raise HTTPException(
-            status_code=409,
-            detail="This sign-in has no Riot session cookie. Sign in with the login helper extension (or the ssid box) first.",
-        )
     now = time.monotonic()
+    ttl = CODE_TTL if session.ssid else max(60.0, _token_seconds_left(session))
     code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(10))
     with _codes_lock:
         for key in [k for k, (_, exp) in _codes.items() if exp <= now]:
             del _codes[key]
         for key in [k for k, (t, _) in _codes.items() if t == token]:
             del _codes[key]  # one live code per session
-        _codes[code] = (token, now + CODE_TTL)
-    return {"code": f"{code[:5]}-{code[5:]}", "expires_in": int(CODE_TTL)}
+        _codes[code] = (token, now + ttl)
+    return {"code": f"{code[:5]}-{code[5:]}", "expires_in": int(ttl), "renews": bool(session.ssid)}
 
 
 @router.post("/code/redeem", response_model=LoginResponse)
@@ -213,8 +216,19 @@ async def redeem_login_code(body: CodeRedeemRequest, request: Request) -> LoginR
             del _codes[code]
             entry = None
     source = store.get_valid(entry[0]) if entry else None
-    if not source or not source.ssid:
+    if not source:
         return LoginResponse(status="error", error="That code is invalid or has expired.")
+    if not source.ssid:
+        # No cookie to renew with: share the current tokens, for as long as Riot keeps them valid.
+        left = _token_seconds_left(source)
+        if left <= 0:
+            return LoginResponse(status="error", error="That code has expired. Create a new one.")
+        clone = dataclasses.replace(source)
+        new_token = store.create(clone)
+        clone.expires_at = datetime.now(timezone.utc) + timedelta(seconds=left)
+        return LoginResponse(
+            status="success", session_token=new_token, puuid=source.puuid, promo=settings.is_promo_target(source.puuid)
+        )
     try:
         tokens, next_ssid = await riot_auth.reauthenticate(source.ssid)
     except riot_auth.AuthenticationError as e:
