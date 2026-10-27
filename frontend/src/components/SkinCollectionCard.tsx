@@ -15,6 +15,8 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
   const color = tierColor(skin);
   const name = localizedName(skin.uuid, skin.name, localizedNames);
   const hasVideo = skin.levels.some((level) => level.video_url);
+  const colors = skin.chromas ?? [];
+  const canPreview = hasVideo || colors.length > 1;
   const imageRef = useRef<HTMLDivElement>(null);
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
 
@@ -27,18 +29,19 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
       <div className="h-0.5" style={{ backgroundColor: color }} />
       <div
         ref={imageRef}
-        onClick={() => hasVideo && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}
-        role={hasVideo ? 'button' : undefined}
-        aria-label={hasVideo ? `Play ${name} demo video` : undefined}
+        onClick={() => canPreview && imageRef.current && setVideoOrigin(imageRef.current.getBoundingClientRect())}
+        role={canPreview ? 'button' : undefined}
+        aria-label={canPreview ? `Preview ${name}` : undefined}
         className="relative flex aspect-video items-center justify-center p-4"
-        style={{ cursor: hasVideo ? 'pointer' : 'default' }}
+        style={{ cursor: canPreview ? 'pointer' : 'default' }}
       >
         {skin.display_icon ? (
           <SkinImage src={skin.display_icon} alts={skin.alt_icons} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
         ) : (
           <span className="text-sm text-text-secondary">No image</span>
         )}
-        {hasVideo && (
+        {colors.length > 1 && <ColorChip count={colors.length} />}
+        {canPreview && (
           <div
             className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
             style={{ boxShadow: 'inset 0 0 0 2px var(--glow-color), inset 0 0 18px -6px var(--glow-color)' }}
@@ -60,9 +63,10 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         </span>
         {subtitle && <span className="ml-2 text-[11px] text-text-secondary">{subtitle}</span>}
       </div>
-      {videoOrigin && hasVideo && (
+      {videoOrigin && canPreview && (
         <SkinVideoModal
           levels={skin.levels}
+          chromas={colors}
           fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
@@ -70,5 +74,14 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         />
       )}
     </div>
+  );
+}
+
+function ColorChip({ count }: { count: number }) {
+  return (
+    <span className="pointer-events-none absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-bg-primary/75 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary backdrop-blur-sm">
+      <span className="h-2 w-2 rounded-full bg-gradient-to-br from-accent-red via-accent-teal to-sky-400" aria-hidden="true" />
+      {count} colors
+    </span>
   );
 }

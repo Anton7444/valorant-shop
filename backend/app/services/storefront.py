@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 
 from app.models.store import (
+    SkinChroma,
     AccessoryOffer,
     AccessoryStoreResponse,
     BundleItem,
@@ -75,6 +76,19 @@ async def fetch_storefront(
         return resp.json()
 
 
+def _build_chromas(skin: dict | None) -> list[SkinChroma]:
+    return [
+        SkinChroma(
+            uuid=c["uuid"],
+            name=c["name"],
+            display_icon=c["icon"],
+            swatch=c["swatch"],
+            video_url=c["video"],
+        )
+        for c in (skin or {}).get("chromas", [])
+    ]
+
+
 def _build_levels(skin: dict, *lookup_uuids: str) -> list[SkinLevel]:
     """Build a skin's selectable levels (with demo videos where Riot has them)."""
     raw_levels = skin.get("levels")
@@ -141,6 +155,7 @@ async def _resolve_skin_offer(offer: dict, owned_ids: frozenset[str] = frozenset
         name=skin.get("displayName", "Unknown"),
         display_icon=skin.get("displayIcon", "") or "",
         alt_icons=skin.get("altIcons", []),
+        chromas=_build_chromas(skin),
         content_tier_uuid=tier_uuid,
         content_tier_name=tier_name,
         content_tier_color=tier_color,
@@ -290,6 +305,7 @@ async def get_featured_bundle(raw_storefront: dict) -> BundleResponse:
                 name=item_name,
                 display_icon=item_icon,
                 alt_icons=(item.get("altIcons", []) if item else []),
+                chromas=_build_chromas(item),
                 base_price=base_price,
                 discounted_price=discounted_price,
                 discount_percent=discount_pct,
@@ -348,6 +364,7 @@ async def get_inventory(owned_ids: frozenset[str]) -> InventoryResponse:
             name=skin.get("displayName", "Unknown"),
             display_icon=skin.get("displayIcon", "") or "",
             alt_icons=skin.get("altIcons", []),
+            chromas=_build_chromas(skin),
             content_tier_uuid=tier_uuid,
             content_tier_name=tier["name"] if tier else "Unknown",
             content_tier_color=tier["highlight_color"] if tier else "",
@@ -387,6 +404,7 @@ def get_catalog() -> CatalogResponse:
                 name=skin.get("displayName", "Unknown"),
                 display_icon=skin.get("displayIcon", "") or "",
                 alt_icons=skin.get("altIcons", []),
+                chromas=_build_chromas(skin),
                 content_tier_uuid=tier_uuid,
                 content_tier_name=tier["name"] if tier else "Unknown",
                 content_tier_color=tier["highlight_color"] if tier else "",

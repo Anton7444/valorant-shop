@@ -68,6 +68,23 @@ def _index_with_levels(
             levels_store[level["uuid"].lower()] = parsed
 
 
+def _chromas(skin: dict, fallback_icon: str) -> list[dict]:
+    """The skin's colour variants (the first one is the default colour). Empty when there is only one."""
+    raw = skin.get("chromas") or []
+    if len(raw) < 2:
+        return []
+    return [
+        {
+            "uuid": c["uuid"].lower(),
+            "name": c.get("displayName", ""),
+            "icon": c.get("fullRender") or c.get("displayIcon") or fallback_icon,
+            "swatch": c.get("swatch") or "",
+            "video": c.get("streamedVideo") or None,
+        }
+        for c in raw
+    ]
+
+
 def _alt_icons(skin: dict, primary: str) -> list[str]:
     """Other pictures of the same skin, used when the main icon is a placeholder."""
     urls: list[str] = []
@@ -105,6 +122,7 @@ async def initialize() -> None:
             "levels": skin.get("levels", []),
         }
         skin_entry["altIcons"] = _alt_icons(skin, skin_entry["displayIcon"])
+        skin_entry["chromas"] = _chromas(skin, skin_entry["displayIcon"])
         _skins[uuid] = skin_entry
 
         # Map each level UUID to the parent skin, and each level's own demo
@@ -129,6 +147,7 @@ async def initialize() -> None:
                 "displayIcon": chroma.get("fullRender") or chroma.get("displayIcon") or skin_entry["displayIcon"],
                 "contentTierUuid": skin_entry["contentTierUuid"],
                 "altIcons": skin_entry["altIcons"],
+                "chromas": skin_entry["chromas"],
             }
             if chroma.get("streamedVideo"):
                 _skin_video_by_uuid[chroma_uuid] = chroma["streamedVideo"]

@@ -5,7 +5,13 @@ export type ShopLanguage = 'en-US' | 'zh-TW' | 'zh-CN';
 
 const STORAGE_KEY = 'valorant-shop-language';
 const CATALOGS = ['weapons', 'agents', 'maps', 'weapons/skins', 'bundles', 'buddies', 'sprays', 'playercards', 'playertitles'];
-type CatalogEntry = { uuid: string; displayName?: string; titleText?: string; levels?: Array<{ uuid: string }> };
+type CatalogEntry = {
+  uuid: string;
+  displayName?: string;
+  titleText?: string;
+  levels?: Array<{ uuid: string }>;
+  chromas?: Array<{ uuid: string; displayName?: string }>;
+};
 
 function getInitialLanguage(): ShopLanguage {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -19,6 +25,9 @@ function indexCatalog(data: CatalogEntry[]) {
     names[entry.uuid.toLowerCase()] = name;
     entry.levels?.forEach((level) => {
       names[level.uuid.toLowerCase()] = name;
+    });
+    entry.chromas?.forEach((chroma) => {
+      if (chroma.displayName) names[`chroma:${chroma.uuid.toLowerCase()}`] = chroma.displayName;
     });
     return names;
   }, {});

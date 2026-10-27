@@ -14,8 +14,17 @@ export interface SkinLevel {
   video_url: string | null;
 }
 
+export interface SkinChroma {
+  uuid: string;
+  name: string;
+  display_icon: string;
+  swatch: string;
+  video_url: string | null;
+}
+
 export interface SkinOffer {
   alt_icons?: string[];
+  chromas?: SkinChroma[];
   uuid: string;
   name: string;
   display_icon: string;
@@ -29,6 +38,7 @@ export interface SkinOffer {
 
 export interface OwnedSkin {
   alt_icons?: string[];
+  chromas?: SkinChroma[];
   uuid: string;
   name: string;
   display_icon: string;
@@ -55,6 +65,7 @@ export interface InventoryResponse {
 
 export interface BundleItem {
   alt_icons?: string[];
+  chromas?: SkinChroma[];
   uuid: string;
   name: string;
   display_icon: string;
