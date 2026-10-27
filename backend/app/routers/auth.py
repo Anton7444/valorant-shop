@@ -160,7 +160,7 @@ async def sign_in_with_ssid(body: SsidRequest, request: Request) -> LoginRespons
     return await _login_from_url(f"http://localhost/redirect#{fragment}", ssid=next_ssid)
 
 
-# --- School/other-computer codes: a short code that signs another browser in as this account ---
+# --- Login codes: a short code that signs another browser in as this account ---
 
 CODE_TTL = 24 * 3600.0
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

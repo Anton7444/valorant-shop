@@ -231,7 +231,7 @@ export default function LoginPage() {
                 <div className="mt-3 space-y-3 leading-relaxed">
                   <form onSubmit={handleCodeLogin} className="space-y-2 rounded-sm border border-border/60 p-3">
                     <p>
-                      Have a <span className="font-semibold text-text-primary">school code</span>? On a computer where you
+                      Have a <span className="font-semibold text-text-primary">login code</span>? On a computer where you
                       signed in with the login helper extension, the Store page (very bottom) can show one.
                     </p>
                     <div className="flex gap-2">
@@ -239,7 +239,7 @@ export default function LoginPage() {
                         value={codeText}
                         onChange={(e) => setCodeText(e.target.value)}
                         placeholder="XXXXX-XXXXX"
-                        aria-label="School code"
+                        aria-label="Login code"
                         autoCapitalize="characters"
                         spellCheck={false}
                         autoComplete="off"

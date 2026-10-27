@@ -140,7 +140,7 @@ function LoginCodeOption() {
   return (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 text-[11px] text-text-secondary/40 transition-colors hover:text-text-secondary focus-within:text-text-secondary">
       <button type="button" onClick={make} className="underline-offset-2 hover:underline">
-        Show a school login code
+        Show a login code
       </button>
       {code && <span className="font-mono tracking-widest text-text-primary">{code}</span>}
       {code && <span>(24 hours)</span>}
