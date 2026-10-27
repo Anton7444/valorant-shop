@@ -4,6 +4,7 @@ import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import { staggerStyle, trackPointer } from '../utils/spotlight';
 import SkinVideoModal from './SkinVideoModal';
+import ColorDots from './ColorDots';
 import SkinImage from './SkinImage';
 
 function tierColor(skin: OwnedSkin): string {
@@ -16,6 +17,8 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
   const name = localizedName(skin.uuid, skin.name, localizedNames);
   const hasVideo = skin.levels.some((level) => level.video_url);
   const colors = skin.chromas ?? [];
+  const [colorIndex, setColorIndex] = useState(0);
+  const shownIcon = colorIndex > 0 && colors[colorIndex] ? colors[colorIndex].display_icon : skin.display_icon;
   const canPreview = hasVideo || colors.length > 1;
   const imageRef = useRef<HTMLDivElement>(null);
   const [videoOrigin, setVideoOrigin] = useState<DOMRect | null>(null);
@@ -36,11 +39,11 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         style={{ cursor: canPreview ? 'pointer' : 'default' }}
       >
         {skin.display_icon ? (
-          <SkinImage src={skin.display_icon} alts={skin.alt_icons} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
+          <SkinImage src={shownIcon} alts={colorIndex > 0 ? undefined : skin.alt_icons} alt={name} loading="lazy" className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105" />
         ) : (
           <span className="text-sm text-text-secondary">No image</span>
         )}
-        {colors.length > 1 && <ColorChip count={colors.length} />}
+        {colors.length > 1 && <ColorDots colors={colors} index={colorIndex} onChange={setColorIndex} />}
         {canPreview && (
           <div
             className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
@@ -67,6 +70,7 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
         <SkinVideoModal
           levels={skin.levels}
           chromas={colors}
+          initialColor={colorIndex}
           fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
@@ -77,11 +81,3 @@ export default function SkinCollectionCard({ skin, index, subtitle }: { skin: Ow
   );
 }
 
-function ColorChip({ count }: { count: number }) {
-  return (
-    <span className="pointer-events-none absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-bg-primary/75 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary backdrop-blur-sm">
-      <span className="h-2 w-2 rounded-full bg-gradient-to-br from-accent-red via-accent-teal to-sky-400" aria-hidden="true" />
-      {count} colors
-    </span>
-  );
-}

@@ -14,6 +14,8 @@ interface OriginRect {
 interface SkinVideoModalProps {
   levels: SkinLevel[];
   chromas?: SkinChroma[];
+  /** Index of the colour to open on (0 = the skin's default). */
+  initialColor?: number;
   fallbackIcon: string;
   name: string;
   originRect: OriginRect;
@@ -25,7 +27,7 @@ const CLOSE_MS = 300;
 const CLOSE_FADE_MS = 300;
 const FOOTER_HEIGHT = 52;
 
-export default function SkinVideoModal({ levels, chromas = [], fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
+export default function SkinVideoModal({ levels, chromas = [], initialColor = 0, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
   const { localizedNames } = useLanguage();
   const rect = originRect;
   const viaServer = useVideoViaServer();
@@ -36,7 +38,7 @@ export default function SkinVideoModal({ levels, chromas = [], fallbackIcon, nam
   });
 
   // Colour variants: -1 shows the skin itself (its levels), otherwise the chosen colour.
-  const [chromaIndex, setChromaIndex] = useState(-1);
+  const [chromaIndex, setChromaIndex] = useState(initialColor > 0 ? initialColor : -1);
   const hasColors = chromas.length > 1;
   const chroma = chromaIndex >= 0 ? chromas[chromaIndex] : null;
   const chromaName = (c: SkinChroma) => localizedNames[`chroma:${c.uuid}`] ?? c.name;

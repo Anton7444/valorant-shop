@@ -6,6 +6,7 @@ import type { SkinOffer } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import SkinVideoModal from './SkinVideoModal';
+import ColorDots from './ColorDots';
 import { staggerStyle, trackPointer } from '../utils/spotlight';
 
 const TIER_COLOR_MAP: Record<string, string> = {
@@ -39,6 +40,8 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
   const imageWrapRef = useRef<HTMLDivElement>(null);
   const hasVideo = !skin.owned && skin.levels.some((level) => level.video_url);
   const colors = skin.chromas ?? [];
+  const [colorIndex, setColorIndex] = useState(0);
+  const shownIcon = colorIndex > 0 && colors[colorIndex] ? colors[colorIndex].display_icon : skin.display_icon;
   const canPreview = !skin.owned && (hasVideo || colors.length > 1);
 
   function handleReveal() {
@@ -141,8 +144,8 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
               >
                 {skin.display_icon ? (
                   <SkinImage
-                    src={skin.display_icon}
-                    alts={skin.alt_icons}
+                    src={shownIcon}
+                    alts={colorIndex > 0 ? undefined : skin.alt_icons}
                     alt={name}
                     className="h-full w-full object-contain drop-shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-translate-y-0.5 group-hover:scale-105"
                   />
@@ -186,8 +189,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
                     </span>
                   </div>
                 )}
-
-                {colors.length > 1 && !skin.owned && <ColorChip count={colors.length} />}
+        {colors.length > 1 && !skin.owned && <ColorDots colors={colors} index={colorIndex} onChange={setColorIndex} />}
                 {canPreview && (
                   <div
                     className="pointer-events-none absolute inset-0 rounded-t-md opacity-0 transition-opacity duration-200 group-hover:opacity-100"
@@ -238,6 +240,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
         <SkinVideoModal
           levels={skin.levels}
           chromas={colors}
+          initialColor={colorIndex}
           fallbackIcon={skin.display_icon}
           name={name}
           originRect={videoOrigin}
@@ -248,11 +251,3 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
   );
 }
 
-function ColorChip({ count }: { count: number }) {
-  return (
-    <span className="pointer-events-none absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-bg-primary/75 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary backdrop-blur-sm">
-      <span className="h-2 w-2 rounded-full bg-gradient-to-br from-accent-red via-accent-teal to-sky-400" aria-hidden="true" />
-      {count} colors
-    </span>
-  );
-}
