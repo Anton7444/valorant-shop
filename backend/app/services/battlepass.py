@@ -9,7 +9,6 @@ import httpx
 from app.models.auth import SessionData
 from app.models.battlepass import BattlePassResponse, FreeReward, PassLevel, PassReward
 from app.services import asset_cache, storefront
-from app.services.riot_http import riot_client
 from app.services.asset_cache import (
     ITEM_TYPE_AGENT,
     ITEM_TYPE_BUDDY,
@@ -92,7 +91,7 @@ async def _reward(raw: dict | None) -> PassReward | None:
 async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
     headers = storefront._riot_headers(session.access_token, session.entitlements_token)
     url = f"https://pd.{session.shard}.a.pvp.net/contracts/v1/contracts/{session.puuid}"
-    async with riot_client() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
         player_contracts = {c["ContractDefinitionID"].lower(): c for c in resp.json().get("Contracts", [])}
