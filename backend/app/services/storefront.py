@@ -5,6 +5,7 @@ from pathlib import Path
 
 import httpx
 
+from app.services.riot_http import riot_client
 from app.models.store import (
     SkinChroma,
     AccessoryOffer,
@@ -63,7 +64,7 @@ async def fetch_storefront(
     """Fetch raw storefront JSON from Riot's API."""
     url = f"https://pd.{shard}.a.pvp.net/store/v3/storefront/{puuid}"
     logger.info("Fetching storefront: %s (version=%s)", url, get_client_version())
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.post(
             url, headers=_riot_headers(access_token, entitlements_token), json={},
         )
@@ -335,7 +336,7 @@ async def fetch_owned_skin_level_ids(
 ) -> frozenset[str]:
     """Fetch the UUIDs of every skin level the player owns (lowercased)."""
     url = f"https://pd.{shard}.a.pvp.net/store/v1/entitlements/{puuid}/{ITEM_TYPE_SKIN}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.get(url, headers=_riot_headers(access_token, entitlements_token))
         if not resp.is_success:
             logger.error(
@@ -430,7 +431,7 @@ async def get_wallet(
 ) -> Wallet:
     """Fetch VP and Radianite balance."""
     url = f"https://pd.{shard}.a.pvp.net/store/v1/wallet/{puuid}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.get(url, headers=_riot_headers(access_token, entitlements_token))
         if not resp.is_success:
             logger.error(

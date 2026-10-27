@@ -81,3 +81,7 @@ app/
     ├── auth.py          # SessionData dataclass
     └── store.py         # Pydantic response models
 ```
+
+## Optional: route Riot calls through a relay
+
+Set `RIOT_PROXY_URL` (e.g. `http://user:pass@host:8899`) to send every call to Riot through the relay in `tools/riot-relay`, for when this server's IP is refused by Riot. Leave it empty for direct calls.
