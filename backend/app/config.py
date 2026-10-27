@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     # Comma-separated PUUIDs (or leading prefixes) that get the promo takeover screen
     PROMO_PUUIDS: str = ""
+    # Optional HTTP proxy for every call to Riot (e.g. http://user:pass@host:8899), for when this
+    # server's own IP is refused by Riot. See tools/riot-relay.
+    RIOT_PROXY_URL: str = ""
 
     @property
     def allowed_origins_list(self) -> list[str]:

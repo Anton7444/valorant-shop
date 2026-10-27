@@ -15,6 +15,8 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 
+from app.services.riot_http import riot_client
+
 logger = logging.getLogger(__name__)
 
 AUTH_URL = (
@@ -92,7 +94,7 @@ def extract_tokens(url: str) -> dict[str, str]:
 # --- Downstream API calls ---
 
 async def get_entitlements(access_token: str) -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.post(
             ENTITLEMENTS_URL,
             headers={
@@ -107,7 +109,7 @@ async def get_entitlements(access_token: str) -> str:
 
 
 async def get_player_info(access_token: str) -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.get(
             USERINFO_URL,
             headers={"Authorization": f"Bearer {access_token}"},
@@ -118,7 +120,7 @@ async def get_player_info(access_token: str) -> str:
 
 
 async def get_region(access_token: str, id_token: str) -> tuple[str, str]:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         resp = await client.put(
             GEO_URL,
             headers={

@@ -13,6 +13,7 @@ from app.models.profile import (
     TeamSummary,
 )
 from app.services import asset_cache, storefront
+from app.services.riot_http import riot_client
 from app.services.asset_cache import ITEM_TYPE_AGENT, get_agent, get_map
 
 logger = logging.getLogger(__name__)
@@ -54,13 +55,13 @@ async def _lookup_names(
 
 
 async def _fetch_identity(session: SessionData) -> tuple[str | None, str | None]:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         names = await _lookup_names(client, session, [session.puuid])
     return names.get(session.puuid, (None, None))
 
 
 async def _fetch_level(session: SessionData) -> int | None:
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         data = await _get_json(client, session, f"{_pd(session)}/account-xp/v1/players/{session.puuid}")
     level = data.get("Progress", {}).get("Level")
     return int(level) if level is not None else None
@@ -68,7 +69,7 @@ async def _fetch_level(session: SessionData) -> int | None:
 
 async def _fetch_agents(session: SessionData) -> list[AgentInfo]:
     url = f"{_pd(session)}/store/v1/entitlements/{session.puuid}/{ITEM_TYPE_AGENT}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         data = await _get_json(client, session, url)
     owned_ids = {e.get("ItemID", "").lower() for e in data.get("Entitlements", [])}
     agents = [
@@ -224,7 +225,7 @@ async def _fetch_matches(
     session: SessionData, start: int = 0, count: int = MATCH_COUNT
 ) -> tuple[list[MatchSummary], bool]:
     """Matches [start, start+count) of the player's history, and whether more may exist."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with riot_client() as client:
         history = await _get_json(
             client,
             session,
