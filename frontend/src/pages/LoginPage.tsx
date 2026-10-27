@@ -23,6 +23,7 @@ export default function LoginPage() {
     () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
   );
   const [pastedUrl, setPastedUrl] = useState('');
+  const [ssidText, setSsidText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
@@ -102,26 +103,42 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await api.submitToken(url);
-
-      if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
-        sessionStorage.removeItem('login_stage');
-        setPromoSession({ token: res.session_token, puuid: res.puuid });
-        setLoading(false);
-        return;
-      }
-
-      if (res.status === 'success' && res.puuid && res.session_token) {
-        sessionStorage.removeItem('login_stage');
-        api.storeToken(res.session_token);
-        dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
-        navigate('/shop');
-      } else {
-        setError(res.error ?? 'Authentication failed');
-        setLoading(false);
-      }
+      await handleLoginResponse(await api.submitToken(url));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
+      setLoading(false);
+    }
+  }
+
+  async function handleLoginResponse(res: api.LoginResponse) {
+    if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
+      sessionStorage.removeItem('login_stage');
+      setPromoSession({ token: res.session_token, puuid: res.puuid });
+      setLoading(false);
+      return;
+    }
+
+    if (res.status === 'success' && res.puuid && res.session_token) {
+      sessionStorage.removeItem('login_stage');
+      api.storeToken(res.session_token);
+      dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+      navigate('/shop');
+    } else {
+      setError(res.error ?? 'Authentication failed');
+      setLoading(false);
+    }
+  }
+
+  async function handleSsidLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ssidText.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await handleLoginResponse(await api.ssidLogin(ssidText.trim()));
+      setSsidText('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign in with that cookie');
       setLoading(false);
     }
   }
@@ -190,6 +207,48 @@ export default function LoginPage() {
                   Get the login helper extension
                 </a>
               </p>
+
+              <details className="mt-4 text-xs text-text-secondary">
+                <summary className="cursor-pointer select-none text-center hover:text-text-primary">
+                  Can't open Riot's login page here?
+                </summary>
+                <div className="mt-3 space-y-3 leading-relaxed">
+                  <p>
+                    Sign in to Riot once on a computer or phone that can (Google, Xbox or password all work), copy the
+                    value of the <span className="font-semibold text-text-primary">ssid</span> cookie, and paste it
+                    here. This computer then never has to open Riot's page.
+                  </p>
+                  <ol className="list-decimal space-y-1 pl-5">
+                    <li>
+                      Open <span className="text-text-primary">auth.riotgames.com</span> while signed in, press F12
+                    </li>
+                    <li>
+                      Application → Cookies → <span className="text-text-primary">https://auth.riotgames.com</span> →{' '}
+                      <span className="text-text-primary">ssid</span>
+                    </li>
+                    <li>Copy its Value and send it to yourself (it works like a password: don't share it)</li>
+                  </ol>
+                  <form onSubmit={handleSsidLogin} className="space-y-2">
+                    <textarea
+                      value={ssidText}
+                      onChange={(e) => setSsidText(e.target.value)}
+                      rows={3}
+                      placeholder="ssid cookie value"
+                      aria-label="ssid cookie value"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="w-full resize-none rounded-sm border border-border bg-bg-primary px-3 py-2 font-mono text-[11px] text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !ssidText.trim()}
+                      className="w-full rounded-sm border border-border py-2 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                    >
+                      Sign in with ssid
+                    </button>
+                  </form>
+                </div>
+              </details>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
                 {[

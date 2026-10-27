@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.auth import SessionData
 from app.models.store import AccessoryStoreResponse, BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, Wallet
-from app.services import storefront
+from app.services import session_refresh, storefront
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,10 @@ async def get_session(request: Request) -> SessionData:
 
     session = store.get_valid(session_token)
     if session:
-        return session
+        if await session_refresh.ensure_fresh(session):
+            return session
+        store.delete(session_token)
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
 
     store.delete(session_token)
     raise HTTPException(status_code=401, detail="Session expired. Please log in again.")

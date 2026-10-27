@@ -68,6 +68,13 @@ export function submitToken(url: string): Promise<LoginResponse> {
   });
 }
 
+export function ssidLogin(ssid: string): Promise<LoginResponse> {
+  return request('/api/auth/ssid', {
+    method: 'POST',
+    body: JSON.stringify({ ssid }),
+  });
+}
+
 export function logout(): Promise<{ status: string }> {
   return request('/api/auth/logout', { method: 'POST' });
 }

@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 import logging
 import threading
 import time
@@ -95,6 +96,10 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
             region=region,
         )
         session_token = store.create(session_data)
+        if ssid:
+            # Backed by an ssid cookie, so the server can renew the tokens: keep it for a day.
+            session_data.ssid = ssid
+            session_data.expires_at = session_data.created_at + timedelta(hours=24)
 
         return LoginResponse(
             status="success",
@@ -116,6 +121,31 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
     except Exception:
         logger.exception("Token submission failed")
         return LoginResponse(status="error", error="Authentication failed unexpectedly")
+
+
+class SsidRequest(BaseModel):
+    ssid: str
+
+
+@router.post("/ssid", response_model=LoginResponse)
+async def sign_in_with_ssid(body: SsidRequest, request: Request) -> LoginResponse:
+    """Sign in with Riot's `ssid` cookie (copied from a browser where you are signed in).
+
+    Lets a computer that cannot open Riot's login page use the site. The cookie is kept only in
+    server memory, to renew the tokens while the session lasts.
+    """
+    _check_rate_limit(request.client.host if request.client else "unknown")
+    try:
+        ssid = riot_auth.clean_ssid(body.ssid)
+        tokens, next_ssid = await riot_auth.reauthenticate(ssid)
+    except riot_auth.AuthenticationError as e:
+        return LoginResponse(status="error", error=str(e))
+    except riot_auth.RateLimitError:
+        return LoginResponse(status="error", error="Rate limited by Riot servers. Try again shortly.")
+    except httpx.RequestError:
+        return LoginResponse(status="error", error="Could not reach Riot servers. Try again.")
+    fragment = f"access_token={tokens['access_token']}&id_token={tokens.get('id_token', '')}"
+    return await _login_from_url(f"http://localhost/redirect#{fragment}", ssid=next_ssid)
 
 
 @router.post("/logout")
