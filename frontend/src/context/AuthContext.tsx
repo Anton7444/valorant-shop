@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     api.checkSession().then((res) => {
       if (res.valid && res.puuid) {
+        // A snapshot view: keep the "saved at" time current when the home computer has refreshed it.
+        if (res.snapshot_at) api.storeSnapshotTime(res.snapshot_at);
+        if (res.snapshot_at) api.storeSnapshotLive(!!res.live);
         dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid });
       } else {
         api.clearToken();

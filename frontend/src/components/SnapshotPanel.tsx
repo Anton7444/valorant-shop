@@ -27,6 +27,8 @@ export default function SnapshotPanel() {
   const [copied, setCopied] = useState(false);
   const [auto, setAuto] = useState(isAutoSyncOn);
   const [lastSync, setLastSync] = useState(lastAutoSync);
+  const [password, setPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -53,6 +55,34 @@ export default function SnapshotPanel() {
       setError(err instanceof Error ? err.message : 'Could not save a snapshot');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function stop() {
+    if (!snap) return;
+    setBusy(true);
+    try {
+      await api.revokeSnapshot(snap.code);
+      localStorage.removeItem('autosync_code');
+      setAutoSync(false);
+      setAuto(false);
+      setSnap(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not stop sharing');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordMessage(null);
+    try {
+      await api.setSnapshotPassword(password);
+      setPassword('');
+      setPasswordMessage('Saved. Use it on the login page of the other computer instead of the code.');
+    } catch (err) {
+      setPasswordMessage(err instanceof Error ? err.message : 'Could not save the password');
     }
   }
 
@@ -99,12 +129,48 @@ export default function SnapshotPanel() {
           >
             {copied ? 'Copied' : 'Copy'}
           </button>
+          <button
+            type="button"
+            onClick={stop}
+            disabled={busy}
+            className="text-xs text-text-secondary underline-offset-2 hover:text-accent-red hover:underline disabled:opacity-50"
+          >
+            Stop sharing
+          </button>
           <span className="text-xs text-text-secondary">
-            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}. The code works for {snap.days} days and the other computer stays signed in. Includes:{' '}
+            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}. {snap.days > 0 ? `The code works for ${snap.days} days` : 'The code never expires'} and the other computer stays signed in. Includes:{' '}
             {snap.parts.map((p) => PART_LABELS[p] ?? p).join(', ')}. Save again when the store changes.
           </span>
         </div>
       )}
+      {(snap || rememberedCode()) && (
+        <form onSubmit={savePassword} className="mt-4 border-t border-border/60 pt-4">
+          <p className="text-xs text-text-secondary">
+            <span className="text-text-primary">Or use a password.</span> Choose one (8+ characters, one you use nowhere
+            else); on the other computer type it on the login page instead of the code. Only this account can be opened.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="New password"
+              aria-label="Password for other computers"
+              className="min-w-0 flex-1 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+            />
+            <button
+              type="submit"
+              disabled={password.length < 8}
+              className="rounded-sm border border-border px-4 text-xs font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+            >
+              Set password
+            </button>
+          </div>
+          {passwordMessage && <p className="mt-2 text-xs text-text-secondary">{passwordMessage}</p>}
+        </form>
+      )}
+
       <label className="mt-4 flex cursor-pointer items-start gap-2 text-xs text-text-secondary">
         <input
           type="checkbox"
@@ -116,8 +182,9 @@ export default function SnapshotPanel() {
           className="mt-0.5 h-3.5 w-3.5 accent-[var(--color-accent-red)]"
         />
         <span>
-          <span className="text-text-primary">Keep it updated automatically.</span> About every 30 minutes this tab signs in
-          to Riot again by itself (it briefly leaves and comes back) and saves fresh data under the same code. Needs this
+          <span className="text-text-primary">Keep it updated automatically.</span> About every 20 minutes this tab signs in
+          to Riot again by itself (it briefly leaves and comes back) and saves fresh data under the same code, so the
+          other computer shows live data: each page it opens is fetched from Riot at that moment. Needs this
           computer on, this site open, the login helper extension installed and Riot's sign-in still remembered in this
           browser.
           {auto && lastSync > 0 && <> Last update {new Date(lastSync).toLocaleTimeString()}.</>}

@@ -15,6 +15,10 @@ class RedeemRequest(BaseModel):
     code: str
 
 
+class PasswordRequest(BaseModel):
+    password: str
+
+
 class TakeRequest(BaseModel):
     # An earlier code of this account to refresh in place (the auto-update does this).
     code: str | None = None
@@ -35,9 +39,47 @@ async def take_snapshot(
     return {
         "code": f"{code[:5]}-{code[5:]}",
         "taken_at": snap.taken_at,
-        "expires_in": int(snapshot.SNAPSHOT_TTL),
+        "expires_in": int(snapshot.SNAPSHOT_TTL),  # 0 = never
         "parts": sorted(snap.data),
     }
+
+
+@router.post("/password")
+async def set_password(body: PasswordRequest, session: SessionData = Depends(get_session)) -> dict:
+    """Choose the password that opens this account's snapshot from another computer."""
+    if session.snapshot_code:
+        raise HTTPException(status_code=400, detail="Set it from the computer that is signed in to Riot.")
+    if len(body.password) < 8 or len(body.password) > 200:
+        raise HTTPException(status_code=400, detail="Use a password of 8 to 200 characters.")
+    if not any(sn.puuid == session.puuid for sn in snapshot._snapshots.values()):
+        raise HTTPException(status_code=409, detail="Save a snapshot first, then set the password.")
+    snapshot.set_password(session.puuid, body.password)
+    return {"ok": True}
+
+
+@router.post("/login", response_model=LoginResponse)
+async def password_login(body: PasswordRequest, request: Request) -> LoginResponse:
+    """Open the snapshot with the owner password."""
+    _check_rate_limit(request.client.host if request.client else "unknown")
+    if snapshot.password_locked():
+        return LoginResponse(status="error", error="Too many wrong passwords. Wait about 15 minutes.")
+    code = snapshot.code_for_password(body.password[:200])
+    snap = snapshot.lookup(code) if code else None
+    if not code or snap is None:
+        return LoginResponse(status="error", error="Wrong password, or nothing is being shared right now.")
+    return LoginResponse(
+        status="success",
+        session_token=snapshot.TOKEN_PREFIX + code,
+        puuid=snap.puuid,
+        promo=settings.is_promo_target(snap.puuid),
+        snapshot_at=snap.taken_at,
+    )
+
+
+@router.post("/revoke")
+async def revoke(body: RedeemRequest, session: SessionData = Depends(get_session)) -> dict:
+    """Stop sharing: delete the snapshot behind a code (only its own account may)."""
+    return {"revoked": snapshot.revoke(body.code, session.puuid)}
 
 
 @router.post("/redeem", response_model=LoginResponse)

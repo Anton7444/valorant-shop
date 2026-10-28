@@ -25,6 +25,7 @@ export default function LoginPage() {
   );
   const [pastedUrl, setPastedUrl] = useState('');
   const [codeText, setCodeText] = useState('');
+  const [showSecret, setShowSecret] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
@@ -140,7 +141,11 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.redeemSnapshot(codeText.trim());
+      // A snapshot code looks like XXXXX-XXXXX; anything else is the owner password.
+      const text = codeText.trim();
+      const res = /^[A-Za-z0-9]{5}-?[A-Za-z0-9]{5}$/.test(text)
+        ? await api.redeemSnapshot(text)
+        : await api.snapshotPasswordLogin(codeText);
       if (res.status === 'success' && res.puuid && res.session_token) {
         api.storeToken(res.session_token);
         if (res.snapshot_at) api.storeSnapshotTime(res.snapshot_at);
@@ -228,20 +233,29 @@ export default function LoginPage() {
                 <form onSubmit={handleCodeLogin} className="mt-3 space-y-2 leading-relaxed">
                   <p>
                     Sign in on a computer that can reach Riot, open the Profile page and press{' '}
-                    <span className="font-semibold text-text-primary">Save a snapshot</span>. Enter the code it gives here
-                    to see that saved data: nothing on this computer talks to Riot.
+                    <span className="font-semibold text-text-primary">Save a snapshot</span>. Enter its code, or the password
+                    you set there, to see that data: nothing on this computer talks to Riot.
                   </p>
                   <div className="flex gap-2">
                     <input
+                      type={showSecret ? 'text' : 'password'}
                       value={codeText}
                       onChange={(e) => setCodeText(e.target.value)}
-                      placeholder="XXXXX-XXXXX"
-                      aria-label="Snapshot code"
-                      autoCapitalize="characters"
+                      placeholder="Password or code"
+                      aria-label="Password or snapshot code"
+                      autoCapitalize="off"
                       spellCheck={false}
                       autoComplete="off"
-                      className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center font-mono uppercase tracking-widest text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                      className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecret((v) => !v)}
+                      aria-pressed={showSecret}
+                      className="px-1 text-[11px] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+                    >
+                      {showSecret ? 'Hide' : 'Show'}
+                    </button>
                     <button
                       type="submit"
                       disabled={loading || !codeText.trim()}

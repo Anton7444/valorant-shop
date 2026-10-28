@@ -129,9 +129,15 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           {snapshotAt !== null && (
             <span
               className="rounded-sm border border-accent-teal/40 px-2 py-1 text-[10px] uppercase tracking-widest text-accent-teal"
-              title="You are looking at data saved from another computer; it does not update"
+              title={
+                api.isSnapshotLive()
+                  ? 'Showing live data through the other computer\'s Riot sign-in'
+                  : 'Showing data saved from another computer; it updates when that computer refreshes it'
+              }
             >
-              Snapshot {new Date(snapshotAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {api.isSnapshotLive()
+                ? 'Live'
+                : `Snapshot ${new Date(snapshotAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </span>
           )}
           {state.puuid && (

@@ -5,6 +5,8 @@ code. Nothing here renews or reuses Riot tokens; the saved data is simply served
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -13,7 +15,9 @@ import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
+import httpx
 from fastapi import HTTPException
 
 from app.config import settings
@@ -31,7 +35,8 @@ from app.services import battlepass, profile, storefront
 
 logger = logging.getLogger(__name__)
 
-SNAPSHOT_TTL = settings.SNAPSHOT_DAYS * 24 * 3600.0
+FOREVER = 4102444800.0  # year 2100
+SNAPSHOT_TTL = settings.SNAPSHOT_DAYS * 24 * 3600.0  # 0 = never
 TOKEN_PREFIX = "snap_"  # viewer sessions are stateless: the token is this prefix plus the code
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -54,6 +59,11 @@ class Snapshot:
     taken_at: float  # epoch seconds
     expires_at: float  # epoch seconds
     data: dict = field(default_factory=dict)  # key -> model
+    # The signed-in session that took it, kept in memory only (never written to disk). While its Riot
+    # tokens are still valid the data is fetched live on each request; after that, the saved data is served.
+    source: SessionData | None = field(default=None, repr=False)
+    live_cache: dict = field(default_factory=dict, repr=False)
+    last_saved: float = 0.0
 
 
 _lock = threading.Lock()
@@ -97,7 +107,8 @@ async def build(session: SessionData) -> Snapshot:
         shard=session.shard,
         region=session.region,
         taken_at=time.time(),
-        expires_at=time.time() + SNAPSHOT_TTL,
+        expires_at=time.time() + SNAPSHOT_TTL if SNAPSHOT_TTL else FOREVER,
+        source=session,
         data=data,
     )
 
@@ -131,24 +142,111 @@ def lookup(code: str) -> Snapshot | None:
         return snap
 
 
-def serve(session: SessionData, key: str):
-    """The saved model for a viewer session, with countdowns brought up to date."""
+LIVE_TOKEN_SECONDS = 50 * 60  # Riot's tokens last about an hour
+CACHE_SECONDS = {"profile": 120.0}  # everything else: 30s
+DEFAULT_CACHE_SECONDS = 30.0
+
+
+def is_live(snap: Snapshot) -> bool:
+    """Can requests still be answered from Riot with the tokens of the computer that took it?"""
+    return snap.source is not None and (datetime.now(timezone.utc) - snap.source.created_at).total_seconds() < LIVE_TOKEN_SECONDS
+
+
+async def _fetch_live(snap: Snapshot, key: str):
+    s = snap.source
+    args = (s.access_token, s.entitlements_token, s.puuid, s.shard)
+
+    async def cached_raw():
+        hit = snap.live_cache.get("raw")
+        if hit and time.time() - hit[0] < DEFAULT_CACHE_SECONDS:
+            return hit[1]
+        raw = await storefront.fetch_storefront(*args)
+        snap.live_cache["raw"] = (time.time(), raw)
+        return raw
+
+    async def owned_ids():
+        try:
+            return await storefront.fetch_owned_skin_level_ids(*args)
+        except (httpx.HTTPStatusError, httpx.RequestError):
+            return frozenset()
+
+    if key == "wallet":
+        return await storefront.get_wallet(*args)
+    if key == "inventory":
+        return await storefront.get_inventory(await owned_ids())
+    if key == "daily":
+        return await storefront.get_daily_store(await cached_raw(), await owned_ids())
+    if key == "bundle":
+        return await storefront.get_featured_bundle(await cached_raw())
+    if key == "accessories":
+        return await storefront.get_accessory_store(await cached_raw())
+    if key == "profile":
+        return await profile.get_profile(s)
+    if key == "battlepass":
+        return await battlepass.get_battlepass(s)
+    return None
+
+
+async def serve(session: SessionData, key: str):
+    """The model for a viewer: live from Riot while the home computer's tokens are fresh, else the
+    saved data (with countdowns brought up to date)."""
     snap = lookup(session.snapshot_code or "")
     if snap is None:
         raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
-    value = snap.data.get(key)
+
+    fresh = False
+    value = None
+    if is_live(snap):
+        hit = snap.live_cache.get(key)
+        ttl = CACHE_SECONDS.get(key, DEFAULT_CACHE_SECONDS)
+        if hit and time.time() - hit[0] < ttl:
+            value, fresh = hit[1], True
+        else:
+            try:
+                live = await _fetch_live(snap, key)
+                if live is not None:
+                    value, fresh = live, True
+                    snap.live_cache[key] = (time.time(), live)
+                    snap.data[key] = live
+                    now = time.time()
+                    if now - snap.last_saved > 60:
+                        snap.last_saved = now
+                        with _lock:
+                            _save()
+            except Exception:
+                logger.warning("Live fetch for %s failed; serving the saved data", key, exc_info=True)
     if value is None:
-        raise HTTPException(status_code=404, detail="That part was not included in the snapshot.")
+        value = snap.data.get(key)
+    if value is None:
+        raise HTTPException(status_code=404, detail="That part is not available.")
+
     value = value.model_copy(deep=True)
-    elapsed = int(time.time() - snap.taken_at)
-    if key in ("daily", "accessories"):
-        value.seconds_remaining = max(0, value.seconds_remaining - elapsed)
-    elif key == "bundle":
-        for bundle in value.bundles:
-            bundle.duration_remaining_secs = max(0, bundle.duration_remaining_secs - elapsed)
-    elif key == "profile":
-        value.has_more_matches = False  # older matches cannot be loaded without Riot
+    if not fresh:
+        elapsed = int(time.time() - snap.taken_at)
+        if key in ("daily", "accessories"):
+            value.seconds_remaining = max(0, value.seconds_remaining - elapsed)
+        elif key == "bundle":
+            for bundle in value.bundles:
+                bundle.duration_remaining_secs = max(0, bundle.duration_remaining_secs - elapsed)
+    if key == "profile":
+        value.has_more_matches = False  # older matches cannot be loaded for a viewer
     return value
+
+
+def revoke(code: str, puuid: str) -> bool:
+    """Delete a snapshot (only its own account may)."""
+    code = normalise(code)
+    with _lock:
+        snap = _snapshots.get(code)
+        if snap is None or snap.puuid != puuid:
+            return False
+        del _snapshots[code]
+        for token, owned in list(_code_of_session.items()):
+            if owned == code:
+                del _code_of_session[token]
+        _save()
+    clear_password(puuid)
+    return True
 
 
 def session_from_token(token: str) -> SessionData | None:
@@ -222,3 +320,83 @@ def _load() -> None:
 
 
 _load()
+
+
+# --- Owner password: opens the account's snapshot from another computer without typing the code ---
+
+_OWNER_FILE = settings.SNAPSHOT_FILE + ".owner"
+_owner: dict | None = None  # {"puuid", "salt", "hash"}; one owner only
+_failures: list[float] = []
+MAX_FAILURES = 8
+FAILURE_WINDOW = 15 * 60.0
+
+
+def _scrypt(password: str, salt: bytes) -> bytes:
+    return hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+
+
+def _write_owner() -> None:
+    try:
+        directory = os.path.dirname(_OWNER_FILE) or "."
+        fd, tmp = tempfile.mkstemp(dir=directory)
+        with os.fdopen(fd, "w") as handle:
+            json.dump(_owner or {}, handle)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, _OWNER_FILE)
+    except Exception:
+        logger.warning("Could not save the owner password", exc_info=True)
+
+
+def set_password(puuid: str, password: str) -> None:
+    """Make `password` the way to open this account's snapshot (replaces any earlier owner)."""
+    global _owner
+    salt = secrets.token_bytes(16)
+    with _lock:
+        _owner = {"puuid": puuid, "salt": salt.hex(), "hash": _scrypt(password, salt).hex()}
+        _write_owner()
+
+
+def clear_password(puuid: str) -> None:
+    global _owner
+    with _lock:
+        if _owner and _owner["puuid"] == puuid:
+            _owner = None
+            _write_owner()
+
+
+def password_locked() -> bool:
+    now = time.time()
+    _failures[:] = [t for t in _failures if now - t < FAILURE_WINDOW]
+    return len(_failures) >= MAX_FAILURES
+
+
+def code_for_password(password: str) -> str | None:
+    """The snapshot code of the owner if `password` is right (and a snapshot exists), else None."""
+    if _owner is None:
+        _failures.append(time.time())
+        return None
+    candidate = _scrypt(password, bytes.fromhex(_owner["salt"]))
+    if not hmac.compare_digest(candidate, bytes.fromhex(_owner["hash"])):
+        _failures.append(time.time())
+        return None
+    # The newest snapshot of that account.
+    with _lock:
+        mine = [(c, sn) for c, sn in _snapshots.items() if sn.puuid == _owner["puuid"] and sn.expires_at > time.time()]
+    if not mine:
+        return None
+    return max(mine, key=lambda item: item[1].taken_at)[0]
+
+
+def _load_owner() -> None:
+    global _owner
+    try:
+        with open(_OWNER_FILE) as handle:
+            raw = json.load(handle)
+        _owner = raw if raw.get("hash") else None
+    except FileNotFoundError:
+        return
+    except Exception:
+        logger.warning("Could not read the owner password file", exc_info=True)
+
+
+_load_owner()
