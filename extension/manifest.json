@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Valorant Shop Login Helper",
-  "version": "1.4.0",
-  "description": "Sends the Riot login redirect back to the Valorant Shop site, together with the Riot session cookie so the site can renew your login by itself.",
+  "version": "1.3.0",
+  "description": "Automatically sends the Riot login redirect back to the Valorant Shop site.",
   "permissions": [
-    "webNavigation",
-    "cookies"
+    "webNavigation"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,8 +19,5 @@
       ],
       "run_at": "document_start"
     }
-  ],
-  "host_permissions": [
-    "https://auth.riotgames.com/*"
   ]
 }

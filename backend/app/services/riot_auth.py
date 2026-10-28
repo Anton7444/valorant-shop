@@ -89,50 +89,6 @@ def extract_tokens(url: str) -> dict[str, str]:
     return {"access_token": access_token, "id_token": id_token}
 
 
-# --- Re-authentication with Riot's `ssid` cookie ---
-
-import re
-
-_SSID_PATTERN = re.compile(r"^[A-Za-z0-9._~%+/=-]{20,4096}$")
-REAUTH_URL = AUTH_URL.replace("&prompt=login", "")
-
-
-def clean_ssid(value: str) -> str:
-    """Accept the bare cookie value or a pasted `ssid=...` / `Cookie: ssid=...; ...` string."""
-    value = value.strip().strip('"\'')
-    match = re.search(r"(?:^|[\s;])ssid=([^;\s]+)", value) or re.match(r"^ssid=([^;\s]+)", value)
-    if match:
-        value = match.group(1)
-    if not _SSID_PATTERN.match(value):
-        raise AuthenticationError("That does not look like an ssid cookie value.")
-    return value
-
-
-async def reauthenticate(ssid: str) -> tuple[dict[str, str], str]:
-    """Trade an ssid cookie for fresh tokens. Returns (tokens, ssid to use next time)."""
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
-        resp = await client.get(
-            REAUTH_URL,
-            headers={
-                "Cookie": f"ssid={ssid}",
-                "User-Agent": "RiotClient/63.0.9.4909983.4789131 rso-auth (Windows;10;;Professional, x64)",
-            },
-        )
-    _check_rate_limit(resp)
-    location = resp.headers.get("location", "")
-    if "access_token=" not in location:
-        raise AuthenticationError(
-            "Riot did not accept that ssid cookie (it may have expired, or Riot refused this server). "
-            "Sign in again and copy a fresh one."
-        )
-    next_ssid = ssid
-    for cookie in resp.headers.get_list("set-cookie"):
-        found = re.match(r"ssid=([^;]+)", cookie)
-        if found and found.group(1):
-            next_ssid = found.group(1)
-    return extract_tokens(location), next_ssid
-
-
 # --- Downstream API calls ---
 
 async def get_entitlements(access_token: str) -> str:

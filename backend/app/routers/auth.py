@@ -1,7 +1,4 @@
 import asyncio
-import dataclasses
-import secrets
-from datetime import datetime, timedelta, timezone
 import logging
 import threading
 import time
@@ -54,7 +51,6 @@ class AuthUrlResponse(BaseModel):
 
 class TokenSubmitRequest(BaseModel):
     url: str
-    ssid: str | None = None  # Riot's session cookie, sent by the login helper extension
 
 
 class LoginResponse(BaseModel):
@@ -73,10 +69,13 @@ async def get_login_url() -> AuthUrlResponse:
     return AuthUrlResponse(auth_url=riot_auth.get_auth_url())
 
 
-async def _login_from_url(url: str, ssid: str | None = None) -> LoginResponse:
-    """Turn a Riot redirect URL (with tokens in its fragment) into a server session."""
+@router.post("/token", response_model=LoginResponse)
+async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginResponse:
+    """Accept the pasted redirect URL, extract tokens, and create a session."""
+    _check_rate_limit(request.client.host if request.client else "unknown")
+
     try:
-        tokens = riot_auth.extract_tokens(url)
+        tokens = riot_auth.extract_tokens(body.url)
         access_token = tokens["access_token"]
         id_token = tokens.get("id_token", "")
 
@@ -96,10 +95,6 @@ async def _login_from_url(url: str, ssid: str | None = None) -> LoginResponse:
             region=region,
         )
         session_token = store.create(session_data)
-        if ssid:
-            # Backed by an ssid cookie, so the server can renew the tokens: keep it for a day.
-            session_data.ssid = ssid
-            session_data.expires_at = session_data.created_at + timedelta(hours=24)
 
         return LoginResponse(
             status="success",
@@ -121,125 +116,6 @@ async def _login_from_url(url: str, ssid: str | None = None) -> LoginResponse:
     except Exception:
         logger.exception("Token submission failed")
         return LoginResponse(status="error", error="Authentication failed unexpectedly")
-
-
-@router.post("/token", response_model=LoginResponse)
-async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginResponse:
-    """Accept the pasted redirect URL, extract tokens, and create a session."""
-    _check_rate_limit(request.client.host if request.client else "unknown")
-    ssid = None
-    if body.ssid:
-        try:
-            ssid = riot_auth.clean_ssid(body.ssid)
-        except riot_auth.AuthenticationError:
-            ssid = None  # a bad cookie just means no auto-renewal; the sign-in itself still works
-    return await _login_from_url(body.url, ssid=ssid)
-
-
-class SsidRequest(BaseModel):
-    ssid: str
-
-
-@router.post("/ssid", response_model=LoginResponse)
-async def sign_in_with_ssid(body: SsidRequest, request: Request) -> LoginResponse:
-    """Sign in with Riot's `ssid` cookie (copied from a browser where you are signed in).
-
-    Lets a computer that cannot open Riot's login page use the site. The cookie is kept only in
-    server memory, to renew the tokens while the session lasts.
-    """
-    _check_rate_limit(request.client.host if request.client else "unknown")
-    try:
-        ssid = riot_auth.clean_ssid(body.ssid)
-        tokens, next_ssid = await riot_auth.reauthenticate(ssid)
-    except riot_auth.AuthenticationError as e:
-        return LoginResponse(status="error", error=str(e))
-    except riot_auth.RateLimitError:
-        return LoginResponse(status="error", error="Rate limited by Riot servers. Try again shortly.")
-    except httpx.RequestError:
-        return LoginResponse(status="error", error="Could not reach Riot servers. Try again.")
-    fragment = f"access_token={tokens['access_token']}&id_token={tokens.get('id_token', '')}"
-    return await _login_from_url(f"http://localhost/redirect#{fragment}", ssid=next_ssid)
-
-
-# --- Login codes: a short code that signs another browser in as this account ---
-
-CODE_TTL = 24 * 3600.0
-CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-_codes_lock = threading.Lock()
-_codes: dict[str, tuple[str, float]] = {}  # code -> (session token it came from, expiry)
-
-
-class CodeRedeemRequest(BaseModel):
-    code: str
-
-
-def _token_seconds_left(session: SessionData) -> float:
-    """Riot's tokens last about an hour from when they were issued."""
-    return 55 * 60 - (datetime.now(timezone.utc) - session.refreshed_at).total_seconds()
-
-
-def _normalise_code(code: str) -> str:
-    return "".join(ch for ch in code.upper() if ch in CODE_ALPHABET)
-
-
-@router.post("/code")
-async def create_login_code(request: Request) -> dict:
-    """Make a code that signs another browser in as this account.
-
-    With Riot's ssid cookie behind the session (login helper extension or the ssid box) the server
-    can renew the tokens, so the code lasts 24h. Without it the code only works while the current
-    Riot tokens are still valid (under an hour).
-    """
-    token = _get_token_from_header(request)
-    session = store.get_valid(token) if token else None
-    if not session:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    now = time.monotonic()
-    ttl = CODE_TTL if session.ssid else max(60.0, _token_seconds_left(session))
-    code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(10))
-    with _codes_lock:
-        for key in [k for k, (_, exp) in _codes.items() if exp <= now]:
-            del _codes[key]
-        for key in [k for k, (t, _) in _codes.items() if t == token]:
-            del _codes[key]  # one live code per session
-        _codes[code] = (token, now + ttl)
-    return {"code": f"{code[:5]}-{code[5:]}", "expires_in": int(ttl), "renews": bool(session.ssid)}
-
-
-@router.post("/code/redeem", response_model=LoginResponse)
-async def redeem_login_code(body: CodeRedeemRequest, request: Request) -> LoginResponse:
-    _check_rate_limit(request.client.host if request.client else "unknown")
-    code = _normalise_code(body.code)
-    with _codes_lock:
-        entry = _codes.get(code)
-        if entry and entry[1] <= time.monotonic():
-            del _codes[code]
-            entry = None
-    source = store.get_valid(entry[0]) if entry else None
-    if not source:
-        return LoginResponse(status="error", error="That code is invalid or has expired.")
-    if not source.ssid:
-        # No cookie to renew with: share the current tokens, for as long as Riot keeps them valid.
-        left = _token_seconds_left(source)
-        if left <= 0:
-            return LoginResponse(status="error", error="That code has expired. Create a new one.")
-        clone = dataclasses.replace(source)
-        new_token = store.create(clone)
-        clone.expires_at = datetime.now(timezone.utc) + timedelta(seconds=left)
-        return LoginResponse(
-            status="success", session_token=new_token, puuid=source.puuid, promo=settings.is_promo_target(source.puuid)
-        )
-    try:
-        tokens, next_ssid = await riot_auth.reauthenticate(source.ssid)
-    except riot_auth.AuthenticationError as e:
-        return LoginResponse(status="error", error=str(e))
-    except riot_auth.RateLimitError:
-        return LoginResponse(status="error", error="Rate limited by Riot servers. Try again shortly.")
-    except httpx.RequestError:
-        return LoginResponse(status="error", error="Could not reach Riot servers. Try again.")
-    source.ssid = next_ssid  # Riot may have rotated the cookie
-    fragment = f"access_token={tokens['access_token']}&id_token={tokens.get('id_token', '')}"
-    return await _login_from_url(f"http://localhost/redirect#{fragment}", ssid=next_ssid)
 
 
 @router.post("/logout")
