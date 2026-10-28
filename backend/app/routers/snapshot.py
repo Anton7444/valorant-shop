@@ -11,6 +11,11 @@ from app.services import snapshot
 router = APIRouter()
 
 
+def _only_owner(session: SessionData) -> None:
+    if settings.OWNER_PUUID and not session.puuid.lower().startswith(settings.OWNER_PUUID.lower()):
+        raise HTTPException(status_code=403, detail="Snapshots are not enabled for this account.")
+
+
 class RedeemRequest(BaseModel):
     code: str
 
@@ -31,6 +36,7 @@ async def take_snapshot(
     """Save everything the site shows right now and return a code that opens it elsewhere."""
     if session.snapshot_code:
         raise HTTPException(status_code=400, detail="This sign-in is itself a snapshot view.")
+    _only_owner(session)
     try:
         snap = await snapshot.build(session)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
@@ -49,11 +55,15 @@ async def set_password(body: PasswordRequest, session: SessionData = Depends(get
     """Choose the password that opens this account's snapshot from another computer."""
     if session.snapshot_code:
         raise HTTPException(status_code=400, detail="Set it from the computer that is signed in to Riot.")
+    _only_owner(session)
     if len(body.password) < 8 or len(body.password) > 200:
         raise HTTPException(status_code=400, detail="Use a password of 8 to 200 characters.")
     if not any(sn.puuid == session.puuid for sn in snapshot._snapshots.values()):
         raise HTTPException(status_code=409, detail="Save a snapshot first, then set the password.")
-    snapshot.set_password(session.puuid, body.password)
+    try:
+        snapshot.set_password(session.puuid, body.password)
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     return {"ok": True}
 
 

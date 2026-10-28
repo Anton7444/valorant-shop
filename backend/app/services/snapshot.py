@@ -352,6 +352,10 @@ def set_password(puuid: str, password: str) -> None:
     global _owner
     salt = secrets.token_bytes(16)
     with _lock:
+        if _owner and _owner["puuid"] != puuid and any(
+            sn.puuid == _owner["puuid"] and sn.expires_at > time.time() for sn in _snapshots.values()
+        ):
+            raise PermissionError("Another account already owns the password.")
         _owner = {"puuid": puuid, "salt": salt.hex(), "hash": _scrypt(password, salt).hex()}
         _write_owner()
 
