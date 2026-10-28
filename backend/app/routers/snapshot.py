@@ -20,10 +20,6 @@ class RedeemRequest(BaseModel):
     code: str
 
 
-class PasswordRequest(BaseModel):
-    password: str
-
-
 class TakeRequest(BaseModel):
     # An earlier code of this account to refresh in place (the auto-update does this).
     code: str | None = None
@@ -50,39 +46,70 @@ async def take_snapshot(
     }
 
 
-@router.post("/password")
-async def set_password(body: PasswordRequest, session: SessionData = Depends(get_session)) -> dict:
-    """Choose the password that opens this account's snapshot from another computer."""
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.get("/account")
+async def my_account(session: SessionData = Depends(get_session)) -> dict:
+    return {"username": None if session.snapshot_code else snapshot.account_of(session.puuid)}
+
+
+@router.post("/account")
+async def create_account(body: RegisterRequest, session: SessionData = Depends(get_session)) -> dict:
+    """Create the username and password that open this Riot account's data from another computer.
+
+    Only a computer that is signed in to Riot can do this, so an account can only be bound to a Riot
+    account you really control.
+    """
     if session.snapshot_code:
-        raise HTTPException(status_code=400, detail="Set it from the computer that is signed in to Riot.")
+        raise HTTPException(status_code=400, detail="Create it from the computer that is signed in to Riot.")
     _only_owner(session)
-    if len(body.password) < 8 or len(body.password) > 200:
+    if not 8 <= len(body.password) <= 200:
         raise HTTPException(status_code=400, detail="Use a password of 8 to 200 characters.")
     if not any(sn.puuid == session.puuid for sn in snapshot._snapshots.values()):
-        raise HTTPException(status_code=409, detail="Save a snapshot first, then set the password.")
+        raise HTTPException(status_code=409, detail="Save a snapshot first, then create the account.")
     try:
-        snapshot.set_password(session.puuid, body.password)
+        snapshot.register(session.puuid, body.username.strip(), body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except PermissionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-    return {"ok": True}
+    return {"username": body.username.strip()}
+
+
+@router.post("/account/delete")
+async def remove_account(session: SessionData = Depends(get_session)) -> dict:
+    if session.snapshot_code:
+        raise HTTPException(status_code=400, detail="Do this from the computer that is signed in to Riot.")
+    snapshot.delete_account(session.puuid)
+    return {"deleted": True}
 
 
 @router.post("/login", response_model=LoginResponse)
-async def password_login(body: PasswordRequest, request: Request) -> LoginResponse:
-    """Open the snapshot with the owner password."""
+async def account_login(body: LoginRequest, request: Request) -> LoginResponse:
+    """Sign in with a username and password to see that account's saved data."""
     _check_rate_limit(request.client.host if request.client else "unknown")
-    if snapshot.password_locked():
-        return LoginResponse(status="error", error="Too many wrong passwords. Wait about 15 minutes.")
-    code = snapshot.code_for_password(body.password[:200])
+    wrong = LoginResponse(status="error", error="Wrong username or password, or nothing is being shared right now.")
+    if snapshot.login_locked(body.username[:64]):
+        return LoginResponse(status="error", error="Too many wrong attempts. Wait about 15 minutes.")
+    code = snapshot.code_for_login(body.username[:64], body.password[:200])
     snap = snapshot.lookup(code) if code else None
     if not code or snap is None:
-        return LoginResponse(status="error", error="Wrong password, or nothing is being shared right now.")
+        return wrong
     return LoginResponse(
         status="success",
         session_token=snapshot.TOKEN_PREFIX + code,
         puuid=snap.puuid,
         promo=settings.is_promo_target(snap.puuid),
         snapshot_at=snap.taken_at,
+        snapshot_live=snapshot.is_live(snap),
     )
 
 
@@ -106,4 +133,5 @@ async def redeem(body: RedeemRequest, request: Request) -> LoginResponse:
         puuid=snap.puuid,
         promo=settings.is_promo_target(snap.puuid),
         snapshot_at=snap.taken_at,
+        snapshot_live=snapshot.is_live(snap),
     )

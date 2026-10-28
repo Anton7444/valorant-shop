@@ -10,6 +10,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import tempfile
 import threading
@@ -245,7 +246,6 @@ def revoke(code: str, puuid: str) -> bool:
             if owned == code:
                 del _code_of_session[token]
         _save()
-    clear_password(puuid)
     return True
 
 
@@ -322,85 +322,105 @@ def _load() -> None:
 _load()
 
 
-# --- Owner password: opens the account's snapshot from another computer without typing the code ---
+# --- Accounts: a username and password that open an account's snapshot from another computer ---
 
-_OWNER_FILE = settings.SNAPSHOT_FILE + ".owner"
-_owner: dict | None = None  # {"puuid", "salt", "hash"}; one owner only
-_failures: list[float] = []
-MAX_FAILURES = 8
+_ACCOUNTS_FILE = settings.SNAPSHOT_FILE + ".accounts"
+_accounts: dict[str, dict] = {}  # lowercase username -> {"username", "puuid", "salt", "hash"}
+_failures: dict[str, list[float]] = {}  # key (username or "*") -> times of wrong attempts
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
+MAX_FAILURES = 6
 FAILURE_WINDOW = 15 * 60.0
+_DUMMY_SALT = bytes(16)
 
 
 def _scrypt(password: str, salt: bytes) -> bytes:
     return hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
 
 
-def _write_owner() -> None:
+def _write_accounts() -> None:
+    """Persist the accounts (caller holds the lock). Only salted hashes are stored."""
     try:
-        directory = os.path.dirname(_OWNER_FILE) or "."
+        directory = os.path.dirname(_ACCOUNTS_FILE) or "."
         fd, tmp = tempfile.mkstemp(dir=directory)
         with os.fdopen(fd, "w") as handle:
-            json.dump(_owner or {}, handle)
+            json.dump(_accounts, handle)
         os.chmod(tmp, 0o600)
-        os.replace(tmp, _OWNER_FILE)
+        os.replace(tmp, _ACCOUNTS_FILE)
     except Exception:
-        logger.warning("Could not save the owner password", exc_info=True)
+        logger.warning("Could not save the accounts", exc_info=True)
 
 
-def set_password(puuid: str, password: str) -> None:
-    """Make `password` the way to open this account's snapshot (replaces any earlier owner)."""
-    global _owner
-    salt = secrets.token_bytes(16)
+def register(puuid: str, username: str, password: str) -> None:
+    """Create (or update) the site account bound to a Riot account. One account per Riot account."""
+    if not USERNAME_PATTERN.match(username):
+        raise ValueError("Use 3 to 32 letters, numbers, dots, dashes or underscores for the username.")
+    key = username.lower()
     with _lock:
-        if _owner and _owner["puuid"] != puuid and any(
-            sn.puuid == _owner["puuid"] and sn.expires_at > time.time() for sn in _snapshots.values()
-        ):
-            raise PermissionError("Another account already owns the password.")
-        _owner = {"puuid": puuid, "salt": salt.hex(), "hash": _scrypt(password, salt).hex()}
-        _write_owner()
+        taken = _accounts.get(key)
+        if taken is not None and taken["puuid"] != puuid:
+            raise PermissionError("That username is taken.")
+        for other in [k for k, v in _accounts.items() if v["puuid"] == puuid and k != key]:
+            del _accounts[other]  # renaming: the old username goes away
+        salt = secrets.token_bytes(16)
+        _accounts[key] = {"username": username, "puuid": puuid, "salt": salt.hex(), "hash": _scrypt(password, salt).hex()}
+        _write_accounts()
 
 
-def clear_password(puuid: str) -> None:
-    global _owner
+def account_of(puuid: str) -> str | None:
     with _lock:
-        if _owner and _owner["puuid"] == puuid:
-            _owner = None
-            _write_owner()
+        return next((v["username"] for v in _accounts.values() if v["puuid"] == puuid), None)
 
 
-def password_locked() -> bool:
+def delete_account(puuid: str) -> None:
+    with _lock:
+        for key in [k for k, v in _accounts.items() if v["puuid"] == puuid]:
+            del _accounts[key]
+        _write_accounts()
+
+
+def _recent_failures(key: str) -> int:
     now = time.time()
-    _failures[:] = [t for t in _failures if now - t < FAILURE_WINDOW]
-    return len(_failures) >= MAX_FAILURES
+    recent = [t for t in _failures.get(key, []) if now - t < FAILURE_WINDOW]
+    _failures[key] = recent
+    return len(recent)
 
 
-def code_for_password(password: str) -> str | None:
-    """The snapshot code of the owner if `password` is right (and a snapshot exists), else None."""
-    if _owner is None:
-        _failures.append(time.time())
-        return None
-    candidate = _scrypt(password, bytes.fromhex(_owner["salt"]))
-    if not hmac.compare_digest(candidate, bytes.fromhex(_owner["hash"])):
-        _failures.append(time.time())
-        return None
-    # The newest snapshot of that account.
+def login_locked(username: str) -> bool:
+    """Too many wrong passwords for this username, or for everyone together."""
+    return _recent_failures(username.lower()) >= MAX_FAILURES or _recent_failures("*") >= MAX_FAILURES * 4
+
+
+def code_for_login(username: str, password: str) -> str | None:
+    """The code of the newest snapshot of the account if the username and password are right."""
+    key = username.lower()
     with _lock:
-        mine = [(c, sn) for c, sn in _snapshots.items() if sn.puuid == _owner["puuid"] and sn.expires_at > time.time()]
+        account = _accounts.get(key)
+    salt = bytes.fromhex(account["salt"]) if account else _DUMMY_SALT
+    candidate = _scrypt(password, salt)  # same work whether or not the username exists
+    ok = bool(account) and hmac.compare_digest(candidate, bytes.fromhex(account["hash"]))
+    if not ok:
+        now = time.time()
+        _failures.setdefault(key, []).append(now)
+        _failures.setdefault("*", []).append(now)
+        return None
+    with _lock:
+        mine = [(c, sn) for c, sn in _snapshots.items() if sn.puuid == account["puuid"] and sn.expires_at > time.time()]
     if not mine:
         return None
     return max(mine, key=lambda item: item[1].taken_at)[0]
 
 
-def _load_owner() -> None:
-    global _owner
+def _load_accounts() -> None:
     try:
-        with open(_OWNER_FILE) as handle:
+        with open(_ACCOUNTS_FILE) as handle:
             raw = json.load(handle)
-        _owner = raw if raw.get("hash") else None
+        for key, value in raw.items():
+            if {"username", "puuid", "salt", "hash"} <= set(value):
+                _accounts[key] = value
     except FileNotFoundError:
         return
     except Exception:
-        logger.warning("Could not read the owner password file", exc_info=True)
+        logger.warning("Could not read the accounts file", exc_info=True)
 
 
-_load_owner()
+_load_accounts()

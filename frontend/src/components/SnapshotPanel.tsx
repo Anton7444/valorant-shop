@@ -27,8 +27,16 @@ export default function SnapshotPanel() {
   const [copied, setCopied] = useState(false);
   const [auto, setAuto] = useState(isAutoSyncOn);
   const [lastSync, setLastSync] = useState(lastAutoSync);
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+
+  const viewing = api.getSnapshotTime() !== null;
+  useEffect(() => {
+    if (viewing) return;
+    api.getAccount().then((res) => setAccountName(res.username)).catch(() => {});
+  }, [viewing]);
 
   useEffect(() => {
     const sync = () => {
@@ -74,15 +82,27 @@ export default function SnapshotPanel() {
     }
   }
 
-  async function savePassword(e: React.FormEvent) {
+  async function saveAccount(e: React.FormEvent) {
     e.preventDefault();
-    setPasswordMessage(null);
+    setAccountMessage(null);
     try {
-      await api.setSnapshotPassword(password);
+      const res = await api.createAccount(username.trim(), password);
+      setAccountName(res.username);
+      setUsername('');
       setPassword('');
-      setPasswordMessage('Saved. Use it on the login page of the other computer instead of the code.');
+      setAccountMessage('Saved. Sign in with it on the other computer.');
     } catch (err) {
-      setPasswordMessage(err instanceof Error ? err.message : 'Could not save the password');
+      setAccountMessage(err instanceof Error ? err.message : 'Could not save the account');
+    }
+  }
+
+  async function removeAccount() {
+    try {
+      await api.deleteAccount();
+      setAccountName(null);
+      setAccountMessage('Account deleted.');
+    } catch (err) {
+      setAccountMessage(err instanceof Error ? err.message : 'Could not delete the account');
     }
   }
 
@@ -104,7 +124,7 @@ export default function SnapshotPanel() {
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-text-secondary">
             Saves your store, accessories, bundle, wallet, inventory, profile, matches and battle pass as they are now and
             gives a code. On the other computer, expand "Can't open Riot's login page here?" on the login page and enter
-            the code: it shows this saved data without ever talking to Riot.
+            the code (or the account you create below): it shows this data without that computer ever talking to Riot.
           </p>
         </div>
         <button
@@ -143,31 +163,59 @@ export default function SnapshotPanel() {
           </span>
         </div>
       )}
-      {(snap || rememberedCode()) && (
-        <form onSubmit={savePassword} className="mt-4 border-t border-border/60 pt-4">
+      {(snap || rememberedCode() || accountName) && (
+        <form onSubmit={saveAccount} className="mt-4 border-t border-border/60 pt-4">
           <p className="text-xs text-text-secondary">
-            <span className="text-text-primary">Or use a password.</span> Choose one (8+ characters, one you use nowhere
-            else); on the other computer type it on the login page instead of the code. Only this account can be opened.
+            <span className="text-text-primary">Or sign in with an account.</span> Pick a username and a password (8+
+            characters, one you use nowhere else). On the other computer, enter them on the login page instead of the
+            code. The account is tied to this Riot account; usernames are unique, so nobody else can take yours.
+            {accountName && (
+              <>
+                {' '}
+                Current username: <span className="font-semibold text-text-primary">{accountName}</span>. Saving again
+                changes the username or password.
+              </>
+            )}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={accountName ?? 'Username'}
+              aria-label="Account username"
+              className="min-w-0 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+            />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
-              placeholder="New password"
-              aria-label="Password for other computers"
-              className="min-w-0 flex-1 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+              placeholder="Password"
+              aria-label="Account password"
+              className="min-w-0 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
             />
             <button
               type="submit"
-              disabled={password.length < 8}
+              disabled={username.trim().length < 3 || password.length < 8}
               className="rounded-sm border border-border px-4 text-xs font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
             >
-              Set password
+              {accountName ? 'Update' : 'Create'}
             </button>
           </div>
-          {passwordMessage && <p className="mt-2 text-xs text-text-secondary">{passwordMessage}</p>}
+          <div className="mt-2 flex items-center gap-3 text-xs">
+            {accountMessage && <span className="text-text-secondary">{accountMessage}</span>}
+            {accountName && (
+              <button
+                type="button"
+                onClick={removeAccount}
+                className="text-text-secondary underline-offset-2 hover:text-accent-red hover:underline"
+              >
+                Delete account
+              </button>
+            )}
+          </div>
         </form>
       )}
 

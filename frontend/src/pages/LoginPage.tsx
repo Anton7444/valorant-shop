@@ -25,7 +25,8 @@ export default function LoginPage() {
   );
   const [pastedUrl, setPastedUrl] = useState('');
   const [codeText, setCodeText] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
+  const [accountUser, setAccountUser] = useState('');
+  const [accountPass, setAccountPass] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
@@ -135,30 +136,39 @@ export default function LoginPage() {
     }
   }
 
-  async function handleCodeLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!codeText.trim()) return;
+  async function openView(request: Promise<api.LoginResponse>, fallback: string) {
     setLoading(true);
     setError(null);
     try {
-      // A snapshot code looks like XXXXX-XXXXX; anything else is the owner password.
-      const text = codeText.trim();
-      const res = /^[A-Za-z0-9]{5}-?[A-Za-z0-9]{5}$/.test(text)
-        ? await api.redeemSnapshot(text)
-        : await api.snapshotPasswordLogin(codeText);
+      const res = await request;
       if (res.status === 'success' && res.puuid && res.session_token) {
         api.storeToken(res.session_token);
-        if (res.snapshot_at) api.storeSnapshotTime(res.snapshot_at);
+        if (res.snapshot_at) {
+          api.storeSnapshotTime(res.snapshot_at);
+          api.storeSnapshotLive(!!res.snapshot_live);
+        }
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
         navigate('/shop');
       } else {
-        setError(res.error ?? 'Could not open that code');
+        setError(res.error ?? fallback);
         setLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not open that code');
+      setError(err instanceof Error ? err.message : fallback);
       setLoading(false);
     }
+  }
+
+  function handleAccountLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accountUser.trim() || !accountPass) return;
+    void openView(api.accountLogin(accountUser.trim(), accountPass), 'Could not sign in');
+  }
+
+  function handleCodeLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codeText.trim()) return;
+    void openView(api.redeemSnapshot(codeText.trim()), 'Could not open that code');
   }
 
   function handleSubmitUrl(e: React.FormEvent) {
@@ -230,41 +240,65 @@ export default function LoginPage() {
                 <summary className="cursor-pointer select-none text-center hover:text-text-primary">
                   Can't open Riot's login page here?
                 </summary>
-                <form onSubmit={handleCodeLogin} className="mt-3 space-y-2 leading-relaxed">
+                <div className="mt-3 space-y-4 leading-relaxed">
                   <p>
-                    Sign in on a computer that can reach Riot, open the Profile page and press{' '}
-                    <span className="font-semibold text-text-primary">Save a snapshot</span>. Enter its code, or the password
-                    you set there, to see that data: nothing on this computer talks to Riot.
+                    Sign in on a computer that can reach Riot, open the Profile page, press{' '}
+                    <span className="font-semibold text-text-primary">Save a snapshot</span> and create an account there.
+                    Then sign in with that account here: nothing on this computer talks to Riot.
                   </p>
-                  <div className="flex gap-2">
+                  <form onSubmit={handleAccountLogin} className="space-y-2">
                     <input
-                      type={showSecret ? 'text' : 'password'}
-                      value={codeText}
-                      onChange={(e) => setCodeText(e.target.value)}
-                      placeholder="Password or code"
-                      aria-label="Password or snapshot code"
+                      value={accountUser}
+                      onChange={(e) => setAccountUser(e.target.value)}
+                      placeholder="Username"
+                      aria-label="Account username"
                       autoCapitalize="off"
                       spellCheck={false}
-                      autoComplete="off"
-                      className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                      autoComplete="username"
+                      className="w-full rounded-sm border border-border bg-bg-primary px-3 py-2 text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                    />
+                    <input
+                      type="password"
+                      value={accountPass}
+                      onChange={(e) => setAccountPass(e.target.value)}
+                      placeholder="Password"
+                      aria-label="Account password"
+                      autoComplete="current-password"
+                      className="w-full rounded-sm border border-border bg-bg-primary px-3 py-2 text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
                     />
                     <button
-                      type="button"
-                      onClick={() => setShowSecret((v) => !v)}
-                      aria-pressed={showSecret}
-                      className="px-1 text-[11px] text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
-                    >
-                      {showSecret ? 'Hide' : 'Show'}
-                    </button>
-                    <button
                       type="submit"
-                      disabled={loading || !codeText.trim()}
-                      className="rounded-sm border border-border px-4 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                      disabled={loading || !accountUser.trim() || !accountPass}
+                      className="w-full rounded-sm border border-border py-2 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
                     >
-                      Open
+                      Sign in
                     </button>
-                  </div>
-                </form>
+                  </form>
+                  <form onSubmit={handleCodeLogin} className="space-y-2 border-t border-border/60 pt-3">
+                    <label htmlFor="snapshot-code" className="block">
+                      Or enter a snapshot code
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id="snapshot-code"
+                        value={codeText}
+                        onChange={(e) => setCodeText(e.target.value)}
+                        placeholder="XXXXX-XXXXX"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                        autoComplete="off"
+                        className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center font-mono uppercase tracking-widest text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                      />
+                      <button
+                        type="submit"
+                        disabled={loading || !codeText.trim()}
+                        className="rounded-sm border border-border px-4 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                      >
+                        Open
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </details>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
