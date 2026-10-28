@@ -1,14 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Valorant Shop Login Helper",
-  "version": "1.4.0",
-  "description": "Sends the Riot login redirect back to the Valorant Shop site, and can route Riot login pages through a proxy you run (for networks that block Riot).",
+  "version": "1.3.0",
+  "description": "Automatically sends the Riot login redirect back to the Valorant Shop site.",
   "permissions": [
-    "webNavigation",
-    "proxy",
-    "storage",
-    "webRequest",
-    "webRequestAuthProvider"
+    "webNavigation"
   ],
   "background": {
     "service_worker": "background.js"
@@ -23,12 +19,5 @@
       ],
       "run_at": "document_start"
     }
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "action": {
-    "default_title": "Riot login proxy",
-    "default_popup": "popup.html"
-  }
+  ]
 }
