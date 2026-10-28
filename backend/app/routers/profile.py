@@ -5,13 +5,15 @@ from app.models.auth import SessionData
 from app.models.battlepass import BattlePassResponse
 from app.models.profile import MatchesResponse, ProfileResponse
 from app.routers.store import _handle_riot_error, get_session
-from app.services import battlepass, profile
+from app.services import battlepass, profile, snapshot
 
 router = APIRouter()
 
 
 @router.get("", response_model=ProfileResponse)
 async def get_profile(session: SessionData = Depends(get_session)) -> ProfileResponse:
+    if session.snapshot_code:
+        return snapshot.serve(session, "profile")
     try:
         return await profile.get_profile(session)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
@@ -20,6 +22,8 @@ async def get_profile(session: SessionData = Depends(get_session)) -> ProfileRes
 
 @router.get("/matches", response_model=MatchesResponse)
 async def get_matches(start: int = Query(0, ge=0, le=1000), session: SessionData = Depends(get_session)) -> MatchesResponse:
+    if session.snapshot_code:
+        return MatchesResponse(matches=[], has_more=False)
     try:
         return await profile.get_matches(session, start)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
@@ -28,6 +32,8 @@ async def get_matches(start: int = Query(0, ge=0, le=1000), session: SessionData
 
 @router.get("/battlepass", response_model=BattlePassResponse)
 async def get_battlepass(session: SessionData = Depends(get_session)) -> BattlePassResponse:
+    if session.snapshot_code:
+        return snapshot.serve(session, "battlepass")
     try:
         result = await battlepass.get_battlepass(session)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:

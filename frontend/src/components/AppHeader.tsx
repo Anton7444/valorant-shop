@@ -37,6 +37,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const { language, setLanguage } = useLanguage();
   const { pathname } = useLocation();
   const loggedIn = state.sessionValid;
+  const snapshotAt = loggedIn ? api.getSnapshotTime() : null;
   const visibleItems = NAV_ITEMS.filter(
     (item) => (loggedIn ? item.to !== '/bundle' : PUBLIC_PATHS.includes(item.to)),
   );
@@ -124,6 +125,14 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
             <div className="@max-[1140px]/header:hidden">
               <WalletDisplay wallet={wallet} />
             </div>
+          )}
+          {snapshotAt !== null && (
+            <span
+              className="rounded-sm border border-accent-teal/40 px-2 py-1 text-[10px] uppercase tracking-widest text-accent-teal"
+              title="You are looking at data saved from another computer; it does not update"
+            >
+              Snapshot {new Date(snapshotAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           )}
           {state.puuid && (
             <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1400px]/header:block">

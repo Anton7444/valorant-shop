@@ -58,6 +58,7 @@ class LoginResponse(BaseModel):
     session_token: str | None = None
     puuid: str | None = None
     promo: bool = False
+    snapshot_at: float | None = None  # set when this sign-in is a snapshot view
     error: str | None = None
 
 
