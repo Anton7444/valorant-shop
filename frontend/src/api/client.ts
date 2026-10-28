@@ -71,8 +71,8 @@ export interface LoginResponse {
   error?: string | null;
 }
 
-export function getAuthUrl(): Promise<{ auth_url: string }> {
-  return request('/api/auth/url');
+export function getAuthUrl(silent = false): Promise<{ auth_url: string }> {
+  return request(`/api/auth/url${silent ? '?silent=true' : ''}`);
 }
 
 export function submitToken(url: string): Promise<LoginResponse> {
@@ -82,8 +82,10 @@ export function submitToken(url: string): Promise<LoginResponse> {
   });
 }
 
-export function createSnapshot(): Promise<{ code: string; taken_at: number; expires_in: number; parts: string[] }> {
-  return request('/api/snapshot', { method: 'POST' });
+export function createSnapshot(
+  code?: string,
+): Promise<{ code: string; taken_at: number; expires_in: number; parts: string[] }> {
+  return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
 export function redeemSnapshot(code: string): Promise<LoginResponse> {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
+import { finishAutoSync, isSilentSignInPending } from '../utils/autoSync';
 
 type Stage = 'start' | 'paste';
 
@@ -116,6 +117,12 @@ export default function LoginPage() {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+        if (isSilentSignInPending()) {
+          // The snapshot auto-update signed in again: save the fresh data, then go back to the profile.
+          await finishAutoSync();
+          navigate('/profile');
+          return;
+        }
         navigate('/shop');
       } else {
         setError(res.error ?? 'Authentication failed');

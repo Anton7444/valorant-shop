@@ -65,9 +65,9 @@ class LoginResponse(BaseModel):
 # --- Endpoints ---
 
 @router.get("/url")
-async def get_login_url() -> AuthUrlResponse:
+async def get_login_url(silent: bool = False) -> AuthUrlResponse:
     """Return the Riot OAuth URL for the user to open in their browser."""
-    return AuthUrlResponse(auth_url=riot_auth.get_auth_url())
+    return AuthUrlResponse(auth_url=riot_auth.get_auth_url(silent))
 
 
 @router.post("/token", response_model=LoginResponse)

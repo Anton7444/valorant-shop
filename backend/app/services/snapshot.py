@@ -102,15 +102,21 @@ async def build(session: SessionData) -> Snapshot:
     )
 
 
-def store(source_token: str, snap: Snapshot) -> str:
-    code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(10))
+def store(source_token: str, snap: Snapshot, reuse_code: str | None = None) -> str:
+    """Keep a snapshot and return its code. `reuse_code` replaces that account's earlier snapshot
+    under the same code, so a computer that already has the code keeps working."""
     now = time.time()
     with _lock:
         for key in [k for k, v in _snapshots.items() if v.expires_at <= now]:
             del _snapshots[key]
-        old = _code_of_session.pop(source_token, None)
-        if old:
-            _snapshots.pop(old, None)  # one live snapshot per session
+        existing = _snapshots.get(normalise(reuse_code)) if reuse_code else None
+        if existing is not None and existing.puuid == snap.puuid:
+            code = normalise(reuse_code)
+        else:
+            code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(10))
+            old = _code_of_session.pop(source_token, None)
+            if old:
+                _snapshots.pop(old, None)  # one live snapshot per session
         _snapshots[code] = snap
         _code_of_session[source_token] = code
         _save()

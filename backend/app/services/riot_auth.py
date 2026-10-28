@@ -54,9 +54,13 @@ def _check_rate_limit(response: httpx.Response) -> None:
         raise RateLimitError("Rate limited by Riot auth servers")
 
 
-def get_auth_url() -> str:
-    """Return the Riot OAuth URL for the user to open in their browser."""
-    return AUTH_URL
+def get_auth_url(silent: bool = False) -> str:
+    """Return the Riot OAuth URL for the user to open in their browser.
+
+    `silent` leaves out `prompt=login`, so a browser that is still signed in to Riot is sent straight
+    back with fresh tokens instead of being asked to sign in again.
+    """
+    return AUTH_URL.replace("&prompt=login", "") if silent else AUTH_URL
 
 
 def extract_tokens(url: str) -> dict[str, str]:

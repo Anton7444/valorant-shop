@@ -1,5 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as api from '../api/client';
+import {
+  CHANGE_EVENT,
+  isAutoSyncOn,
+  lastAutoSync,
+  rememberCode,
+  rememberedCode,
+  setAutoSync,
+} from '../utils/autoSync';
 
 const PART_LABELS: Record<string, string> = {
   daily: 'daily store',
@@ -17,6 +25,17 @@ export default function SnapshotPanel() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [auto, setAuto] = useState(isAutoSyncOn);
+  const [lastSync, setLastSync] = useState(lastAutoSync);
+
+  useEffect(() => {
+    const sync = () => {
+      setAuto(isAutoSyncOn());
+      setLastSync(lastAutoSync());
+    };
+    window.addEventListener(CHANGE_EVENT, sync);
+    return () => window.removeEventListener(CHANGE_EVENT, sync);
+  }, []);
 
   // A browser that is itself looking at a snapshot has nothing live to save.
   if (api.getSnapshotTime() !== null) return null;
@@ -26,7 +45,8 @@ export default function SnapshotPanel() {
     setError(null);
     setCopied(false);
     try {
-      const res = await api.createSnapshot();
+      const res = await api.createSnapshot(rememberedCode());
+      rememberCode(res.code);
       setSnap({ code: res.code, takenAt: res.taken_at, parts: res.parts, days: Math.round(res.expires_in / 86400) });
     } catch (err) {
       setSnap(null);
@@ -85,6 +105,24 @@ export default function SnapshotPanel() {
           </span>
         </div>
       )}
+      <label className="mt-4 flex cursor-pointer items-start gap-2 text-xs text-text-secondary">
+        <input
+          type="checkbox"
+          checked={auto}
+          onChange={(e) => {
+            setAutoSync(e.target.checked);
+            setAuto(e.target.checked);
+          }}
+          className="mt-0.5 h-3.5 w-3.5 accent-[var(--color-accent-red)]"
+        />
+        <span>
+          <span className="text-text-primary">Keep it updated automatically.</span> About every 30 minutes this tab signs in
+          to Riot again by itself (it briefly leaves and comes back) and saves fresh data under the same code. Needs this
+          computer on, this site open, the login helper extension installed and Riot's sign-in still remembered in this
+          browser.
+          {auto && lastSync > 0 && <> Last update {new Date(lastSync).toLocaleTimeString()}.</>}
+        </span>
+      </label>
       {error && <p className="mt-3 text-xs text-accent-red">{error}</p>}
     </div>
   );

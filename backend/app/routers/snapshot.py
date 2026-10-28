@@ -15,8 +15,15 @@ class RedeemRequest(BaseModel):
     code: str
 
 
+class TakeRequest(BaseModel):
+    # An earlier code of this account to refresh in place (the auto-update does this).
+    code: str | None = None
+
+
 @router.post("")
-async def take_snapshot(request: Request, session: SessionData = Depends(get_session)) -> dict:
+async def take_snapshot(
+    request: Request, body: TakeRequest | None = None, session: SessionData = Depends(get_session)
+) -> dict:
     """Save everything the site shows right now and return a code that opens it elsewhere."""
     if session.snapshot_code:
         raise HTTPException(status_code=400, detail="This sign-in is itself a snapshot view.")
@@ -24,7 +31,7 @@ async def take_snapshot(request: Request, session: SessionData = Depends(get_ses
         snap = await snapshot.build(session)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
-    code = snapshot.store(_get_token_from_header(request) or "", snap)
+    code = snapshot.store(_get_token_from_header(request) or "", snap, body.code if body else None)
     return {
         "code": f"{code[:5]}-{code[5:]}",
         "taken_at": snap.taken_at,
