@@ -116,6 +116,14 @@ export function accountLogin(username: string, password: string): Promise<LoginR
   return request('/api/snapshot/login', { method: 'POST', body: JSON.stringify({ username, password }) });
 }
 
+export function refreshSnapshot(): Promise<{ live: boolean; requested: boolean }> {
+  return request('/api/snapshot/refresh', { method: 'POST' });
+}
+
+export function pendingRefresh(): Promise<{ requested: boolean }> {
+  return request('/api/snapshot/pending');
+}
+
 export function revokeSnapshot(code: string): Promise<{ revoked: boolean }> {
   return request('/api/snapshot/revoke', { method: 'POST', body: JSON.stringify({ code }) });
 }
