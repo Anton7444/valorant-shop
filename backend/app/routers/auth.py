@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.models.auth import SessionData
-from app.services import riot_auth
+from app.services import riot_auth, snapshot
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -58,15 +58,16 @@ class LoginResponse(BaseModel):
     session_token: str | None = None
     puuid: str | None = None
     promo: bool = False
+    snapshot_at: float | None = None  # set when this sign-in is a snapshot view
     error: str | None = None
 
 
 # --- Endpoints ---
 
 @router.get("/url")
-async def get_login_url() -> AuthUrlResponse:
+async def get_login_url(silent: bool = False) -> AuthUrlResponse:
     """Return the Riot OAuth URL for the user to open in their browser."""
-    return AuthUrlResponse(auth_url=riot_auth.get_auth_url())
+    return AuthUrlResponse(auth_url=riot_auth.get_auth_url(silent))
 
 
 @router.post("/token", response_model=LoginResponse)
@@ -131,6 +132,10 @@ async def check_session(request: Request) -> dict:
     token = _get_token_from_header(request)
     if not token:
         return {"valid": False}
+
+    viewer = snapshot.session_from_token(token)
+    if viewer:
+        return {"valid": True, "puuid": viewer.puuid}
 
     session = store.get_valid(token)
     if not session:

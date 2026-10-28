@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO)
 
 from app.config import settings
-from app.routers import auth, media, profile, store
+from app.routers import auth, media, profile, snapshot, store
 from app.services import asset_cache
 
 logger = logging.getLogger(__name__)
@@ -59,4 +59,5 @@ async def health_check():
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(store.router, prefix="/api/store", tags=["store"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
+app.include_router(snapshot.router, prefix="/api/snapshot", tags=["snapshot"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])

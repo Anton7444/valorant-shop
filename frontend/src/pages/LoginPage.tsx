@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
+import { finishAutoSync, isSilentSignInPending } from '../utils/autoSync';
 
 type Stage = 'start' | 'paste';
 
@@ -23,6 +24,7 @@ export default function LoginPage() {
     () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
   );
   const [pastedUrl, setPastedUrl] = useState('');
+  const [codeText, setCodeText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
@@ -115,6 +117,12 @@ export default function LoginPage() {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+        if (isSilentSignInPending()) {
+          // The snapshot auto-update signed in again: save the fresh data, then go back to the profile.
+          await finishAutoSync();
+          navigate('/profile');
+          return;
+        }
         navigate('/shop');
       } else {
         setError(res.error ?? 'Authentication failed');
@@ -122,6 +130,28 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
+      setLoading(false);
+    }
+  }
+
+  async function handleCodeLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codeText.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.redeemSnapshot(codeText.trim());
+      if (res.status === 'success' && res.puuid && res.session_token) {
+        api.storeToken(res.session_token);
+        if (res.snapshot_at) api.storeSnapshotTime(res.snapshot_at);
+        dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
+        navigate('/shop');
+      } else {
+        setError(res.error ?? 'Could not open that code');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open that code');
       setLoading(false);
     }
   }
@@ -190,6 +220,38 @@ export default function LoginPage() {
                   Get the login helper extension
                 </a>
               </p>
+
+              <details className="mt-4 text-xs text-text-secondary">
+                <summary className="cursor-pointer select-none text-center hover:text-text-primary">
+                  Can't open Riot's login page here?
+                </summary>
+                <form onSubmit={handleCodeLogin} className="mt-3 space-y-2 leading-relaxed">
+                  <p>
+                    Sign in on a computer that can reach Riot, open the Profile page and press{' '}
+                    <span className="font-semibold text-text-primary">Save a snapshot</span>. Enter the code it gives here
+                    to see that saved data: nothing on this computer talks to Riot.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      value={codeText}
+                      onChange={(e) => setCodeText(e.target.value)}
+                      placeholder="XXXXX-XXXXX"
+                      aria-label="Snapshot code"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded-sm border border-border bg-bg-primary px-3 py-2 text-center font-mono uppercase tracking-widest text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !codeText.trim()}
+                      className="rounded-sm border border-border px-4 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+                    >
+                      Open
+                    </button>
+                  </div>
+                </form>
+              </details>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
                 {[

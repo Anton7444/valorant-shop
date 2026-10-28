@@ -24,6 +24,19 @@ export function storeToken(token: string): void {
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(SNAPSHOT_KEY);
+}
+
+// Set when this browser is looking at a saved snapshot instead of a live Riot sign-in.
+const SNAPSHOT_KEY = 'snapshot_at';
+
+export function getSnapshotTime(): number | null {
+  const raw = localStorage.getItem(SNAPSHOT_KEY);
+  return raw ? Number(raw) : null;
+}
+
+export function storeSnapshotTime(epochSeconds: number): void {
+  localStorage.setItem(SNAPSHOT_KEY, String(epochSeconds));
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -54,17 +67,31 @@ export interface LoginResponse {
   session_token?: string | null;
   puuid?: string | null;
   promo?: boolean;
+  snapshot_at?: number | null;
   error?: string | null;
 }
 
-export function getAuthUrl(): Promise<{ auth_url: string }> {
-  return request('/api/auth/url');
+export function getAuthUrl(silent = false): Promise<{ auth_url: string }> {
+  return request(`/api/auth/url${silent ? '?silent=true' : ''}`);
 }
 
 export function submitToken(url: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
     body: JSON.stringify({ url }),
+  });
+}
+
+export function createSnapshot(
+  code?: string,
+): Promise<{ code: string; taken_at: number; expires_in: number; parts: string[] }> {
+  return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export function redeemSnapshot(code: string): Promise<LoginResponse> {
+  return request('/api/snapshot/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
   });
 }
 
