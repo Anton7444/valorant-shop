@@ -35,9 +35,15 @@ async def take_snapshot(
     return {
         "code": f"{code[:5]}-{code[5:]}",
         "taken_at": snap.taken_at,
-        "expires_in": int(snapshot.SNAPSHOT_TTL),
+        "expires_in": int(snapshot.SNAPSHOT_TTL),  # 0 = never
         "parts": sorted(snap.data),
     }
+
+
+@router.post("/revoke")
+async def revoke(body: RedeemRequest, session: SessionData = Depends(get_session)) -> dict:
+    """Stop sharing: delete the snapshot behind a code (only its own account may)."""
+    return {"revoked": snapshot.revoke(body.code, session.puuid)}
 
 
 @router.post("/redeem", response_model=LoginResponse)

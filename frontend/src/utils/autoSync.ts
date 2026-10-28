@@ -7,7 +7,7 @@ const ENABLED_KEY = 'autosync';
 const LAST_KEY = 'autosync_last';
 const CODE_KEY = 'autosync_code';
 const PENDING_KEY = 'autosync_pending'; // sessionStorage: a silent sign-in is under way
-export const INTERVAL_MS = 30 * 60 * 1000;
+export const INTERVAL_MS = 20 * 60 * 1000; // well inside Riot's one-hour tokens, so the other computer stays live
 export const CHANGE_EVENT = 'autosync-changed';
 
 export const isAutoSyncOn = () => localStorage.getItem(ENABLED_KEY) === '1';

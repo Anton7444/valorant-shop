@@ -4,6 +4,7 @@ export interface SessionResponse {
   valid: boolean;
   puuid?: string;
   snapshot_at?: number | null;
+  live?: boolean;
 }
 
 // Store types

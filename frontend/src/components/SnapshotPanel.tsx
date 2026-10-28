@@ -56,6 +56,22 @@ export default function SnapshotPanel() {
     }
   }
 
+  async function stop() {
+    if (!snap) return;
+    setBusy(true);
+    try {
+      await api.revokeSnapshot(snap.code);
+      localStorage.removeItem('autosync_code');
+      setAutoSync(false);
+      setAuto(false);
+      setSnap(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not stop sharing');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copy() {
     if (!snap) return;
     try {
@@ -99,8 +115,16 @@ export default function SnapshotPanel() {
           >
             {copied ? 'Copied' : 'Copy'}
           </button>
+          <button
+            type="button"
+            onClick={stop}
+            disabled={busy}
+            className="text-xs text-text-secondary underline-offset-2 hover:text-accent-red hover:underline disabled:opacity-50"
+          >
+            Stop sharing
+          </button>
           <span className="text-xs text-text-secondary">
-            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}. The code works for {snap.days} days and the other computer stays signed in. Includes:{' '}
+            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}. {snap.days > 0 ? `The code works for ${snap.days} days` : 'The code never expires'} and the other computer stays signed in. Includes:{' '}
             {snap.parts.map((p) => PART_LABELS[p] ?? p).join(', ')}. Save again when the store changes.
           </span>
         </div>
@@ -116,8 +140,9 @@ export default function SnapshotPanel() {
           className="mt-0.5 h-3.5 w-3.5 accent-[var(--color-accent-red)]"
         />
         <span>
-          <span className="text-text-primary">Keep it updated automatically.</span> About every 30 minutes this tab signs in
-          to Riot again by itself (it briefly leaves and comes back) and saves fresh data under the same code. Needs this
+          <span className="text-text-primary">Keep it updated automatically.</span> About every 20 minutes this tab signs in
+          to Riot again by itself (it briefly leaves and comes back) and saves fresh data under the same code, so the
+          other computer shows live data: each page it opens is fetched from Riot at that moment. Needs this
           computer on, this site open, the login helper extension installed and Riot's sign-in still remembered in this
           browser.
           {auto && lastSync > 0 && <> Last update {new Date(lastSync).toLocaleTimeString()}.</>}

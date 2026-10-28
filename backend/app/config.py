@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     PROMO_PUUIDS: str = ""
     # Where snapshots are kept so they survive a restart (see services/snapshot.py)
     SNAPSHOT_FILE: str = "/tmp/valshop_snapshots.json"
-    SNAPSHOT_DAYS: int = 30
+    SNAPSHOT_DAYS: int = 0  # 0 = never expires (revoke it from the Profile page)
 
     @property
     def allowed_origins_list(self) -> list[str]:

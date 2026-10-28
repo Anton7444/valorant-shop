@@ -25,10 +25,21 @@ export function storeToken(token: string): void {
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(SNAPSHOT_KEY);
+  localStorage.removeItem(LIVE_KEY);
 }
 
 // Set when this browser is looking at a saved snapshot instead of a live Riot sign-in.
 const SNAPSHOT_KEY = 'snapshot_at';
+const LIVE_KEY = 'snapshot_live';
+
+/** True while the other computer's Riot sign-in is fresh, so pages are answered live. */
+export function isSnapshotLive(): boolean {
+  return localStorage.getItem(LIVE_KEY) === '1';
+}
+
+export function storeSnapshotLive(live: boolean): void {
+  localStorage.setItem(LIVE_KEY, live ? '1' : '0');
+}
 
 export function getSnapshotTime(): number | null {
   const raw = localStorage.getItem(SNAPSHOT_KEY);
@@ -86,6 +97,10 @@ export function createSnapshot(
   code?: string,
 ): Promise<{ code: string; taken_at: number; expires_in: number; parts: string[] }> {
   return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export function revokeSnapshot(code: string): Promise<{ revoked: boolean }> {
+  return request('/api/snapshot/revoke', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
 export function redeemSnapshot(code: string): Promise<LoginResponse> {

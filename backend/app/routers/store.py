@@ -60,7 +60,7 @@ def _handle_riot_error(exc: Exception) -> HTTPException:
 @router.get("/daily", response_model=DailyStoreResponse)
 async def daily_store(session: SessionData = Depends(get_session)) -> DailyStoreResponse:
     if session.snapshot_code:
-        return snapshot.serve(session, "daily")
+        return await snapshot.serve(session, "daily")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -81,7 +81,7 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
 @router.get("/accessories", response_model=AccessoryStoreResponse)
 async def accessory_store(session: SessionData = Depends(get_session)) -> AccessoryStoreResponse:
     if session.snapshot_code:
-        return snapshot.serve(session, "accessories")
+        return await snapshot.serve(session, "accessories")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -94,7 +94,7 @@ async def accessory_store(session: SessionData = Depends(get_session)) -> Access
 @router.get("/bundle", response_model=BundleResponse)
 async def featured_bundle(session: SessionData = Depends(get_session)) -> BundleResponse:
     if session.snapshot_code:
-        return snapshot.serve(session, "bundle")
+        return await snapshot.serve(session, "bundle")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -113,7 +113,7 @@ async def public_featured_bundle() -> BundleResponse:
 @router.get("/wallet", response_model=Wallet)
 async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
     if session.snapshot_code:
-        return snapshot.serve(session, "wallet")
+        return await snapshot.serve(session, "wallet")
     try:
         return await storefront.get_wallet(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -125,7 +125,7 @@ async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
 @router.get("/inventory", response_model=InventoryResponse)
 async def inventory(session: SessionData = Depends(get_session)) -> InventoryResponse:
     if session.snapshot_code:
-        return snapshot.serve(session, "inventory")
+        return await snapshot.serve(session, "inventory")
     try:
         owned_ids = await storefront.fetch_owned_skin_level_ids(
             session.access_token, session.entitlements_token, session.puuid, session.shard

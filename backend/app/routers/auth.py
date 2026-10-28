@@ -136,7 +136,12 @@ async def check_session(request: Request) -> dict:
     viewer = snapshot.session_from_token(token)
     if viewer:
         snap = snapshot.lookup(viewer.snapshot_code or "")
-        return {"valid": True, "puuid": viewer.puuid, "snapshot_at": snap.taken_at if snap else None}
+        return {
+            "valid": True,
+            "puuid": viewer.puuid,
+            "snapshot_at": snap.taken_at if snap else None,
+            "live": bool(snap and snapshot.is_live(snap)),
+        }
 
     session = store.get_valid(token)
     if not session:
