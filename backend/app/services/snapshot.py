@@ -5,6 +5,8 @@ code. Nothing here renews or reuses Riot tokens; the saved data is simply served
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -243,6 +245,7 @@ def revoke(code: str, puuid: str) -> bool:
             if owned == code:
                 del _code_of_session[token]
         _save()
+    clear_password(puuid)
     return True
 
 
@@ -317,3 +320,83 @@ def _load() -> None:
 
 
 _load()
+
+
+# --- Owner password: opens the account's snapshot from another computer without typing the code ---
+
+_OWNER_FILE = settings.SNAPSHOT_FILE + ".owner"
+_owner: dict | None = None  # {"puuid", "salt", "hash"}; one owner only
+_failures: list[float] = []
+MAX_FAILURES = 8
+FAILURE_WINDOW = 15 * 60.0
+
+
+def _scrypt(password: str, salt: bytes) -> bytes:
+    return hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+
+
+def _write_owner() -> None:
+    try:
+        directory = os.path.dirname(_OWNER_FILE) or "."
+        fd, tmp = tempfile.mkstemp(dir=directory)
+        with os.fdopen(fd, "w") as handle:
+            json.dump(_owner or {}, handle)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, _OWNER_FILE)
+    except Exception:
+        logger.warning("Could not save the owner password", exc_info=True)
+
+
+def set_password(puuid: str, password: str) -> None:
+    """Make `password` the way to open this account's snapshot (replaces any earlier owner)."""
+    global _owner
+    salt = secrets.token_bytes(16)
+    with _lock:
+        _owner = {"puuid": puuid, "salt": salt.hex(), "hash": _scrypt(password, salt).hex()}
+        _write_owner()
+
+
+def clear_password(puuid: str) -> None:
+    global _owner
+    with _lock:
+        if _owner and _owner["puuid"] == puuid:
+            _owner = None
+            _write_owner()
+
+
+def password_locked() -> bool:
+    now = time.time()
+    _failures[:] = [t for t in _failures if now - t < FAILURE_WINDOW]
+    return len(_failures) >= MAX_FAILURES
+
+
+def code_for_password(password: str) -> str | None:
+    """The snapshot code of the owner if `password` is right (and a snapshot exists), else None."""
+    if _owner is None:
+        _failures.append(time.time())
+        return None
+    candidate = _scrypt(password, bytes.fromhex(_owner["salt"]))
+    if not hmac.compare_digest(candidate, bytes.fromhex(_owner["hash"])):
+        _failures.append(time.time())
+        return None
+    # The newest snapshot of that account.
+    with _lock:
+        mine = [(c, sn) for c, sn in _snapshots.items() if sn.puuid == _owner["puuid"] and sn.expires_at > time.time()]
+    if not mine:
+        return None
+    return max(mine, key=lambda item: item[1].taken_at)[0]
+
+
+def _load_owner() -> None:
+    global _owner
+    try:
+        with open(_OWNER_FILE) as handle:
+            raw = json.load(handle)
+        _owner = raw if raw.get("hash") else None
+    except FileNotFoundError:
+        return
+    except Exception:
+        logger.warning("Could not read the owner password file", exc_info=True)
+
+
+_load_owner()

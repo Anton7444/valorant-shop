@@ -27,6 +27,8 @@ export default function SnapshotPanel() {
   const [copied, setCopied] = useState(false);
   const [auto, setAuto] = useState(isAutoSyncOn);
   const [lastSync, setLastSync] = useState(lastAutoSync);
+  const [password, setPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -69,6 +71,18 @@ export default function SnapshotPanel() {
       setError(err instanceof Error ? err.message : 'Could not stop sharing');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function savePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordMessage(null);
+    try {
+      await api.setSnapshotPassword(password);
+      setPassword('');
+      setPasswordMessage('Saved. Use it on the login page of the other computer instead of the code.');
+    } catch (err) {
+      setPasswordMessage(err instanceof Error ? err.message : 'Could not save the password');
     }
   }
 
@@ -129,6 +143,34 @@ export default function SnapshotPanel() {
           </span>
         </div>
       )}
+      {(snap || rememberedCode()) && (
+        <form onSubmit={savePassword} className="mt-4 border-t border-border/60 pt-4">
+          <p className="text-xs text-text-secondary">
+            <span className="text-text-primary">Or use a password.</span> Choose one (8+ characters, one you use nowhere
+            else); on the other computer type it on the login page instead of the code. Only this account can be opened.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="New password"
+              aria-label="Password for other computers"
+              className="min-w-0 flex-1 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
+            />
+            <button
+              type="submit"
+              disabled={password.length < 8}
+              className="rounded-sm border border-border px-4 text-xs font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
+            >
+              Set password
+            </button>
+          </div>
+          {passwordMessage && <p className="mt-2 text-xs text-text-secondary">{passwordMessage}</p>}
+        </form>
+      )}
+
       <label className="mt-4 flex cursor-pointer items-start gap-2 text-xs text-text-secondary">
         <input
           type="checkbox"

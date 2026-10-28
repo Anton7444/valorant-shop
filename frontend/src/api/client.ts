@@ -99,6 +99,14 @@ export function createSnapshot(
   return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
+export function setSnapshotPassword(password: string): Promise<{ ok: boolean }> {
+  return request('/api/snapshot/password', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+export function snapshotPasswordLogin(password: string): Promise<LoginResponse> {
+  return request('/api/snapshot/login', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
 export function revokeSnapshot(code: string): Promise<{ revoked: boolean }> {
   return request('/api/snapshot/revoke', { method: 'POST', body: JSON.stringify({ code }) });
 }
