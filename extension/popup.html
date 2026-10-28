@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Riot login proxy</title>
+<style>
+  body { margin: 0; width: 320px; padding: 14px; font: 13px system-ui, sans-serif; background: #0f1923; color: #ece8e1; }
+  h1 { margin: 0 0 4px; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
+  p { margin: 0 0 12px; color: #8b97a5; font-size: 12px; line-height: 1.4; }
+  label { display: block; margin: 8px 0 3px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8b97a5; }
+  input[type=text], input[type=password], input[type=number], textarea {
+    box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid #2b3846; border-radius: 3px;
+    background: #162230; color: #ece8e1; font: inherit; outline: none;
+  }
+  input:focus, textarea:focus { border-color: #ff4655; }
+  .row { display: flex; gap: 8px; } .row > div:first-child { flex: 1; } .row > div:last-child { width: 80px; }
+  .check { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 13px; text-transform: none; letter-spacing: 0; color: #ece8e1; }
+  button { margin-top: 12px; width: 100%; padding: 8px; border: 1px solid #ff4655; border-radius: 3px; background: transparent; color: #ff4655;
+    font: 600 12px system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+  button:hover { background: rgba(255, 70, 85, .12); }
+  #status { margin-top: 8px; min-height: 16px; font-size: 12px; color: #3dd9b3; }
+</style>
+</head>
+<body>
+  <h1>Riot login proxy</h1>
+  <p>For networks that block Riot: send only Riot's login pages through a relay you run (tools/riot-relay). Everything else stays direct.</p>
+  <label class="check"><input type="checkbox" id="enabled"> Use the proxy</label>
+  <div class="row">
+    <div><label for="host">Relay address</label><input type="text" id="host" placeholder="home.example.com" spellcheck="false"></div>
+    <div><label for="port">Port</label><input type="number" id="port" placeholder="8899"></div>
+  </div>
+  <label for="user">Username</label><input type="text" id="user" autocomplete="off" spellcheck="false">
+  <label for="pass">Password</label><input type="password" id="pass" autocomplete="off">
+  <label for="domains">Domains sent through it (one per line)</label>
+  <textarea id="domains" rows="5" spellcheck="false"></textarea>
+  <button id="save">Save</button>
+  <div id="status" role="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
