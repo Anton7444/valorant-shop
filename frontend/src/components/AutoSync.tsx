@@ -22,8 +22,21 @@ export default function AutoSync() {
     };
     schedule();
     window.addEventListener(CHANGE_EVENT, schedule);
+
+    // A viewer on another computer pressed Refresh while this sign-in had run out: sign in again now.
+    const poll = window.setInterval(() => {
+      if (!isAutoSyncOn()) return;
+      api
+        .pendingRefresh()
+        .then((res) => {
+          if (res.requested) void startSilentSignIn().catch(() => {});
+        })
+        .catch(() => {});
+    }, 20_000);
+
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(poll);
       window.removeEventListener(CHANGE_EVENT, schedule);
     };
   }, [state.sessionValid, pathname]);

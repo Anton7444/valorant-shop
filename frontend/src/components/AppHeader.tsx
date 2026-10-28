@@ -7,6 +7,7 @@ import type { Wallet } from '../types';
 import WalletDisplay from './WalletDisplay';
 import LanguageSwitch from './LanguageSwitch';
 import ScrollFade from './ScrollFade';
+import RefreshButton from './RefreshButton';
 import NavMore from './NavMore';
 import { useRovingArrows } from '../hooks/useRovingArrows';
 
@@ -126,6 +127,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               <WalletDisplay wallet={wallet} />
             </div>
           )}
+          {snapshotAt !== null && <RefreshButton />}
           {snapshotAt !== null && (
             <span
               className="rounded-sm border border-accent-teal/40 px-2 py-1 text-[10px] uppercase tracking-widest text-accent-teal"

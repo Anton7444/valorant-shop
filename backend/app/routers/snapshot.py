@@ -113,6 +113,22 @@ async def account_login(body: LoginRequest, request: Request) -> LoginResponse:
     )
 
 
+@router.post("/refresh")
+async def refresh(session: SessionData = Depends(get_session)) -> dict:
+    """A snapshot viewer asks for fresh data."""
+    if not session.snapshot_code:
+        raise HTTPException(status_code=400, detail="Only a snapshot view can ask for a refresh.")
+    return snapshot.request_refresh(session.snapshot_code)
+
+
+@router.get("/pending")
+async def pending(session: SessionData = Depends(get_session)) -> dict:
+    """The signed-in home computer asks whether a viewer wants fresh data."""
+    if session.snapshot_code:
+        return {"requested": False}
+    return {"requested": snapshot.take_pending(session.puuid)}
+
+
 @router.post("/revoke")
 async def revoke(body: RedeemRequest, session: SessionData = Depends(get_session)) -> dict:
     """Stop sharing: delete the snapshot behind a code (only its own account may)."""

@@ -65,6 +65,8 @@ class Snapshot:
     source: SessionData | None = field(default=None, repr=False)
     live_cache: dict = field(default_factory=dict, repr=False)
     last_saved: float = 0.0
+    refresh_requested: bool = False  # a viewer asked the home computer to sign in again
+    last_request: float = 0.0
 
 
 _lock = threading.Lock()
@@ -232,6 +234,32 @@ async def serve(session: SessionData, key: str):
     if key == "profile":
         value.has_more_matches = False  # older matches cannot be loaded for a viewer
     return value
+
+
+def request_refresh(code: str) -> dict:
+    """A viewer pressed Refresh: drop the short caches so the next requests go to Riot; if the home
+    computer's sign-in has run out, ask it (it polls `pending`) to sign in again."""
+    snap = lookup(code)
+    if snap is None:
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+    now = time.time()
+    if now - snap.last_request < 5:
+        return {"live": is_live(snap), "requested": snap.refresh_requested}
+    snap.last_request = now
+    snap.live_cache.clear()
+    if is_live(snap):
+        return {"live": True, "requested": False}
+    snap.refresh_requested = True
+    return {"live": False, "requested": True}
+
+
+def take_pending(puuid: str) -> bool:
+    """For the home computer: was a refresh asked for? (Asking clears it.)"""
+    with _lock:
+        pending = [sn for sn in _snapshots.values() if sn.puuid == puuid and sn.refresh_requested]
+        for sn in pending:
+            sn.refresh_requested = False
+    return bool(pending)
 
 
 def revoke(code: str, puuid: str) -> bool:
