@@ -79,6 +79,7 @@ export interface LoginResponse {
   puuid?: string | null;
   promo?: boolean;
   snapshot_at?: number | null;
+  snapshot_live?: boolean | null;
   error?: string | null;
 }
 
@@ -99,12 +100,20 @@ export function createSnapshot(
   return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
 }
 
-export function setSnapshotPassword(password: string): Promise<{ ok: boolean }> {
-  return request('/api/snapshot/password', { method: 'POST', body: JSON.stringify({ password }) });
+export function getAccount(): Promise<{ username: string | null }> {
+  return request('/api/snapshot/account');
 }
 
-export function snapshotPasswordLogin(password: string): Promise<LoginResponse> {
-  return request('/api/snapshot/login', { method: 'POST', body: JSON.stringify({ password }) });
+export function createAccount(username: string, password: string): Promise<{ username: string }> {
+  return request('/api/snapshot/account', { method: 'POST', body: JSON.stringify({ username, password }) });
+}
+
+export function deleteAccount(): Promise<{ deleted: boolean }> {
+  return request('/api/snapshot/account/delete', { method: 'POST' });
+}
+
+export function accountLogin(username: string, password: string): Promise<LoginResponse> {
+  return request('/api/snapshot/login', { method: 'POST', body: JSON.stringify({ username, password }) });
 }
 
 export function revokeSnapshot(code: string): Promise<{ revoked: boolean }> {

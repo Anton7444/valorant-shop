@@ -59,6 +59,7 @@ class LoginResponse(BaseModel):
     puuid: str | None = None
     promo: bool = False
     snapshot_at: float | None = None  # set when this sign-in is a snapshot view
+    snapshot_live: bool | None = None  # ... and whether its pages are answered live
     error: str | None = None
 
 
