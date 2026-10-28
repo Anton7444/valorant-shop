@@ -232,7 +232,7 @@ export default function LoginPage() {
                   <form onSubmit={handleCodeLogin} className="space-y-2 rounded-sm border border-border/60 p-3">
                     <p>
                       Have a <span className="font-semibold text-text-primary">login code</span>? On a computer where you
-                      signed in with the login helper extension, the Store page (very bottom) can show one.
+                      signed in, the Profile page can give you one.
                     </p>
                     <div className="flex gap-2">
                       <input

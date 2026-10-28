@@ -1,4 +1,5 @@
 import RollingNumber from '../components/RollingNumber';
+import LoginCodePanel from '../components/LoginCodePanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -458,6 +459,10 @@ export default function ProfilePage() {
                   <CurrencyTile label="Kingdom Credits" value={profile.wallet.kingdom_credits} accent="#e8c15a" index={3} />
                 </div>
               )}
+            </section>
+
+            <section>
+              <LoginCodePanel />
             </section>
 
             <section>
