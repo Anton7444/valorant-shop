@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     # Comma-separated PUUIDs (or leading prefixes) that get the promo takeover screen
     PROMO_PUUIDS: str = ""
+    # Where snapshots are kept so they survive a restart (see services/snapshot.py)
+    SNAPSHOT_FILE: str = "/tmp/valshop_snapshots.json"
+    SNAPSHOT_DAYS: int = 30
 
     @property
     def allowed_origins_list(self) -> list[str]:

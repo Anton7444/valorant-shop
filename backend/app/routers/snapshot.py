@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -9,7 +7,6 @@ from app.models.auth import SessionData
 from app.routers.auth import LoginResponse, _check_rate_limit, _get_token_from_header
 from app.routers.store import _handle_riot_error, get_session
 from app.services import snapshot
-from app.session_store import store
 
 router = APIRouter()
 
@@ -43,19 +40,10 @@ async def redeem(body: RedeemRequest, request: Request) -> LoginResponse:
     snap = snapshot.lookup(code)
     if snap is None:
         return LoginResponse(status="error", error="That code is invalid or has expired.")
-    viewer = SessionData(
-        access_token="",
-        entitlements_token="",
-        puuid=snap.puuid,
-        shard=snap.shard,
-        region=snap.region,
-        snapshot_code=code,
-    )
-    token = store.create(viewer)
-    viewer.expires_at = viewer.created_at + timedelta(hours=24)
+    # Viewer sessions are stateless (the token is derived from the code), so they survive restarts.
     return LoginResponse(
         status="success",
-        session_token=token,
+        session_token=snapshot.TOKEN_PREFIX + code,
         puuid=snap.puuid,
         promo=settings.is_promo_target(snap.puuid),
         snapshot_at=snap.taken_at,

@@ -21,6 +21,10 @@ async def get_session(request: Request) -> SessionData:
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    viewer = snapshot.session_from_token(session_token)
+    if viewer:
+        return viewer
+
     session = store.get_valid(session_token)
     if session:
         return session

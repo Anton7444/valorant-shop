@@ -13,7 +13,7 @@ const PART_LABELS: Record<string, string> = {
 
 /** Saves everything the site shows now and gives a code to open it on a computer that cannot reach Riot. */
 export default function SnapshotPanel() {
-  const [snap, setSnap] = useState<{ code: string; takenAt: number; parts: string[] } | null>(null);
+  const [snap, setSnap] = useState<{ code: string; takenAt: number; parts: string[]; days: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -27,7 +27,7 @@ export default function SnapshotPanel() {
     setCopied(false);
     try {
       const res = await api.createSnapshot();
-      setSnap({ code: res.code, takenAt: res.taken_at, parts: res.parts });
+      setSnap({ code: res.code, takenAt: res.taken_at, parts: res.parts, days: Math.round(res.expires_in / 86400) });
     } catch (err) {
       setSnap(null);
       setError(err instanceof Error ? err.message : 'Could not save a snapshot');
@@ -80,7 +80,7 @@ export default function SnapshotPanel() {
             {copied ? 'Copied' : 'Copy'}
           </button>
           <span className="text-xs text-text-secondary">
-            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}, valid for 24 hours. Includes:{' '}
+            Saved {new Date(snap.takenAt * 1000).toLocaleTimeString()}. The code works for {snap.days} days and the other computer stays signed in. Includes:{' '}
             {snap.parts.map((p) => PART_LABELS[p] ?? p).join(', ')}. Save again when the store changes.
           </span>
         </div>

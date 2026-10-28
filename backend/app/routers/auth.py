@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.models.auth import SessionData
-from app.services import riot_auth
+from app.services import riot_auth, snapshot
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -132,6 +132,10 @@ async def check_session(request: Request) -> dict:
     token = _get_token_from_header(request)
     if not token:
         return {"valid": False}
+
+    viewer = snapshot.session_from_token(token)
+    if viewer:
+        return {"valid": True, "puuid": viewer.puuid}
 
     session = store.get_valid(token)
     if not session:
