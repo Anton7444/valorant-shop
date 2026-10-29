@@ -45,7 +45,12 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          echo "[$VPS_HOST]:$VPS_PORT $VPS_HOST_KEY" > ~/.ssh/known_hosts
+          # OpenSSH matches port 22 against the bare host name, any other
+          # port against "[host]:port", so write both forms.
+          {
+            echo "$VPS_HOST $VPS_HOST_KEY"
+            echo "[$VPS_HOST]:$VPS_PORT $VPS_HOST_KEY"
+          } > ~/.ssh/known_hosts
 
           # The server's forced command runs the deploy script; the command
           # given here is ignored.
