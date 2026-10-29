@@ -1,10 +1,12 @@
-name: Update Backup Backend (InstaBox)
+name: Update Backend (VPS)
 
-# Keeps the standby backend on the InstaBox VM in sync with master.
-# The primary backend on Render still deploys on its own (autoDeploy).
+# Keeps the backend on the VPS in sync with master by SSH-ing in with a
+# restricted deploy key. On the server that key can only run
+# /data/home/valorant-backup/deploy.sh (git fetch + reset, pip install,
+# restart valorant-backup, health check); it gets no shell.
 #
-# Requires the repository secret INSTABOX_API_KEY (an InstaBox API key with the
-# machines:write scope). Without it this workflow just prints a warning and exits.
+# Requires the repository secret VPS_SSH_KEY (the deploy private key).
+# Without it this workflow just prints a warning and exits.
 
 on:
   push:
@@ -21,54 +23,36 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  INSTABOX_MACHINE: m_agqunmd6dwdqhz2ppue6hneh74
+  VPS_HOST: 154.23.160.219
+  VPS_PORT: '48220'
+  VPS_USER: user
+  # Public SSH host key of the VPS (pinned so the connection can't be intercepted).
+  VPS_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB8e/R39NCSwMJ1SFVjzc7PwgbbflQHr1PAbohlI0dk/
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Update backup backend on the InstaBox VM
+      - name: Deploy backend to the VPS
         env:
-          INSTABOX_API_KEY: ${{ secrets.INSTABOX_API_KEY }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          if [ -z "$INSTABOX_API_KEY" ]; then
-            echo "::warning::INSTABOX_API_KEY secret is not set; skipping the backup update."
+          if [ -z "$VPS_SSH_KEY" ]; then
+            echo "::warning::VPS_SSH_KEY secret is not set; skipping the backend update."
             exit 0
           fi
 
-          API="https://api.instabox.sh/v1/machines/$INSTABOX_MACHINE"
-          AUTH="Authorization: Bearer $INSTABOX_API_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "[$VPS_HOST]:$VPS_PORT $VPS_HOST_KEY" > ~/.ssh/known_hosts
 
-          # Wake the VM if it was idle-suspended (no-op when it is already running).
-          curl -sS -m 60 -X POST -H "$AUTH" "$API/wake" -o /dev/null \
-            -w "wake: HTTP %{http_code}\n" || true
+          # The server's forced command runs the deploy script; the command
+          # given here is ignored.
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ConnectTimeout=30 -o ServerAliveInterval=15 \
+            "$VPS_USER@$VPS_HOST" deploy
 
-          # Runs inside the VM. The app is served from the repo checkout, so a
-          # fetch + reset is enough for code changes; the pip install only matters
-          # when backend/pyproject.toml dependencies change.
-          REMOTE='set -e
-          cd ~/valorant-backup/repo
-          git fetch --depth 1 origin master
-          git reset --hard FETCH_HEAD
-          cd ..
-          uv pip install --quiet --python venv/bin/python ./repo/backend
-          ./start.sh
-          sleep 6
-          curl -fsS localhost:8000/api/health
-          echo
-          git -C repo log --oneline -1'
-
-          PAYLOAD=$(jq -n --arg cmd "$REMOTE" '{cmd: $cmd, timeoutSeconds: 300}')
-          RESP=$(curl -sS -m 330 -X POST -H "$AUTH" -H "Content-Type: application/json" \
-            "$API/exec" -d "$PAYLOAD")
-
-          echo "$RESP" | jq -r '.stdout // empty'
-          echo "$RESP" | jq -r '.stderr // empty' >&2
-
-          CODE=$(echo "$RESP" | jq -r '.exitCode // "missing"')
-          if [ "$CODE" != "0" ]; then
-            echo "::error::Backup update failed (exit code: $CODE)"
-            echo "$RESP" | jq -r '.error.message // empty'
-            exit 1
-          fi
-          echo "Backup backend updated."
+          echo "Backend updated."
