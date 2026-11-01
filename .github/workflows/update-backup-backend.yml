@@ -24,7 +24,7 @@ concurrency:
 
 env:
   VPS_HOST: 74.222.12.182
-  VPS_PORT: '22'
+  VPS_PORT: '52022'
   VPS_USER: user
   # Public SSH host key of the VPS (pinned so the connection can't be intercepted).
   VPS_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGNUcpu4pxfd+CwONLeKYx4yKMWyHE/Z2jEOpITJfYTj
