@@ -23,11 +23,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VPS_HOST: 74.222.12.182
+  VPS_HOST: 161.33.95.198
   VPS_PORT: '52022'
   VPS_USER: user
   # Public SSH host key of the VPS (pinned so the connection can't be intercepted).
-  VPS_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGNUcpu4pxfd+CwONLeKYx4yKMWyHE/Z2jEOpITJfYTj
+  VPS_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICj7CxwDj2M/Gp8oHV6sjE3o3hrTaNOdtU6pXwOf5ySb
 
 jobs:
   update:
