@@ -11,6 +11,7 @@ import SkinCard from '../components/SkinCard';
 import BundleCard from '../components/BundleCard';
 
 const STORE_SEEN_KEY = 'valshop:lastSeenStoreKey';
+const NIGHT_SEEN_KEY = 'valshop:lastSeenNightKey';
 
 export default function ShopPage() {
   const { dispatch } = useAuth();
@@ -25,6 +26,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewStore, setIsNewStore] = useState(true);
+  const [isNewNight, setIsNewNight] = useState(true);
 
   const fetchStoreData = useCallback(async () => {
     setLoading(true);
@@ -44,6 +46,12 @@ export default function ShopPage() {
       setIsNewStore(storeKey !== lastSeenKey);
       if (storeKey) {
         localStorage.setItem(STORE_SEEN_KEY, storeKey);
+      }
+
+      const nightKey = (nightRes?.offers ?? []).map((offer) => offer.uuid).sort().join(',');
+      setIsNewNight(nightKey !== localStorage.getItem(NIGHT_SEEN_KEY));
+      if (nightKey) {
+        localStorage.setItem(NIGHT_SEEN_KEY, nightKey);
       }
 
       setOffers(dailyRes.offers);
@@ -124,7 +132,7 @@ export default function ShopPage() {
                     <SkinCard
                       key={skin.uuid}
                       skin={skin}
-                      startRevealed
+                      startRevealed={!isNewNight}
                       index={index}
                       discountedCost={skin.discounted_cost}
                       discountPercent={skin.discount_percent}
