@@ -90,6 +90,17 @@ class DailyStoreResponse(BaseModel):
     seconds_remaining: int
 
 
+class NightMarketOffer(SkinOffer):
+    # `cost` is the regular price; the Night Market sells it for `discounted_cost`.
+    discounted_cost: int = 0
+    discount_percent: int = 0
+
+
+class NightMarketResponse(BaseModel):
+    offers: list[NightMarketOffer]
+    seconds_remaining: int
+
+
 class BundleResponse(BaseModel):
     bundles: list[Bundle]
 

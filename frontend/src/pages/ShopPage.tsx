@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
-import type { Bundle, SkinOffer, Wallet } from '../types';
+import type { Bundle, NightMarketOffer, SkinOffer, Wallet } from '../types';
 import CountdownTimer from '../components/CountdownTimer';
 import AppHeader from '../components/AppHeader';
 import SkinCard from '../components/SkinCard';
@@ -19,6 +19,8 @@ export default function ShopPage() {
   const [offers, setOffers] = useState<SkinOffer[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [nightOffers, setNightOffers] = useState<NightMarketOffer[]>([]);
+  const [nightSeconds, setNightSeconds] = useState(0);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +31,12 @@ export default function ShopPage() {
     setError(null);
 
     try {
-      const [dailyRes, bundleRes, walletRes] = await Promise.all([
+      const [dailyRes, bundleRes, walletRes, nightRes] = await Promise.all([
         api.getDailyStore(),
         api.getBundles(),
         api.getWallet(),
+        // The Night Market is optional: a failure here must never break the rest of the store.
+        api.getNightMarket().catch(() => null),
       ]);
 
       const storeKey = dailyRes.offers.map((offer) => offer.uuid).sort().join(',');
@@ -45,6 +49,8 @@ export default function ShopPage() {
       setOffers(dailyRes.offers);
       setSecondsRemaining(dailyRes.seconds_remaining);
       setBundles(bundleRes.bundles);
+      setNightOffers(nightRes?.offers ?? []);
+      setNightSeconds(nightRes?.seconds_remaining ?? 0);
       setWallet(walletRes);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load store';
@@ -101,6 +107,32 @@ export default function ShopPage() {
                 ))}
               </div>
             </section>
+
+            {/* Night Market (only while it is open) */}
+            {nightOffers.length > 0 && (
+              <section className="mb-12">
+                <SectionHeading>Night market</SectionHeading>
+                <div className="mb-6 flex justify-center">
+                  <CountdownTimer
+                    secondsRemaining={nightSeconds}
+                    onExpire={fetchStoreData}
+                    label="Night market ends in"
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {nightOffers.map((skin, index) => (
+                    <SkinCard
+                      key={skin.uuid}
+                      skin={skin}
+                      startRevealed
+                      index={index}
+                      discountedCost={skin.discounted_cost}
+                      discountPercent={skin.discount_percent}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Featured Bundle */}
             {bundles.length > 0 && (

@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 interface CountdownTimerProps {
   secondsRemaining: number;
   onExpire?: () => void;
+  label?: string;
 }
 
-export default function CountdownTimer({ secondsRemaining, onExpire }: CountdownTimerProps) {
+export default function CountdownTimer({ secondsRemaining, onExpire, label = 'Store refreshes in' }: CountdownTimerProps) {
   const [remaining, setRemaining] = useState(secondsRemaining);
   const [prevSecs, setPrevSecs] = useState(secondsRemaining);
 
@@ -51,7 +52,7 @@ export default function CountdownTimer({ secondsRemaining, onExpire }: Countdown
         <polyline points="12 6 12 12 16 14" />
       </svg>
       <span className="text-lg font-semibold tracking-wide">
-        Store refreshes in{' '}
+        {label}{' '}
         <span className="font-bold">
           {days > 0 && `${days}d `}
           {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s

@@ -38,6 +38,16 @@ export interface SkinOffer {
   owned?: boolean;
 }
 
+export interface NightMarketOffer extends SkinOffer {
+  discounted_cost: number;
+  discount_percent: number;
+}
+
+export interface NightMarketResponse {
+  offers: NightMarketOffer[];
+  seconds_remaining: number;
+}
+
 export interface OwnedSkin {
   alt_icons?: string[];
   chromas?: SkinChroma[];

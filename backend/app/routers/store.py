@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.auth import SessionData
-from app.models.store import AccessoryStoreResponse, BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, Wallet
+from app.models.store import AccessoryStoreResponse, BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, NightMarketResponse, Wallet
 from app.services import snapshot, storefront
 from app.session_store import store
 
@@ -76,6 +76,28 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
         logger.warning("Could not fetch entitlements; skipping owned markers")
         owned_ids = frozenset()
     return await storefront.get_daily_store(raw, owned_ids)
+
+
+@router.get("/nightmarket", response_model=NightMarketResponse)
+async def night_market(session: SessionData = Depends(get_session)) -> NightMarketResponse:
+    if session.snapshot_code:
+        # Shared snapshots don't carry the Night Market; show nothing rather than an error.
+        return NightMarketResponse(offers=[], seconds_remaining=0)
+    try:
+        raw = await storefront.fetch_storefront(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        raise _handle_riot_error(exc)
+    if not raw.get("BonusStore"):
+        return NightMarketResponse(offers=[], seconds_remaining=0)
+    try:
+        owned_ids = await storefront.fetch_owned_skin_level_ids(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError):
+        owned_ids = frozenset()
+    return await storefront.get_night_market(raw, owned_ids)
 
 
 @router.get("/accessories", response_model=AccessoryStoreResponse)

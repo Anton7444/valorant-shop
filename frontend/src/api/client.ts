@@ -6,6 +6,7 @@ import type {
   DailyStoreResponse,
   InventoryResponse,
   MatchesResponse,
+  NightMarketResponse,
   ProfileResponse,
   SessionResponse,
   Wallet,
@@ -147,6 +148,10 @@ export function checkSession(): Promise<SessionResponse> {
 
 export function getDailyStore(): Promise<DailyStoreResponse> {
   return request('/api/store/daily');
+}
+
+export function getNightMarket(): Promise<NightMarketResponse> {
+  return request('/api/store/nightmarket');
 }
 
 export function getAccessoryStore(): Promise<AccessoryStoreResponse> {

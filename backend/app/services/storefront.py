@@ -13,6 +13,8 @@ from app.models.store import (
     BundleResponse,
     Bundle,
     DailyStoreResponse,
+    NightMarketOffer,
+    NightMarketResponse,
     CatalogResponse,
     CatalogSkin,
     InventoryResponse,
@@ -177,6 +179,26 @@ async def get_daily_store(raw_storefront: dict, owned_ids: frozenset[str] = froz
             offers.append(skin_offer)
 
     return DailyStoreResponse(offers=offers, seconds_remaining=seconds_remaining)
+
+
+async def get_night_market(raw_storefront: dict, owned_ids: frozenset[str] = frozenset()) -> NightMarketResponse:
+    """Parse the Night Market (BonusStore): six skins with a personal discount. Empty when it is not open."""
+    bonus = raw_storefront.get("BonusStore") or {}
+    seconds_remaining = bonus.get("BonusStoreRemainingDurationInSeconds", 0)
+
+    offers: list[NightMarketOffer] = []
+    for raw in bonus.get("BonusStoreOffers", []):
+        offer = raw.get("Offer", {})
+        skin_offer = await _resolve_skin_offer(offer, owned_ids)
+        if not skin_offer:
+            continue
+        offers.append(NightMarketOffer(
+            **skin_offer.model_dump(),
+            discounted_cost=(raw.get("DiscountCosts") or {}).get(VP_CURRENCY_ID, 0),
+            discount_percent=int(raw.get("DiscountPercent", 0) or 0),
+        ))
+
+    return NightMarketResponse(offers=offers, seconds_remaining=seconds_remaining if offers else 0)
 
 
 ACCESSORY_TYPE_NAMES = {

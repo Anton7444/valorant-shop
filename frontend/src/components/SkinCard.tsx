@@ -26,9 +26,12 @@ interface SkinCardProps {
   skin: SkinOffer;
   startRevealed?: boolean;
   index?: number;
+  /** Night Market: the sale price and discount, shown next to the struck-through regular price. */
+  discountedCost?: number;
+  discountPercent?: number;
 }
 
-export default function SkinCard({ skin, startRevealed = false, index = 0 }: SkinCardProps) {
+export default function SkinCard({ skin, startRevealed = false, index = 0, discountedCost, discountPercent }: SkinCardProps) {
   const { localizedNames } = useLanguage();
   const metal = useMetalCards();
   const name = localizedName(skin.uuid, skin.name, localizedNames);
@@ -215,12 +218,22 @@ export default function SkinCard({ skin, startRevealed = false, index = 0 }: Ski
                     {skin.content_tier_name}
                   </span>
                 </div>
-                <div className="flex shrink-0 items-center gap-1 text-text-primary">
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
-                  </svg>
-                  <span className="text-sm font-semibold">{skin.cost.toLocaleString()}</span>
-                  <span className="text-xs text-text-secondary">VP</span>
+                <div className="flex shrink-0 flex-col items-end gap-0.5 text-text-primary">
+                  {discountedCost != null && (
+                    <div className="flex items-center gap-1.5">
+                      {discountPercent ? (
+                        <span className="rounded-sm bg-accent-red px-1.5 py-0.5 text-[10px] font-bold text-white">-{discountPercent}%</span>
+                      ) : null}
+                      <span className="text-xs text-text-secondary line-through">{skin.cost.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L2 12l10 10 10-10L12 2zm0 3.5L18.5 12 12 18.5 5.5 12 12 5.5z" />
+                    </svg>
+                    <span className="text-sm font-semibold">{(discountedCost ?? skin.cost).toLocaleString()}</span>
+                    <span className="text-xs text-text-secondary">VP</span>
+                  </div>
                 </div>
               </div>
             </div>
