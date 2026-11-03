@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 from app.config import settings
 from app.routers import auth, media, profile, snapshot, store
-from app.services import asset_cache
+from app.services import asset_cache, session_refresh
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await asset_cache.initialize()
-    yield
+    keepalive = asyncio.create_task(session_refresh.keepalive_loop())
+    try:
+        yield
+    finally:
+        keepalive.cancel()
 
 
 app = FastAPI(

@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     OWNER_PUUID: str = ""
     SNAPSHOT_DAYS: int = 0  # 0 = never expires (revoke it from the Profile page)
 
+    # "Stay signed in": sessions made from Riot cookies are kept (encrypted) here and renewed automatically
+    SESSION_DB: str = "/tmp/valshop_sessions.db"
+    SESSION_KEY: str = ""  # Fernet key; if empty one is created next to SESSION_DB and reused
+    MAX_PERSISTENT_SESSIONS: int = 200
+    SESSION_IDLE_DAYS: int = 30  # a stay-signed-in session nobody opens for this long is deleted
+    KEEPALIVE_HOURS: float = 6.0
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]

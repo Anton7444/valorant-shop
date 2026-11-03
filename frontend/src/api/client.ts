@@ -88,6 +88,11 @@ export function getAuthUrl(silent = false): Promise<{ auth_url: string }> {
   return request(`/api/auth/url${silent ? '?silent=true' : ''}`);
 }
 
+/** "Stay signed in": send exported Riot cookies; the server renews the login by itself from then on. */
+export function submitCookies(cookies: string): Promise<LoginResponse> {
+  return request('/api/auth/cookies', { method: 'POST', body: JSON.stringify({ cookies }) });
+}
+
 export function submitToken(url: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
