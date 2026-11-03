@@ -188,40 +188,55 @@ export default function LoginPage() {
 
           {stage === 'start' ? (
             <>
-              <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} busy={googleBusy} disabled={loading} />
-              <p className="mb-4 mt-2 text-center text-xs leading-relaxed text-text-secondary/70">
-                Sign in with Google to keep your Riot login linked to your account and use the shop on every device.
-              </p>
-              <div className="mb-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-text-secondary/50">
+              <div className="rounded-md border border-accent-red/30 bg-bg-primary/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-display text-xs uppercase tracking-widest text-text-primary">Recommended</span>
+                  <span className="rounded-sm bg-accent-teal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-teal">
+                    Stay signed in
+                  </span>
+                </div>
+                <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} busy={googleBusy} disabled={loading} />
+                <ul className="mt-3 space-y-1 text-xs text-text-secondary">
+                  {[
+                    'Riot login renews itself, no more re-login',
+                    'Same account on every device',
+                    'Delete your data any time in Settings',
+                  ].map((t) => (
+                    <li key={t} className="flex items-start gap-2">
+                      <span className="mt-px text-accent-teal">&#10003;</span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-text-secondary/50">
                 <span className="h-px flex-1 bg-border/60" />
-                or
+                or without an account
                 <span className="h-px flex-1 bg-border/60" />
               </div>
 
               <button
                 onClick={handleOpenLogin}
                 disabled={loading || googleBusy}
-                className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded border border-border bg-transparent py-3 text-sm font-bold uppercase tracking-widest text-text-primary transition-all hover:border-accent-red hover:text-accent-red active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ fontFamily: "'Oswald', sans-serif" }}
               >
                 {loading && <Spinner />}
                 SIGN IN WITH RIOT
               </button>
 
-              <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary/70">
-                A new tab will open for Riot login. After signing in, you'll see
-                a <span className="text-accent-red">"can't connect"</span> page —
-                that's normal. Copy the URL and come back here to paste it.
-              </p>
-              <p className="mt-2 text-center text-xs text-text-secondary/70">
-                Tired of copying?{' '}
+              <p className="mt-3 text-center text-xs leading-relaxed text-text-secondary/70">
+                Opens Riot's login in a new tab. Afterwards copy the URL of the{' '}
+                <span className="text-accent-red">"can't connect"</span> page and paste it here.{' '}
                 <a
                   href={`${import.meta.env.BASE_URL}login-helper.zip`}
                   download
                   className="text-text-primary underline underline-offset-2 hover:text-accent-red"
                 >
-                  Get the login helper extension
-                </a>
+                  Login helper extension
+                </a>{' '}
+                does it for you.
               </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
