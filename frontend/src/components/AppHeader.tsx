@@ -90,7 +90,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
       {/* Sizes below follow the header's own width (container queries), not the window's:
           narrow headers drop the wallet and put the tabs on their own scrollable row. */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 @max-[460px]/header:gap-x-3">
-        <h1 className="font-display text-lg tracking-wider text-text-primary">
+        <h1 className="font-display text-lg tracking-wider text-text-primary @max-[460px]/header:text-base">
           VAL<span className="text-accent-red">SHOP</span>
         </h1>
         <ScrollFade className="min-w-0 flex-1 [scrollbar-width:none] @max-[980px]/header:order-last @max-[980px]/header:basis-full [&::-webkit-scrollbar]:hidden">
@@ -124,7 +124,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           </nav>
         </ScrollFade>
 
-        <div className="ml-auto flex items-center gap-4 @max-[460px]/header:gap-2">
+        <div className="ml-auto flex items-center gap-4 @max-[460px]/header:gap-1.5">
           {wallet && (
             <div className="@max-[1140px]/header:hidden">
               <WalletDisplay wallet={wallet} />
@@ -150,26 +150,39 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
             aria-label="Settings"
             title="Settings"
             className={({ isActive }) =>
-              `font-display rounded-sm border px-3 py-1.5 text-xs uppercase tracking-widest transition-all duration-200 active:scale-[0.97] @max-[460px]/header:px-2 ${
+              `font-display rounded-sm border px-3 py-1.5 text-xs uppercase tracking-widest transition-all duration-200 active:scale-[0.97] @max-[460px]/header:px-2.5 @max-[460px]/header:py-1.5 ${
                 isActive
                   ? 'border-accent-red/60 text-accent-red'
                   : 'border-border text-text-secondary hover:border-accent-red hover:text-accent-red'
               }`
             }
           >
-            Settings
+            <span className="@max-[460px]/header:hidden">Settings</span>
+            <svg
+              className="hidden h-4 w-4 @max-[460px]/header:block"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+            </svg>
           </NavLink>
           {loggedIn ? (
             <button
               onClick={handleLogout}
-              className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97] @max-[460px]/header:px-2"
+              className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97] @max-[460px]/header:px-2.5 @max-[460px]/header:py-1.5"
             >
               Logout
             </button>
           ) : (
             <Link
               to="/"
-              className="font-display rounded-sm border border-accent-red/60 px-3 py-1.5 text-xs uppercase tracking-widest text-accent-red transition-all duration-200 hover:bg-accent-red/10 active:scale-[0.97] @max-[460px]/header:px-2"
+              className="font-display rounded-sm border border-accent-red/60 px-3 py-1.5 text-xs uppercase tracking-widest text-accent-red transition-all duration-200 hover:bg-accent-red/10 active:scale-[0.97] @max-[460px]/header:px-2.5 @max-[460px]/header:py-1.5"
             >
               Sign in
             </Link>
