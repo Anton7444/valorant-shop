@@ -202,7 +202,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0, disco
               </div>
 
               {/* Info */}
-              <div className="flex items-center justify-between border-t border-border bg-bg-card p-4">
+              <div className="relative flex items-center justify-between border-t border-border bg-bg-card p-4">
                 <div className="min-w-0">
                   <h3
                     className="truncate text-base text-text-primary"
@@ -235,6 +235,9 @@ export default function SkinCard({ skin, startRevealed = false, index = 0, disco
                     <span className="text-xs text-text-secondary">VP</span>
                   </div>
                 </div>
+                {skin.owned && (
+                  <div className="pointer-events-none absolute inset-0" style={{ background: 'rgba(10, 16, 24, 0.72)' }} />
+                )}
               </div>
             </div>
           </div>
