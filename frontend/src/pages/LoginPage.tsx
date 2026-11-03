@@ -188,55 +188,28 @@ export default function LoginPage() {
 
           {stage === 'start' ? (
             <>
-              <div className="rounded-md border border-accent-red/30 bg-bg-primary/60 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-display text-xs uppercase tracking-widest text-text-primary">Recommended</span>
-                  <span className="rounded-sm bg-accent-teal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-teal">
-                    Stay signed in
-                  </span>
-                </div>
+              <div className="space-y-3">
                 <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} busy={googleBusy} disabled={loading} />
-                <ul className="mt-3 space-y-1 text-xs text-text-secondary">
-                  {[
-                    'Riot login renews itself, no more re-login',
-                    'Same account on every device',
-                    'Delete your data any time in Settings',
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-2">
-                      <span className="mt-px text-accent-teal">&#10003;</span>
-                      {t}
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  onClick={handleOpenLogin}
+                  disabled={loading || googleBusy}
+                  className="flex w-full items-center justify-center gap-2 rounded border border-border py-3 text-sm font-bold uppercase tracking-widest text-text-primary transition-colors hover:border-accent-red disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{ fontFamily: "'Oswald', sans-serif" }}
+                >
+                  {loading && <Spinner />}
+                  SIGN IN WITH RIOT
+                </button>
               </div>
 
-              <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-text-secondary/50">
-                <span className="h-px flex-1 bg-border/60" />
-                or without an account
-                <span className="h-px flex-1 bg-border/60" />
-              </div>
-
-              <button
-                onClick={handleOpenLogin}
-                disabled={loading || googleBusy}
-                className="flex w-full items-center justify-center gap-2 rounded border border-border bg-transparent py-3 text-sm font-bold uppercase tracking-widest text-text-primary transition-all hover:border-accent-red hover:text-accent-red active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                style={{ fontFamily: "'Oswald', sans-serif" }}
-              >
-                {loading && <Spinner />}
-                SIGN IN WITH RIOT
-              </button>
-
-              <p className="mt-3 text-center text-xs leading-relaxed text-text-secondary/70">
-                Opens Riot's login in a new tab. Afterwards copy the URL of the{' '}
-                <span className="text-accent-red">"can't connect"</span> page and paste it here.{' '}
+              <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary/70">
+                Google keeps you signed in on every device. Riot-only sign-in opens Riot's page in a new tab, then you paste the URL back here.{' '}
                 <a
                   href={`${import.meta.env.BASE_URL}login-helper.zip`}
                   download
                   className="text-text-primary underline underline-offset-2 hover:text-accent-red"
                 >
                   Login helper extension
-                </a>{' '}
-                does it for you.
+                </a>
               </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-border/60 pt-3">
