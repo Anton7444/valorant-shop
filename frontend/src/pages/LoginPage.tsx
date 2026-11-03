@@ -202,8 +202,7 @@ export default function LoginPage() {
               </div>
 
               <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary/70">
-                Google keeps you signed in on every device. Riot-only sign-in opens Riot's page in a new tab, then you paste the URL back here.{' '}
-                <a
+                                <a
                   href={`${import.meta.env.BASE_URL}login-helper.zip`}
                   download
                   className="text-text-primary underline underline-offset-2 hover:text-accent-red"
