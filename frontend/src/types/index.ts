@@ -17,8 +17,6 @@ export interface SessionResponse {
   valid: boolean;
   puuid?: string | null;
   account?: AccountInfo;
-  snapshot_at?: number | null;
-  live?: boolean;
 }
 
 // Store types

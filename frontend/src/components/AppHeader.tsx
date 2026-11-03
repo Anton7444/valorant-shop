@@ -7,7 +7,6 @@ import type { Wallet } from '../types';
 import WalletDisplay from './WalletDisplay';
 import LanguageSwitch from './LanguageSwitch';
 import ScrollFade from './ScrollFade';
-import RefreshButton from './RefreshButton';
 import NavMore from './NavMore';
 import { useRovingArrows } from '../hooks/useRovingArrows';
 
@@ -38,7 +37,6 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
   const { language, setLanguage } = useLanguage();
   const { pathname } = useLocation();
   const loggedIn = state.sessionValid;
-  const snapshotAt = loggedIn ? api.getSnapshotTime() : null;
   const visibleItems = NAV_ITEMS.filter(
     (item) => (loggedIn ? item.to !== '/bundle' : PUBLIC_PATHS.includes(item.to)),
   );
@@ -54,7 +52,12 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
 
     const place = () => {
       const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
-      if (!active) return;
+      if (!active) {
+        // This page has no tab (Settings, say): hide the highlight instead of leaving it on the old tab.
+        lastIndicator = null;
+        el.style.opacity = '0';
+        return;
+      }
       lastIndicator = { left: active.offsetLeft, width: active.offsetWidth };
       el.style.width = `${lastIndicator.width}px`;
       el.style.transform = `translateX(${lastIndicator.left}px)`;
@@ -127,21 +130,6 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               <WalletDisplay wallet={wallet} />
             </div>
           )}
-          {snapshotAt !== null && <RefreshButton />}
-          {snapshotAt !== null && (
-            <span
-              className="rounded-sm border border-accent-teal/40 px-2 py-1 text-[10px] uppercase tracking-widest text-accent-teal"
-              title={
-                api.isSnapshotLive()
-                  ? 'Showing live data through the other computer\'s Riot sign-in'
-                  : 'Showing data saved from another computer; it updates when that computer refreshes it'
-              }
-            >
-              {api.isSnapshotLive()
-                ? 'Live'
-                : `Snapshot ${new Date(snapshotAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-            </span>
-          )}
           {state.puuid && (
             <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1400px]/header:block">
               {state.puuid.slice(0, 8)}
@@ -157,14 +145,20 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               { value: 'zh-CN', label: '简中' },
             ]}
           />
-          <Link
+          <NavLink
             to="/settings"
             aria-label="Settings"
             title="Settings"
-            className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97] @max-[460px]/header:px-2"
+            className={({ isActive }) =>
+              `font-display rounded-sm border px-3 py-1.5 text-xs uppercase tracking-widest transition-all duration-200 active:scale-[0.97] @max-[460px]/header:px-2 ${
+                isActive
+                  ? 'border-accent-red/60 text-accent-red'
+                  : 'border-border text-text-secondary hover:border-accent-red hover:text-accent-red'
+              }`
+            }
           >
             Settings
-          </Link>
+          </NavLink>
           {loggedIn ? (
             <button
               onClick={handleLogout}

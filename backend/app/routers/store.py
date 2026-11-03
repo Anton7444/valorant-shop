@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.auth import SessionData
 from app.models.store import AccessoryStoreResponse, BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, NightMarketResponse, Wallet
-from app.services import snapshot, storefront
+from app.services import storefront
 from app.accounts import accounts
 from app.services import account_session
 from app.session_store import store
@@ -26,10 +26,6 @@ async def get_session(request: Request) -> SessionData:
     sub = accounts.sub_for_token(session_token)
     if sub:
         return await account_session.session_for(sub)
-
-    viewer = snapshot.session_from_token(session_token)
-    if viewer:
-        return viewer
 
     session = store.get_valid(session_token)
     if session:
@@ -65,8 +61,6 @@ def _handle_riot_error(exc: Exception) -> HTTPException:
 
 @router.get("/daily", response_model=DailyStoreResponse)
 async def daily_store(session: SessionData = Depends(get_session)) -> DailyStoreResponse:
-    if session.snapshot_code:
-        return await snapshot.serve(session, "daily")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -86,9 +80,6 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
 
 @router.get("/nightmarket", response_model=NightMarketResponse)
 async def night_market(session: SessionData = Depends(get_session)) -> NightMarketResponse:
-    if session.snapshot_code:
-        # Shared snapshots don't carry the Night Market; show nothing rather than an error.
-        return NightMarketResponse(offers=[], seconds_remaining=0)
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -108,8 +99,6 @@ async def night_market(session: SessionData = Depends(get_session)) -> NightMark
 
 @router.get("/accessories", response_model=AccessoryStoreResponse)
 async def accessory_store(session: SessionData = Depends(get_session)) -> AccessoryStoreResponse:
-    if session.snapshot_code:
-        return await snapshot.serve(session, "accessories")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -121,8 +110,6 @@ async def accessory_store(session: SessionData = Depends(get_session)) -> Access
 
 @router.get("/bundle", response_model=BundleResponse)
 async def featured_bundle(session: SessionData = Depends(get_session)) -> BundleResponse:
-    if session.snapshot_code:
-        return await snapshot.serve(session, "bundle")
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -140,8 +127,6 @@ async def public_featured_bundle() -> BundleResponse:
 
 @router.get("/wallet", response_model=Wallet)
 async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
-    if session.snapshot_code:
-        return await snapshot.serve(session, "wallet")
     try:
         return await storefront.get_wallet(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -152,8 +137,6 @@ async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
 
 @router.get("/inventory", response_model=InventoryResponse)
 async def inventory(session: SessionData = Depends(get_session)) -> InventoryResponse:
-    if session.snapshot_code:
-        return await snapshot.serve(session, "inventory")
     try:
         owned_ids = await storefront.fetch_owned_skin_level_ids(
             session.access_token, session.entitlements_token, session.puuid, session.shard

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.models.auth import SessionData
-from app.services import riot_auth, snapshot
+from app.services import riot_auth
 from app.accounts import accounts
 from app.session_store import store
 
@@ -59,8 +59,6 @@ class LoginResponse(BaseModel):
     session_token: str | None = None
     puuid: str | None = None
     promo: bool = False
-    snapshot_at: float | None = None  # set when this sign-in is a snapshot view
-    snapshot_live: bool | None = None  # ... and whether its pages are answered live
     error: str | None = None
 
 
@@ -142,16 +140,6 @@ async def check_session(request: Request) -> dict:
 
         info = summary(sub)
         return {"valid": True, "puuid": info["riot"]["puuid"], "account": info}
-
-    viewer = snapshot.session_from_token(token)
-    if viewer:
-        snap = snapshot.lookup(viewer.snapshot_code or "")
-        return {
-            "valid": True,
-            "puuid": viewer.puuid,
-            "snapshot_at": snap.taken_at if snap else None,
-            "live": bool(snap and snapshot.is_live(snap)),
-        }
 
     session = store.get_valid(token)
     if not session:

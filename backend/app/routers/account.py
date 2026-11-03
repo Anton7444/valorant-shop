@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 class GoogleLogin(BaseModel):
-    credential: str
+    access_token: str
 
 
 class CookiesBody(BaseModel):
@@ -56,7 +56,7 @@ async def auth_config() -> dict:
 async def google_login(body: GoogleLogin, request: Request) -> dict:
     _check_rate_limit(request.client.host if request.client else "unknown")
     try:
-        claims = await google_auth.verify(body.credential)
+        claims = await google_auth.verify(body.access_token)
     except google_auth.GoogleAuthError as e:
         return {"status": "error", "error": str(e)}
     except httpx.HTTPError:

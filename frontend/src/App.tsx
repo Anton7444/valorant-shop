@@ -11,7 +11,6 @@ import PricesPage from './pages/PricesPage';
 import AccessoryPage from './pages/AccessoryPage';
 import ReflectivePage from './pages/ReflectivePage';
 import BattlePassPage from './pages/BattlePassPage';
-import AutoSync from './components/AutoSync';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import { LanguageProvider } from './context/LanguageContext';
@@ -22,7 +21,6 @@ export default function App() {
       <LanguageProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <ErrorBoundary>
-            <AutoSync />
             <Routes>
               <Route path="/" element={<LoginPage />} />
               <Route

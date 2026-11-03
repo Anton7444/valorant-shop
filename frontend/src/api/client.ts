@@ -27,30 +27,6 @@ export function storeToken(token: string): void {
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(SNAPSHOT_KEY);
-  localStorage.removeItem(LIVE_KEY);
-}
-
-// Set when this browser is looking at a saved snapshot instead of a live Riot sign-in.
-const SNAPSHOT_KEY = 'snapshot_at';
-const LIVE_KEY = 'snapshot_live';
-
-/** True while the other computer's Riot sign-in is fresh, so pages are answered live. */
-export function isSnapshotLive(): boolean {
-  return localStorage.getItem(LIVE_KEY) === '1';
-}
-
-export function storeSnapshotLive(live: boolean): void {
-  localStorage.setItem(LIVE_KEY, live ? '1' : '0');
-}
-
-export function getSnapshotTime(): number | null {
-  const raw = localStorage.getItem(SNAPSHOT_KEY);
-  return raw ? Number(raw) : null;
-}
-
-export function storeSnapshotTime(epochSeconds: number): void {
-  localStorage.setItem(SNAPSHOT_KEY, String(epochSeconds));
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -81,8 +57,6 @@ export interface LoginResponse {
   session_token?: string | null;
   puuid?: string | null;
   promo?: boolean;
-  snapshot_at?: number | null;
-  snapshot_live?: boolean | null;
   error?: string | null;
 }
 
@@ -101,8 +75,8 @@ export interface GoogleLoginResponse {
   error?: string;
 }
 
-export function googleLogin(credential: string): Promise<GoogleLoginResponse> {
-  return request('/api/auth/google', { method: 'POST', body: JSON.stringify({ credential }) });
+export function googleLogin(accessToken: string): Promise<GoogleLoginResponse> {
+  return request('/api/auth/google', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) });
 }
 
 export interface AccountActionResponse {
@@ -132,47 +106,6 @@ export function submitToken(url: string): Promise<LoginResponse> {
   return request('/api/auth/token', {
     method: 'POST',
     body: JSON.stringify({ url }),
-  });
-}
-
-export function createSnapshot(
-  code?: string,
-): Promise<{ code: string; taken_at: number; expires_in: number; parts: string[] }> {
-  return request('/api/snapshot', { method: 'POST', body: JSON.stringify({ code }) });
-}
-
-export function getAccount(): Promise<{ username: string | null }> {
-  return request('/api/snapshot/account');
-}
-
-export function createAccount(username: string, password: string): Promise<{ username: string }> {
-  return request('/api/snapshot/account', { method: 'POST', body: JSON.stringify({ username, password }) });
-}
-
-export function deleteAccount(): Promise<{ deleted: boolean }> {
-  return request('/api/snapshot/account/delete', { method: 'POST' });
-}
-
-export function accountLogin(username: string, password: string): Promise<LoginResponse> {
-  return request('/api/snapshot/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-}
-
-export function refreshSnapshot(): Promise<{ live: boolean; requested: boolean }> {
-  return request('/api/snapshot/refresh', { method: 'POST' });
-}
-
-export function pendingRefresh(): Promise<{ requested: boolean }> {
-  return request('/api/snapshot/pending');
-}
-
-export function revokeSnapshot(code: string): Promise<{ revoked: boolean }> {
-  return request('/api/snapshot/revoke', { method: 'POST', body: JSON.stringify({ code }) });
-}
-
-export function redeemSnapshot(code: string): Promise<LoginResponse> {
-  return request('/api/snapshot/redeem', {
-    method: 'POST',
-    body: JSON.stringify({ code }),
   });
 }
 

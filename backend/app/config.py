@@ -7,11 +7,6 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     # Comma-separated PUUIDs (or leading prefixes) that get the promo takeover screen
     PROMO_PUUIDS: str = ""
-    # Where snapshots are kept so they survive a restart (see services/snapshot.py)
-    SNAPSHOT_FILE: str = "/tmp/valshop_snapshots.json"
-    # If set (a PUUID or its first characters), only that account may save snapshots or set the password
-    OWNER_PUUID: str = ""
-    SNAPSHOT_DAYS: int = 0  # 0 = never expires (revoke it from the Profile page)
 
     # Google sign-in + accounts (a Google account can carry one linked Riot login across devices)
     GOOGLE_CLIENT_ID: str = ""  # OAuth "Web application" client id; empty = Google sign-in is off

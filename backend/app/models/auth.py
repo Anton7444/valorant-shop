@@ -11,6 +11,3 @@ class SessionData:
     region: str
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    # Set for a "viewer" session made from a snapshot code: it only shows the saved data and never
-    # calls Riot.
-    snapshot_code: str | None = None
