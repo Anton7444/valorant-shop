@@ -193,7 +193,7 @@ export default function LoginPage() {
                 <button
                   onClick={handleOpenLogin}
                   disabled={loading || googleBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded border border-border py-3 text-sm font-bold uppercase tracking-widest text-text-primary transition-colors hover:border-accent-red disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   style={{ fontFamily: "'Oswald', sans-serif" }}
                 >
                   {loading && <Spinner />}
