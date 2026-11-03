@@ -13,6 +13,7 @@ import ReflectivePage from './pages/ReflectivePage';
 import BattlePassPage from './pages/BattlePassPage';
 import AutoSync from './components/AutoSync';
 import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
@@ -64,6 +65,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/bundle" element={<BundlePage />} />
               <Route path="/prices" element={<PricesPage />} />

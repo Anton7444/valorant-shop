@@ -1,8 +1,22 @@
 // Auth types (matching backend models)
 
+export interface AccountSettings {
+  video_via_server: boolean;
+  metal_cards: boolean;
+}
+
+/** A Google account signed in on this device; riot.state says whether a Riot login is linked to it. */
+export interface AccountInfo {
+  email: string;
+  name: string;
+  riot: { state: 'none' | 'linked' | 'expired'; puuid: string | null };
+  settings: AccountSettings;
+}
+
 export interface SessionResponse {
   valid: boolean;
-  puuid?: string;
+  puuid?: string | null;
+  account?: AccountInfo;
   snapshot_at?: number | null;
   live?: boolean;
 }
@@ -195,15 +209,17 @@ export interface AuthState {
   status: 'idle' | 'loading' | 'authenticated' | 'error';
   sessionValid: boolean;
   puuid: string | null;
+  account: AccountInfo | null;
   error: string | null;
 }
 
 export type AuthAction =
   | { type: 'LOGIN_START' }
-  | { type: 'LOGIN_SUCCESS'; puuid: string }
+  | { type: 'LOGIN_SUCCESS'; puuid: string | null; account?: AccountInfo }
   | { type: 'LOGIN_ERROR'; error: string }
   | { type: 'LOGOUT' }
-  | { type: 'SESSION_RESTORED'; puuid: string };
+  | { type: 'SESSION_RESTORED'; puuid: string | null; account?: AccountInfo }
+  | { type: 'ACCOUNT_UPDATED'; account: AccountInfo };
 
 export interface AccessoryOffer {
   uuid: string;

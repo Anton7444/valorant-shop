@@ -13,11 +13,14 @@ class Settings(BaseSettings):
     OWNER_PUUID: str = ""
     SNAPSHOT_DAYS: int = 0  # 0 = never expires (revoke it from the Profile page)
 
-    # "Stay signed in": sessions made from Riot cookies are kept (encrypted) here and renewed automatically
-    SESSION_DB: str = "/tmp/valshop_sessions.db"
-    SESSION_KEY: str = ""  # Fernet key; if empty one is created next to SESSION_DB and reused
-    MAX_PERSISTENT_SESSIONS: int = 200
-    SESSION_IDLE_DAYS: int = 30  # a stay-signed-in session nobody opens for this long is deleted
+    # Google sign-in + accounts (a Google account can carry one linked Riot login across devices)
+    GOOGLE_CLIENT_ID: str = ""  # OAuth "Web application" client id; empty = Google sign-in is off
+    ALLOWED_EMAILS: str = ""  # optional comma-separated allow-list; empty = any verified Google account
+    ACCOUNT_DB: str = "/tmp/valshop_accounts.db"
+    ACCOUNT_KEY: str = ""  # Fernet key for the stored Riot cookies; if empty one is created next to ACCOUNT_DB
+    MAX_ACCOUNTS: int = 200
+    DEVICE_IDLE_DAYS: int = 90  # a signed-in device nobody uses for this long is signed out
+    RIOT_IDLE_DAYS: int = 30  # a linked Riot login on an account that is not used for this long is deleted
     KEEPALIVE_HOURS: float = 6.0
 
     @property

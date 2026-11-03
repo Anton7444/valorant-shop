@@ -1,4 +1,6 @@
 import type {
+  AccountInfo,
+  AccountSettings,
   BattlePassResponse,
   AccessoryStoreResponse,
   BundleResponse,
@@ -88,9 +90,42 @@ export function getAuthUrl(silent = false): Promise<{ auth_url: string }> {
   return request(`/api/auth/url${silent ? '?silent=true' : ''}`);
 }
 
-/** "Stay signed in": send exported Riot cookies; the server renews the login by itself from then on. */
-export function submitCookies(cookies: string): Promise<LoginResponse> {
-  return request('/api/auth/cookies', { method: 'POST', body: JSON.stringify({ cookies }) });
+export function getAuthConfig(): Promise<{ google_client_id: string | null }> {
+  return request('/api/auth/config');
+}
+
+export interface GoogleLoginResponse {
+  status: 'success' | 'error';
+  session_token?: string;
+  account?: AccountInfo;
+  error?: string;
+}
+
+export function googleLogin(credential: string): Promise<GoogleLoginResponse> {
+  return request('/api/auth/google', { method: 'POST', body: JSON.stringify({ credential }) });
+}
+
+export interface AccountActionResponse {
+  status: 'success' | 'error';
+  account?: AccountInfo;
+  error?: string;
+}
+
+/** Link (or replace) the Riot login of the signed-in Google account from exported cookies. */
+export function linkRiot(cookies: string): Promise<AccountActionResponse> {
+  return request('/api/account/riot', { method: 'POST', body: JSON.stringify({ cookies }) });
+}
+
+export function unlinkRiot(): Promise<AccountActionResponse> {
+  return request('/api/account/riot/unlink', { method: 'POST' });
+}
+
+export function saveAccountSettings(patch: Partial<AccountSettings>): Promise<AccountInfo> {
+  return request('/api/account/settings', { method: 'PUT', body: JSON.stringify(patch) });
+}
+
+export function deleteGoogleAccount(): Promise<{ status: string }> {
+  return request('/api/account/delete', { method: 'POST' });
 }
 
 export function submitToken(url: string): Promise<LoginResponse> {

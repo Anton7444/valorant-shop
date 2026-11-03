@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from datetime import timedelta
 import threading
 import time
 
@@ -10,7 +9,8 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.models.auth import SessionData
-from app.services import riot_auth, riot_refresh, session_refresh, snapshot
+from app.services import riot_auth, snapshot
+from app.accounts import accounts
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -52,10 +52,6 @@ class AuthUrlResponse(BaseModel):
 
 class TokenSubmitRequest(BaseModel):
     url: str
-
-
-class CookieSubmitRequest(BaseModel):
-    cookies: str
 
 
 class LoginResponse(BaseModel):
@@ -125,70 +121,12 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
         return LoginResponse(status="error", error="Authentication failed unexpectedly")
 
 
-@router.post("/cookies", response_model=LoginResponse)
-async def submit_cookies(body: CookieSubmitRequest, request: Request) -> LoginResponse:
-    """"Stay signed in": accept exported Riot cookies, keep them encrypted and renew the access token silently."""
-    _check_rate_limit(request.client.host if request.client else "unknown")
-    if not store.persistent:
-        return LoginResponse(status="error", error="Stay-signed-in is not available on this server.")
-
-    cookies = riot_refresh.parse_cookies(body.cookies)
-    if "ssid" not in cookies:
-        return LoginResponse(
-            status="error",
-            error="No Riot login cookie (ssid) found. Export the cookies of auth.riotgames.com right after logging in.",
-        )
-
-    try:
-        access_token, id_token, expires_in, cookies = await riot_refresh.reauth(cookies)
-        entitlements, puuid, (region, shard) = await asyncio.gather(
-            riot_auth.get_entitlements(access_token),
-            riot_auth.get_player_info(access_token),
-            riot_auth.get_region(access_token, id_token),
-        )
-        existing = sum(1 for k in store.persistent_keys() if (s := store.get_key(k)) and s.puuid != puuid)
-        if existing >= settings.MAX_PERSISTENT_SESSIONS:
-            return LoginResponse(status="error", error="Stay-signed-in is full on this server right now.")
-
-        store.drop_persistent_for_puuid(puuid)
-        session_token = store.create(
-            SessionData(
-                access_token=access_token,
-                entitlements_token=entitlements,
-                puuid=puuid,
-                shard=shard,
-                region=region,
-                id_token=id_token,
-                cookies=cookies,
-            ),
-            ttl=timedelta(seconds=max(expires_in - 120, 60)),
-        )
-        return LoginResponse(
-            status="success",
-            session_token=session_token,
-            puuid=puuid,
-            promo=settings.is_promo_target(puuid),
-        )
-    except riot_auth.AuthenticationError as e:
-        return LoginResponse(status="error", error=str(e))
-    except riot_auth.RateLimitError:
-        return LoginResponse(status="error", error="Rate limited by Riot servers. Try again shortly.")
-    except httpx.HTTPStatusError as e:
-        logger.error("Riot API HTTP error: %s", e.response.status_code)
-        return LoginResponse(status="error", error=f"Riot API error ({e.response.status_code})")
-    except httpx.RequestError as e:
-        logger.error("Network error contacting Riot: %s", e)
-        return LoginResponse(status="error", error="Could not reach Riot servers. Try again.")
-    except Exception:
-        logger.exception("Cookie login failed")
-        return LoginResponse(status="error", error="Authentication failed unexpectedly")
-
-
 @router.post("/logout")
 async def logout(request: Request) -> dict:
     token = _get_token_from_header(request)
     if token:
         store.delete(token)
+        accounts.drop_device(token)
     return {"status": "ok"}
 
 
@@ -197,6 +135,13 @@ async def check_session(request: Request) -> dict:
     token = _get_token_from_header(request)
     if not token:
         return {"valid": False}
+
+    sub = accounts.sub_for_token(token)
+    if sub:
+        from app.routers.account import summary  # local import: account.py imports this module
+
+        info = summary(sub)
+        return {"valid": True, "puuid": info["riot"]["puuid"], "account": info}
 
     viewer = snapshot.session_from_token(token)
     if viewer:
@@ -208,12 +153,8 @@ async def check_session(request: Request) -> dict:
             "live": bool(snap and snapshot.is_live(snap)),
         }
 
-    await session_refresh.ensure_fresh(token)
     session = store.get_valid(token)
     if not session:
-        kept = store.get(token)
-        if kept and kept.cookies:
-            return {"valid": True, "puuid": kept.puuid, "stay_signed_in": True}  # renewal pending
         return {"valid": False}
 
-    return {"valid": True, "puuid": session.puuid, "stay_signed_in": bool(session.cookies)}
+    return {"valid": True, "puuid": session.puuid}

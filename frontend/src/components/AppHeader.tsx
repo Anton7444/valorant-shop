@@ -157,6 +157,14 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               { value: 'zh-CN', label: '简中' },
             ]}
           />
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            title="Settings"
+            className="font-display rounded-sm border border-border px-3 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97] @max-[460px]/header:px-2"
+          >
+            Settings
+          </Link>
           {loggedIn ? (
             <button
               onClick={handleLogout}

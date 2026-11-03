@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.models.auth import SessionData
 from app.models.store import AccessoryStoreResponse, BundleResponse, CatalogResponse, DailyStoreResponse, InventoryResponse, NightMarketResponse, Wallet
 from app.services import snapshot, storefront
-from app.services import session_refresh
+from app.accounts import accounts
+from app.services import account_session
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -22,19 +23,17 @@ async def get_session(request: Request) -> SessionData:
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    sub = accounts.sub_for_token(session_token)
+    if sub:
+        return await account_session.session_for(sub)
+
     viewer = snapshot.session_from_token(session_token)
     if viewer:
         return viewer
 
-    await session_refresh.ensure_fresh(session_token)
     session = store.get_valid(session_token)
     if session:
         return session
-
-    kept = store.get(session_token)
-    if kept and kept.cookies:
-        # A stay-signed-in session: Riot could not be reached for the renewal. Keep it and try again soon.
-        raise HTTPException(status_code=503, detail="Could not refresh the Riot login right now. Try again shortly.")
 
     store.delete(session_token)
     raise HTTPException(status_code=401, detail="Session expired. Please log in again.")

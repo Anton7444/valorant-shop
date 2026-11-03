@@ -8,11 +8,13 @@ import {
 } from 'react';
 import type { AuthAction, AuthState } from '../types';
 import * as api from '../api/client';
+import { applyAccountSettings } from '../utils/accountSettings';
 
 const initialState: AuthState = {
   status: 'idle',
   sessionValid: false,
   puuid: null,
+  account: null,
   error: null,
 };
 
@@ -25,6 +27,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         status: 'authenticated',
         sessionValid: true,
         puuid: action.puuid,
+        account: action.account ?? null,
         error: null,
       };
     case 'LOGIN_ERROR':
@@ -37,8 +40,11 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         status: 'authenticated',
         sessionValid: true,
         puuid: action.puuid,
+        account: action.account ?? null,
         error: null,
       };
+    case 'ACCOUNT_UPDATED':
+      return { ...state, puuid: action.account.riot.puuid, account: action.account };
   }
 }
 
@@ -63,7 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!api.getStoredToken()) return;
 
     api.checkSession().then((res) => {
-      if (res.valid && res.puuid) {
+      if (res.valid && res.account) {
+        applyAccountSettings(res.account.settings);
+        dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid ?? null, account: res.account });
+      } else if (res.valid && res.puuid) {
         // A snapshot view: keep the "saved at" time current when the home computer has refreshed it.
         if (res.snapshot_at) api.storeSnapshotTime(res.snapshot_at);
         if (res.snapshot_at) api.storeSnapshotLive(!!res.live);
@@ -82,8 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     function onStorage(event: StorageEvent) {
       if (event.key !== 'session_token' || !event.newValue) return;
       api.checkSession().then((res) => {
-        if (res.valid && res.puuid) {
-          dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid });
+        if (res.valid && (res.puuid || res.account)) {
+          dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid ?? null, account: res.account });
         }
       }).catch(() => {});
     }

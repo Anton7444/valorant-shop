@@ -3,6 +3,8 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import { finishAutoSync, isSilentSignInPending } from '../utils/autoSync';
+import { applyAccountSettings } from '../utils/accountSettings';
+import GoogleSignIn from '../components/GoogleSignIn';
 
 type Stage = 'start' | 'paste';
 
@@ -25,7 +27,6 @@ export default function LoginPage() {
   );
   const [pastedUrl, setPastedUrl] = useState('');
   const [codeText, setCodeText] = useState('');
-  const [cookieText, setCookieText] = useState('');
   const [accountUser, setAccountUser] = useState('');
   const [accountPass, setAccountPass] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,12 +103,12 @@ export default function LoginPage() {
     }
   }
 
-  async function finishLogin(url: string, submit: (v: string) => Promise<api.LoginResponse> = api.submitToken) {
+  async function finishLogin(url: string) {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await submit(url);
+      const res = await api.submitToken(url);
 
       if (res.status === 'success' && res.promo && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
@@ -133,6 +134,26 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authenticate');
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleCredential(credential: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.googleLogin(credential);
+      if (res.status === 'success' && res.session_token && res.account) {
+        api.storeToken(res.session_token);
+        applyAccountSettings(res.account.settings);
+        dispatch({ type: 'LOGIN_SUCCESS', puuid: res.account.riot.puuid, account: res.account });
+        navigate(res.account.riot.state === 'linked' ? '/shop' : '/settings');
+      } else {
+        setError(res.error ?? 'Google sign-in failed');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed');
       setLoading(false);
     }
   }
@@ -178,12 +199,6 @@ export default function LoginPage() {
     void finishLogin(pastedUrl.trim());
   }
 
-  function handleCookieLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!cookieText.trim()) return;
-    void finishLogin(cookieText.trim(), api.submitCookies);
-  }
-
   function handleBack() {
     sessionStorage.removeItem('login_stage');
     setStage('start');
@@ -217,6 +232,16 @@ export default function LoginPage() {
 
           {stage === 'start' ? (
             <>
+              <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} />
+              <p className="mb-4 mt-2 text-center text-xs leading-relaxed text-text-secondary/70">
+                Sign in with Google to keep your Riot login linked to your account and use the shop on every device.
+              </p>
+              <div className="mb-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-text-secondary/50">
+                <span className="h-px flex-1 bg-border/60" />
+                or
+                <span className="h-px flex-1 bg-border/60" />
+              </div>
+
               <button
                 onClick={handleOpenLogin}
                 disabled={loading}
@@ -242,41 +267,6 @@ export default function LoginPage() {
                   Get the login helper extension
                 </a>
               </p>
-
-              <details className="mt-4 text-xs text-text-secondary">
-                <summary className="cursor-pointer select-none text-center hover:text-text-primary">
-                  Stay signed in (no more re-login)
-                </summary>
-                <div className="mt-3 space-y-3 leading-relaxed">
-                  <p>
-                    Log in to Riot once in a private window, export the cookies of{' '}
-                    <span className="text-text-primary">auth.riotgames.com</span> (for example with the Cookie-Editor
-                    extension, JSON or Netscape format) and paste them here. The server keeps them encrypted and renews
-                    your login by itself, so you do not have to sign in again. Press Logout any time to delete them.
-                    Use a separate login for this, not the one you use for other tools.
-                  </p>
-                  <form onSubmit={handleCookieLogin} className="space-y-2">
-                    <textarea
-                      value={cookieText}
-                      onChange={(e) => setCookieText(e.target.value)}
-                      placeholder="Paste the exported cookies here"
-                      aria-label="Riot cookies"
-                      rows={3}
-                      spellCheck={false}
-                      autoComplete="off"
-                      className="w-full resize-none rounded-sm border border-border bg-bg-primary px-3 py-2 text-text-primary outline-none placeholder:text-text-secondary/50 focus:border-accent-red"
-                    />
-                    <button
-                      type="submit"
-                      disabled={loading || !cookieText.trim()}
-                      className="flex w-full items-center justify-center gap-2 rounded-sm border border-border py-2 font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50"
-                    >
-                      {loading && <Spinner />}
-                      Stay signed in
-                    </button>
-                  </form>
-                </div>
-              </details>
 
               <details className="mt-4 text-xs text-text-secondary">
                 <summary className="cursor-pointer select-none text-center hover:text-text-primary">
@@ -413,8 +403,8 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-xs leading-relaxed text-text-secondary/70">
           You'll log in on Riot's official page — this app never sees your password.
           <br />
-          By default only a temporary access token is used. If you choose "Stay signed in", your Riot login cookies are
-          kept encrypted on the server until you sign out.
+          With the Riot sign-in only a temporary access token is used. If you sign in with Google and link your
+          Riot login, its cookies are stored encrypted until you delete them in Settings.
         </p>
         <p className="mt-4 text-center text-[10px] leading-relaxed text-text-secondary/50">
           This application is not endorsed by Riot Games and does not reflect the

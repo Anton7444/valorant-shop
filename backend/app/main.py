@@ -10,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO)
 
 from app.config import settings
-from app.routers import auth, media, profile, snapshot, store
-from app.services import asset_cache, session_refresh
+from app.routers import account, auth, media, profile, snapshot, store
+from app.services import account_session, asset_cache
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await asset_cache.initialize()
-    keepalive = asyncio.create_task(session_refresh.keepalive_loop())
+    keepalive = asyncio.create_task(account_session.keepalive_loop())
     try:
         yield
     finally:
@@ -62,6 +62,7 @@ async def health_check():
 
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(account.router, prefix="/api", tags=["account"])
 app.include_router(store.router, prefix="/api/store", tags=["store"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(snapshot.router, prefix="/api/snapshot", tags=["snapshot"])
