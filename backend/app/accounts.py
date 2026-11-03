@@ -1,6 +1,7 @@
 """Google-backed accounts. An account owns at most one linked Riot login (the ssid cookie and the tokens it
 renews), kept encrypted, so every device signed in to the same Google account sees the same shop."""
 
+import base64
 import hashlib
 import json
 import logging
@@ -28,17 +29,80 @@ def _h(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _kms():
+    import oci
+
+    signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
+    return oci.key_management.KmsCryptoClient({}, settings.OCI_KMS_ENDPOINT, signer=signer), oci.key_management.models
+
+
+def _kms_wrap(key: bytes) -> bytes:
+    client, m = _kms()
+    r = client.encrypt(m.EncryptDataDetails(key_id=settings.OCI_KMS_KEY_ID, plaintext=base64.b64encode(key).decode()))
+    return r.data.ciphertext.encode()
+
+
+def _kms_unwrap(blob: bytes) -> bytes:
+    last: Exception | None = None
+    for attempt in range(4):  # the vault is a network call; give it a few tries at start-up
+        try:
+            client, m = _kms()
+            r = client.decrypt(m.DecryptDataDetails(key_id=settings.OCI_KMS_KEY_ID, ciphertext=blob.decode()))
+            return base64.b64decode(r.data.plaintext)
+        except Exception as exc:  # noqa: BLE001
+            last = exc
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError("could not unwrap the account key with Oracle Vault") from last
+
+
+def _write_private(path: str, data: bytes) -> None:
+    tmp = path + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
 def _fernet() -> Fernet:
     if settings.ACCOUNT_KEY:
         return Fernet(settings.ACCOUNT_KEY.encode())
-    path = settings.ACCOUNT_DB + ".key"
-    if os.path.exists(path):
-        return Fernet(open(path, "rb").read().strip())
+    legacy = settings.ACCOUNT_DB + ".key"
+    if settings.OCI_KMS_KEY_ID and settings.OCI_KMS_ENDPOINT:
+        wrapped = settings.ACCOUNT_DB + ".wrapped"
+        if os.path.exists(wrapped):
+            return Fernet(_kms_unwrap(open(wrapped, "rb").read().strip()))
+        # first start with the vault: wrap a fresh key (an existing database is re-encrypted with it)
+        new = Fernet.generate_key()
+        _write_private(wrapped + ".pending", _kms_wrap(new))
+        _migrate_to(new, Fernet(open(legacy, "rb").read().strip()) if os.path.exists(legacy) else None)
+        os.replace(wrapped + ".pending", wrapped)
+        logger.info("account key is now wrapped by Oracle Vault")
+        return Fernet(new)
+    if os.path.exists(legacy):
+        return Fernet(open(legacy, "rb").read().strip())
     key = Fernet.generate_key()
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    fd = os.open(legacy, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "wb") as f:
         f.write(key)
     return Fernet(key)
+
+
+def _migrate_to(new_key: bytes, old: Fernet | None) -> None:
+    """Re-encrypt every stored Riot login from the old key to the new one, in one transaction."""
+    if old is None or not os.path.exists(settings.ACCOUNT_DB):
+        return
+    new = Fernet(new_key)
+    db = sqlite3.connect(settings.ACCOUNT_DB)
+    try:
+        has = db.execute("SELECT 1 FROM sqlite_master WHERE name='accounts'").fetchone()
+        if not has:
+            return
+        rows = db.execute("SELECT sub, riot FROM accounts WHERE riot IS NOT NULL").fetchall()
+        for sub, blob in rows:
+            db.execute("UPDATE accounts SET riot=? WHERE sub=?", (new.encrypt(old.decrypt(bytes(blob))), sub))
+        db.commit()
+    finally:
+        db.close()
 
 
 class AccountStore:

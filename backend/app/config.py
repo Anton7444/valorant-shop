@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     ALLOWED_EMAILS: str = ""  # optional comma-separated allow-list; empty = any verified Google account
     ACCOUNT_DB: str = "/tmp/valshop_accounts.db"
     ACCOUNT_KEY: str = ""  # Fernet key for the stored Riot cookies; if empty one is created next to ACCOUNT_DB
+    OCI_KMS_KEY_ID: str = ""  # when set, the Fernet key is wrapped by this Oracle Vault key instead of sitting on disk
+    OCI_KMS_ENDPOINT: str = ""  # the vault's cryptographic endpoint
     MAX_ACCOUNTS: int = 200
     DEVICE_IDLE_DAYS: int = 90  # a signed-in device nobody uses for this long is signed out
     RIOT_IDLE_DAYS: int = 30  # a linked Riot login on an account that is not used for this long is deleted
