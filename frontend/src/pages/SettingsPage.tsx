@@ -99,7 +99,6 @@ export default function SettingsPage() {
       if (res.status === 'success' && res.account) {
         dispatch({ type: 'ACCOUNT_UPDATED', account: res.account });
         setCookies('');
-        setMessage({ kind: 'ok', text: 'Riot account linked. It now works on every device signed in to this Google account.' });
       } else {
         setMessage({ kind: 'error', text: res.error ?? 'Could not link the Riot account' });
       }
