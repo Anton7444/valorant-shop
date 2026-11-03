@@ -203,7 +203,7 @@ export default function SettingsPage() {
                 Sign in with Google to link your Riot login to your account. Then the shop works on every device and
                 you never have to log in to Riot again.
               </p>
-              <GoogleSignIn onCredential={(c) => void handleGoogle(c)} />
+              <GoogleSignIn onCredential={(c) => void handleGoogle(c)} busy={busy} />
             </div>
           )}
         </Section>

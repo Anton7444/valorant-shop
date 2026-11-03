@@ -26,6 +26,7 @@ export default function LoginPage() {
   );
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoSession, setPromoSession] = useState<{ token: string; puuid: string } | null>(null);
 
@@ -129,7 +130,7 @@ export default function LoginPage() {
   }
 
   async function handleGoogleCredential(credential: string) {
-    setLoading(true);
+    setGoogleBusy(true);
     setError(null);
     try {
       const res = await api.googleLogin(credential);
@@ -140,11 +141,11 @@ export default function LoginPage() {
         navigate(res.account.riot.state === 'linked' ? '/shop' : '/settings');
       } else {
         setError(res.error ?? 'Google sign-in failed');
-        setLoading(false);
+        setGoogleBusy(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed');
-      setLoading(false);
+      setGoogleBusy(false);
     }
   }
 
@@ -187,7 +188,7 @@ export default function LoginPage() {
 
           {stage === 'start' ? (
             <>
-              <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} />
+              <GoogleSignIn onCredential={(c) => void handleGoogleCredential(c)} busy={googleBusy} disabled={loading} />
               <p className="mb-4 mt-2 text-center text-xs leading-relaxed text-text-secondary/70">
                 Sign in with Google to keep your Riot login linked to your account and use the shop on every device.
               </p>
@@ -199,7 +200,7 @@ export default function LoginPage() {
 
               <button
                 onClick={handleOpenLogin}
-                disabled={loading}
+                disabled={loading || googleBusy}
                 className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ fontFamily: "'Oswald', sans-serif" }}
               >

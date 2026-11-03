@@ -44,6 +44,15 @@ function loadGoogleScript(): Promise<void> {
   return scriptPromise;
 }
 
+function Spinner() {
+  return (
+    <svg className="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 function GoogleGlyph() {
   return (
     <svg className="h-6 w-6 rounded-full bg-white p-1" viewBox="0 0 48 48" aria-hidden="true">
@@ -56,7 +65,15 @@ function GoogleGlyph() {
 }
 
 /** "Continue with Google" in the site's own style. Renders nothing when the server has no Google client id set up. */
-export default function GoogleSignIn({ onCredential }: { onCredential: (accessToken: string) => void }) {
+export default function GoogleSignIn({
+  onCredential,
+  busy = false,
+  disabled = false,
+}: {
+  onCredential: (accessToken: string) => void;
+  busy?: boolean;
+  disabled?: boolean;
+}) {
   const [clientId, setClientId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -107,12 +124,12 @@ export default function GoogleSignIn({ onCredential }: { onCredential: (accessTo
   return (
     <button
       type="button"
-      disabled={!ready}
+      disabled={!ready || busy || disabled}
       onClick={() => client.current?.requestAccessToken()}
       className="flex w-full items-center justify-center gap-3 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 hover:shadow-[0_8px_24px_-8px_rgba(255,70,85,0.6)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
       style={{ fontFamily: "'Oswald', sans-serif" }}
     >
-      <GoogleGlyph />
+      {busy ? <Spinner /> : <GoogleGlyph />}
       CONTINUE WITH GOOGLE
     </button>
   );
