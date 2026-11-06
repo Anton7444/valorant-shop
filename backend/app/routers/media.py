@@ -41,4 +41,5 @@ async def proxy_video(u: str, request: Request):
 
     response_headers = {k: v for k, v in upstream.headers.items() if k.lower() in FORWARD_RESPONSE_HEADERS}
     response_headers["Cache-Control"] = "public, max-age=86400"
+    response_headers["X-Content-Type-Options"] = "nosniff"
     return StreamingResponse(body(), status_code=upstream.status_code, headers=response_headers)
