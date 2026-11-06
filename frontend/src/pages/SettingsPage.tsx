@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
@@ -46,6 +46,93 @@ function Toggle({
 
 const buttonClass =
   'rounded-sm border border-border px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-accent-red disabled:opacity-50';
+
+const REPO_URL = 'https://github.com/Anton7444/valorant-shop';
+
+function CommitRow({ label, commit, date, subject }: { label: string; commit: string | null; date?: string | null; subject?: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    if (!commit) return;
+    try {
+      await navigator.clipboard.writeText(commit);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable: the hash is on screen anyway
+    }
+  }
+
+  return (
+    <div className="py-2">
+      <div className="text-[11px] uppercase tracking-widest text-text-secondary">{label}</div>
+      {commit ? (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <a
+            href={`${REPO_URL}/commit/${commit}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-sm text-text-primary underline-offset-2 hover:text-accent-red hover:underline"
+            title={commit}
+          >
+            {commit.slice(0, 7)}
+          </a>
+          <button type="button" onClick={copy} className="text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">
+            {copied ? 'Copied' : 'Copy full hash'}
+          </button>
+          {date && <span className="text-xs text-text-secondary/80">{new Date(date).toLocaleString()}</span>}
+        </div>
+      ) : (
+        <div className="mt-1 text-sm text-text-secondary">unknown</div>
+      )}
+      {subject && <div className="mt-0.5 truncate text-xs text-text-secondary/80">{subject}</div>}
+    </div>
+  );
+}
+
+function AboutSection() {
+  const frontendCommit = __APP_COMMIT__ || null;
+  const [backend, setBackend] = useState<{ commit: string | null; date: string | null; subject: string | null } | null | 'error'>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getBackendVersion()
+      .then((v) => !cancelled && setBackend(v))
+      .catch(() => !cancelled && setBackend('error'));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const backendCommit = backend && backend !== 'error' ? backend.commit : null;
+  const inSync = frontendCommit && backendCommit ? frontendCommit === backendCommit : null;
+
+  return (
+    <Section title="About">
+      <CommitRow label="Website" commit={frontendCommit} date={__APP_COMMIT_DATE__ || null} subject={__APP_COMMIT_SUBJECT__ || null} />
+      <div className="text-xs text-text-secondary/70">Built {new Date(__APP_BUILT_AT__).toLocaleString()}</div>
+      <div className="my-2 border-t border-border/60" />
+      {backend === null ? (
+        <div className="py-2 text-sm text-text-secondary">Checking the server…</div>
+      ) : backend === 'error' ? (
+        <div className="py-2 text-sm text-text-secondary">The server's version could not be read.</div>
+      ) : (
+        <CommitRow label="Server" commit={backend.commit} date={backend.date} subject={backend.subject} />
+      )}
+      {inSync !== null && (
+        <p className={`mt-1 text-xs ${inSync ? 'text-accent-teal' : 'text-text-secondary'}`}>
+          {inSync
+            ? 'The website and the server are on the same commit.'
+            : 'The website and the server are on different commits (one of them has not finished updating yet).'}
+        </p>
+      )}
+      <p className="mt-3 text-xs text-text-secondary/70">
+        Source code: <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline-offset-2 hover:text-accent-red hover:underline">github.com/Anton7444/valorant-shop</a>
+      </p>
+    </Section>
+  );
+}
 
 export default function SettingsPage() {
   const { state, dispatch } = useAuth();
@@ -276,6 +363,7 @@ export default function SettingsPage() {
             <p className="mt-2 text-xs text-text-secondary/70">These settings are saved in this browser. Sign in with Google to keep them on every device.</p>
           )}
         </Section>
+        <AboutSection />
       </main>
     </div>
   );

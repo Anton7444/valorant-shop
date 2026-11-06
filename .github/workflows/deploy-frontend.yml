@@ -47,6 +47,7 @@ jobs:
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
           VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
         run: npm run build
 
       # GitHub Pages doesn't understand client-side routing: a hard refresh
