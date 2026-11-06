@@ -113,6 +113,10 @@ export function logout(): Promise<{ status: string }> {
   return request('/api/auth/logout', { method: 'POST' });
 }
 
+export function getBackendVersion(): Promise<{ commit: string | null; date: string | null; subject: string | null }> {
+  return request('/api/version');
+}
+
 export function checkSession(): Promise<SessionResponse> {
   return request('/api/auth/session');
 }

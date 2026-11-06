@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO)
 
+from app import version as version_info
 from app.config import settings
 from app.routers import account, auth, media, profile, store
 from app.services import account_session, asset_cache
@@ -54,6 +55,12 @@ async def request_logging_middleware(request: Request, call_next):
         duration_ms,
     )
     return response
+
+
+@app.get("/api/version")
+async def version():
+    """The commit this backend runs (read once at startup)."""
+    return version_info.VERSION
 
 
 @app.get("/api/health")
