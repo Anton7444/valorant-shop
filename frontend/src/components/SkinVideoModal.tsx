@@ -33,11 +33,15 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
   const viaServer = useVideoViaServer();
   const [phase, setPhase] = useState<'entering' | 'open' | 'closing'>('entering');
   const [selectedIndex, setSelectedIndex] = useState(() => {
+    if (initialColor > 0) return levels.length - 1;
     const firstWithVideo = levels.findIndex((level) => level.video_url);
     return firstWithVideo === -1 ? 0 : firstWithVideo;
   });
 
-  // Colour variants: -1 shows the skin itself (its levels), otherwise the chosen colour.
+  // Colour variants: -1 is the skin's default colour, otherwise the chosen colour. Riot's colour videos
+  // and renders show a variant at the skin's top level, so choosing a colour moves the level selection
+  // to the last level, and choosing an earlier level goes back to the default colour.
+  const finalLevel = levels.length - 1;
   const [chromaIndex, setChromaIndex] = useState(initialColor > 0 ? initialColor : -1);
   const hasColors = chromas.length > 1;
   const chroma = chromaIndex >= 0 ? chromas[chromaIndex] : null;
@@ -137,37 +141,6 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
             </svg>
           </button>
 
-          {hasColors && (
-            <div
-              role="group"
-              aria-label="Colours"
-              className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-4.5rem)] items-center gap-1.5 overflow-x-auto rounded-full bg-bg-primary/70 p-1.5 backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {chromas.map((c, index) => {
-                const active = index === (chromaIndex === -1 ? 0 : chromaIndex);
-                return (
-                  <button
-                    key={c.uuid}
-                    type="button"
-                    title={chromaName(c)}
-                    aria-label={chromaName(c)}
-                    aria-pressed={active}
-                    onClick={() => setChromaIndex(index === 0 ? -1 : index)}
-                    className={`h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 bg-bg-secondary transition-transform duration-200 hover:scale-110 ${
-                      active ? 'scale-110 border-text-primary' : 'border-transparent'
-                    }`}
-                  >
-                    {c.swatch ? (
-                      <img src={c.swatch} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="block h-full w-full text-[9px] leading-5 text-text-secondary">{index + 1}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           {mediaVideo ? (
             <video
               key={mediaVideo}
@@ -209,25 +182,68 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
             {mediaTitle}
           </h3>
 
-          {showThumbStrip && (
-            <div className="flex shrink-0 items-center gap-2">
-              {levels.map((level, index) => (
-                <button
-                  key={level.uuid}
-                  type="button"
-                  onClick={() => {
-                    setSelectedIndex(index);
-                    setChromaIndex(-1);
-                  }}
-                  className={`rounded-md border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                    index === selectedIndex && !chroma
-                      ? 'border-accent-red bg-bg-card text-text-primary'
-                      : 'border-border bg-bg-card/50 text-text-secondary hover:border-text-secondary'
-                  }`}
-                >
-                  LV.{level.level_number}
-                </button>
-              ))}
+          {(hasColors || showThumbStrip) && (
+            <div className="flex min-w-0 shrink-0 items-center gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {hasColors && (
+                <div role="group" aria-label="Colours" className="flex items-center gap-1.5">
+                  {chromas.map((c, index) => {
+                    const active = index === (chromaIndex === -1 ? 0 : chromaIndex);
+                    return (
+                      <button
+                        key={c.uuid}
+                        type="button"
+                        title={chromaName(c)}
+                        aria-label={chromaName(c)}
+                        aria-pressed={active}
+                        onClick={() => {
+                          setChromaIndex(index === 0 ? -1 : index);
+                          if (index > 0) setSelectedIndex(finalLevel);
+                        }}
+                        className={`h-7 w-7 shrink-0 overflow-hidden rounded-full border-2 bg-bg-card transition-transform duration-200 hover:scale-110 ${
+                          active ? 'scale-110 border-text-primary' : 'border-border'
+                        }`}
+                      >
+                        {c.swatch ? (
+                          <img src={c.swatch} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="block text-[10px] leading-6 text-text-secondary">{index + 1}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {hasColors && showThumbStrip && <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />}
+
+              {showThumbStrip && (
+                <div role="group" aria-label="Levels" className="flex items-center gap-2">
+                  {levels.map((level, index) => {
+                    const active = index === selectedIndex;
+                    // With a colour picked, only the top level can show it; the others go back to the default colour.
+                    const dim = chroma !== null && index !== finalLevel;
+                    return (
+                      <button
+                        key={level.uuid}
+                        type="button"
+                        aria-pressed={active}
+                        title={dim ? 'Shows the default colour' : undefined}
+                        onClick={() => {
+                          setSelectedIndex(index);
+                          if (index !== finalLevel) setChromaIndex(-1);
+                        }}
+                        className={`rounded-md border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                          active
+                            ? 'border-accent-red bg-bg-card text-text-primary'
+                            : `border-border bg-bg-card/50 text-text-secondary hover:border-text-secondary ${dim ? 'opacity-60' : ''}`
+                        }`}
+                      >
+                        LV.{level.level_number}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
