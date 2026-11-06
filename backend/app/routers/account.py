@@ -2,11 +2,11 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.accounts import AccountsFull, accounts
 from app.config import settings
-from app.routers.auth import _check_rate_limit, _get_token_from_header
+from app.routers.auth import _check_rate_limit, _client_ip, _get_token_from_header
 from app.services import account_session, google_auth, riot_auth, riot_refresh
 
 logger = logging.getLogger(__name__)
@@ -15,11 +15,11 @@ router = APIRouter()
 
 
 class GoogleLogin(BaseModel):
-    access_token: str
+    access_token: str = Field(max_length=4_096)
 
 
 class CookiesBody(BaseModel):
-    cookies: str
+    cookies: str = Field(max_length=100_000)
 
 
 class SettingsBody(BaseModel):
@@ -54,7 +54,7 @@ async def auth_config() -> dict:
 
 @router.post("/auth/google")
 async def google_login(body: GoogleLogin, request: Request) -> dict:
-    _check_rate_limit(request.client.host if request.client else "unknown")
+    _check_rate_limit(_client_ip(request))
     try:
         claims = await google_auth.verify(body.access_token)
     except google_auth.GoogleAuthError as e:
@@ -79,7 +79,7 @@ async def get_account(request: Request) -> dict:
 async def link_riot(body: CookiesBody, request: Request) -> dict:
     """Link (or replace) the Riot login of this Google account from exported cookies."""
     _, sub = _current(request)
-    _check_rate_limit(request.client.host if request.client else "unknown")
+    _check_rate_limit(_client_ip(request))
     cookies = riot_refresh.parse_cookies(body.cookies)
     if "ssid" not in cookies:
         return {"status": "error", "error": "No Riot login cookie (ssid) found. Export the cookies of auth.riotgames.com right after logging in."}

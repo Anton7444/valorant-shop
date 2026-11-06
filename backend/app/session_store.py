@@ -18,6 +18,10 @@ class SessionStore:
         data.created_at = now
         data.expires_at = now + ACCESS_TOKEN_TTL
         with self._lock:
+            if len(self._sessions) >= 256:  # drop expired sessions so the table cannot grow forever
+                self._sessions = {
+                    k: v for k, v in self._sessions.items() if v.expires_at is None or v.expires_at > now
+                }
             self._sessions[token] = data
         return token
 
