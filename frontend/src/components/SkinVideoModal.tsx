@@ -26,6 +26,9 @@ const OPEN_MS = 500;
 const CLOSE_MS = 300;
 const CLOSE_FADE_MS = 300;
 const FOOTER_HEIGHT = 52;
+// Phones: the footer stacks the name, the colours and the levels in rows so every button is reachable.
+const COMPACT_WIDTH = 640;
+const COMPACT_ROW = 36;
 
 export default function SkinVideoModal({ levels, chromas = [], initialColor = 0, fallbackIcon, name, originRect, onClose }: SkinVideoModalProps) {
   const { localizedNames } = useLanguage();
@@ -55,7 +58,10 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
 
   const videoWidth = Math.min(window.innerWidth * 0.9, 960);
   const videoHeight = (videoWidth * 9) / 16;
-  const panelHeight = videoHeight + FOOTER_HEIGHT;
+  const compact = window.innerWidth < COMPACT_WIDTH;
+  const compactRows = 1 + (hasColors ? 1 : 0) + (showThumbStrip ? 1 : 0);
+  const footerHeight = compact ? compactRows * COMPACT_ROW + 16 : FOOTER_HEIGHT;
+  const panelHeight = videoHeight + footerHeight;
   const targetTop = (window.innerHeight - panelHeight) / 2;
   const targetLeft = (window.innerWidth - videoWidth) / 2;
 
@@ -172,8 +178,10 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
         </div>
 
         <div
-          className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-bg-secondary px-3"
-          style={{ height: FOOTER_HEIGHT }}
+          className={`flex shrink-0 border-t border-border bg-bg-secondary px-3 ${
+            compact ? 'flex-col justify-center gap-1' : 'items-center justify-between gap-3'
+          }`}
+          style={{ height: footerHeight }}
         >
           <h3
             className="min-w-0 truncate text-sm text-text-primary"
@@ -183,9 +191,13 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
           </h3>
 
           {(hasColors || showThumbStrip) && (
-            <div className="flex min-w-0 shrink-0 items-center gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              className={`flex min-w-0 items-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+                compact ? 'flex-col items-stretch gap-1' : 'shrink-0 gap-4 overflow-x-auto'
+              }`}
+            >
               {hasColors && (
-                <div role="group" aria-label="Colours" className="flex items-center gap-1.5">
+                <div role="group" aria-label="Colours" className="flex items-center gap-1.5 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {chromas.map((c, index) => {
                     const active = index === (chromaIndex === -1 ? 0 : chromaIndex);
                     return (
@@ -214,10 +226,10 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
                 </div>
               )}
 
-              {hasColors && showThumbStrip && <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />}
+              {hasColors && showThumbStrip && !compact && <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />}
 
               {showThumbStrip && (
-                <div role="group" aria-label="Levels" className="flex items-center gap-2">
+                <div role="group" aria-label="Levels" className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {levels.map((level, index) => {
                     const active = index === selectedIndex;
                     // With a colour picked, only the top level can show it; the others go back to the default colour.
