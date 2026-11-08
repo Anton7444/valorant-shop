@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { SkinChroma, SkinLevel } from '../types';
 import { useLanguage } from '../context/useLanguage';
 import { useVideoViaServer, videoSrc } from '../utils/videoRoute';
+import { saveVideo } from '../utils/mediaCache';
 
 interface OriginRect {
   top: number;
@@ -160,6 +161,8 @@ export default function SkinVideoModal({ levels, chromas = [], initialColor = 0,
               // still blocks unmuted autoplay, fall back to muted playback.
               onCanPlay={(event) => {
                 const video = event.currentTarget;
+                // Keep it on this device so the next time it starts at once (no-op if it is already saved).
+                void saveVideo(video.currentSrc || videoSrc(mediaVideo, viaServer), mediaTitle, videoSrc(mediaVideo, true));
                 if (video.paused) video.play().catch(() => {
                   video.muted = true;
                   video.play().catch(() => {});
