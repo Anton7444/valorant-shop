@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import AppHeader from '../components/AppHeader';
 import GoogleSignIn from '../components/GoogleSignIn';
+import StorageSection from '../components/StorageSection';
 import { applyAccountSettings } from '../utils/accountSettings';
 import { setMetalCards, useMetalCards } from '../utils/metalCards';
 import { setVideoViaServer, useVideoViaServer } from '../utils/videoRoute';
@@ -363,6 +364,10 @@ export default function SettingsPage() {
             <p className="mt-2 text-xs text-text-secondary/70">These settings are saved in this browser. Sign in with Google to keep them on every device.</p>
           )}
         </Section>
+        <Section title="Storage">
+          <StorageSection />
+        </Section>
+
         <AboutSection />
       </main>
     </div>
