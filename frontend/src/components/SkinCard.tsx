@@ -89,7 +89,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0, disco
 
       <div className="[perspective:1200px]">
         <div
-          className="relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] [transform-style:preserve-3d]"
+          className="grid transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] [transform-style:preserve-3d] [-webkit-transform-style:preserve-3d]"
           style={{ transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
         >
           {/* Front face: mystery cover */}
@@ -98,7 +98,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0, disco
             onClick={handleReveal}
             disabled={revealed}
             aria-label="Click to reveal skin"
-            className="block w-full text-left [backface-visibility:hidden]"
+            className="block w-full text-left [grid-area:1/1] [backface-visibility:hidden] [-webkit-backface-visibility:hidden]"
             style={{ cursor: revealed ? 'default' : 'pointer' }}
           >
             <div className="flex aspect-video items-center justify-center p-4">
@@ -132,7 +132,7 @@ export default function SkinCard({ skin, startRevealed = false, index = 0, disco
 
           {/* Back face: actual skin, shown once flipped */}
           <div
-            className="absolute inset-0 [backface-visibility:hidden]"
+            className="[grid-area:1/1] [backface-visibility:hidden] [-webkit-backface-visibility:hidden]"
             style={{ transform: 'rotateY(180deg)' }}
           >
             <div className={revealed ? 'animate-reveal-pop' : 'opacity-0'}>
