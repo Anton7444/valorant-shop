@@ -511,7 +511,7 @@ export default function ProfilePage() {
                             agent.owned ? '' : 'opacity-35 grayscale'
                           }`}
                         >
-                          <img src={agent.icon} alt={name} loading="lazy" className="aspect-square w-full object-cover" />
+                          <AgentIcon src={agent.icon} alt={name} />
                           <div className="truncate px-1 py-1.5 text-[11px] text-text-primary">{name}</div>
                         </div>
                       </div>
@@ -581,6 +581,24 @@ export default function ProfilePage() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+/* Square icon with a shimmering placeholder that fades out once the picture has arrived */
+function AgentIcon({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className={`relative aspect-square w-full ${loaded ? '' : 'skeleton !border-0'}`}>
+      <img
+        src={src}
+        alt={alt}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        ref={(img) => { if (img?.complete) setLoaded(true); }}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
     </div>
   );
 }
