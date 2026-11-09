@@ -360,15 +360,25 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   );
 }
 
-/* Little body figure with one zone lit up (head, body or legs) in place of a text label */
+/* Body figure with one zone lit up (head, body or legs) in place of a text label */
+const BODY_ARM_TORSO = 'M28 22 L22 24 C14 26 10 28 8 34 C6 40 5 48 4 56 L2 70 C2 74 7 74 8 70 L11 58 C12 52 13 46 15 42 L17 54 C18 60 19 66 20 71 L30 71 L30 22 Z';
+const BODY_LEG = 'M20 71 L30 71 L30 84 L29 84 L29 146 L24 148 C21 148 20 146 21 144 L23 120 C23 106 22 96 21 88 C20 80 19 75 20 71 Z';
+const MIRROR = 'translate(60 0) scale(-1 1)';
+
 function BodyFigure({ zone }: { zone: 'head' | 'body' | 'legs' }) {
-  const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : 'rgba(255,255,255,0.22)');
+  const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : 'rgba(255,255,255,0.25)');
   return (
-    <svg viewBox="0 0 40 80" className="h-16 w-8 shrink-0" role="img" aria-label={zone}>
+    <svg viewBox="0 0 60 150" className="h-20 w-8 shrink-0" role="img" aria-label={zone}>
       <title>{zone}</title>
-      <circle cx="20" cy="9" r="7" fill={fill('head')} />
-      <path d="M9 19h22l3 22h-6l-1-6h-14l-1 6h-6z" fill={fill('body')} />
-      <path d="M13 41h14l2 36h-7l-2-24l-2 24h-7z" fill={fill('legs')} />
+      <ellipse cx="30" cy="11" rx="8" ry="10" fill={fill('head')} />
+      <g fill={fill('body')}>
+        <path d={BODY_ARM_TORSO} />
+        <path d={BODY_ARM_TORSO} transform={MIRROR} />
+      </g>
+      <g fill={fill('legs')}>
+        <path d={BODY_LEG} />
+        <path d={BODY_LEG} transform={MIRROR} />
+      </g>
     </svg>
   );
 }
@@ -475,7 +485,13 @@ function PerformanceSection({
               return (
                 <li key={id} className="flex items-center gap-3">
                   <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-sm bg-bg-secondary">
-                    {w?.icon && <img src={w.icon} alt="" loading="lazy" className="max-h-8 max-w-[4.5rem] object-contain" />}
+                    {w?.icon ? (
+                      <img src={w.icon} alt="" loading="lazy" className="max-h-8 max-w-[4.5rem] object-contain" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="h-6 w-6 text-text-secondary" fill="none" stroke="currentColor" strokeWidth="1.6" role="img" aria-label="Abilities">
+                        <path d="M13 2 4 14h7l-1 8 9-12h-7z" strokeLinejoin="round" />
+                      </svg>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2 text-sm">
