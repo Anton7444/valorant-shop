@@ -170,7 +170,13 @@ function Scoreboard({ match }: { match: MatchSummary }) {
         const color =
           team?.won === true ? 'var(--color-accent-teal)' : team?.won === false ? 'var(--color-accent-red)' : 'var(--color-text-secondary)';
         return (
-          <table key={team?.team_id ?? groupIndex} className="w-full min-w-[820px] border-collapse text-sm">
+          <table key={team?.team_id ?? groupIndex} className="w-full min-w-[820px] table-fixed border-collapse text-sm">
+            {/* Fixed widths keep both teams' columns lined up */}
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[7%]" />
+              {COLUMNS.map((c) => <col key={c.key} />)}
+            </colgroup>
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-text-secondary" style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }}>
                 <th className="px-3 py-2 text-left font-semibold" style={{ color }}>
