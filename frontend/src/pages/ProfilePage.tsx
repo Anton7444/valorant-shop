@@ -361,23 +361,24 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
 }
 
 /* Body figure with one zone lit up (head, body or legs) in place of a text label */
-const BODY_ARM_TORSO = 'M30 17 L26 17.5 C21 19 16 20.5 13.5 23 C11.5 25 11 29 10.5 34 C10 40 10.5 46 10 52 L9 64 C8.7 68 8.5 72 9.2 75 C10.5 77 12.8 76.5 13 74 L14 62 C14.5 55 15 50 15.5 44 C16 41 17 38 18 36 L19 46 C19.5 52 20 58 20 66 L20 70 L30 70 Z';
-const BODY_LEG = 'M20 70 L30 70 L30 80 C29.5 80 29.3 81 29.2 84 C29 94 28.5 104 28 114 C27.8 122 27.5 128 27.2 132 C27.8 134.5 27.8 136.5 26 137.5 L19 137.5 C18 136.5 19 135 20.5 134 C21 128 21 122 21 115 C21 106 20 98 19.6 90 C19.3 82 19.5 76 20 70 Z';
-const MIRROR = 'translate(60 0) scale(-1 1)';
+const FIG_HEAD = '112,66 128,60 150,65 153,98 139,120 122,120 109,100';
+const FIG_BODY = '131,130 97,134 62,168 44,228 39,318 62,332 64,296 79,236 90,190 93,268 131,310';
+const FIG_LEG = '84,284 124,322 106,412 94,502 94,540 60,540 68,503 76,410';
+const FIG_MIRROR = 'translate(262 0) scale(-1 1)';
 
 function BodyFigure({ zone }: { zone: 'head' | 'body' | 'legs' }) {
-  const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : 'rgba(255,255,255,0.25)');
+  const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : '#8a9096');
   return (
-    <svg viewBox="0 0 60 140" className="h-20 w-[2.1rem] shrink-0" role="img" aria-label={zone}>
+    <svg viewBox="30 55 203 490" className="h-20 w-8 shrink-0" role="img" aria-label={zone}>
       <title>{zone}</title>
-      <ellipse cx="30" cy="8.2" rx="6" ry="7.4" fill={fill('head')} />
+      <polygon points={FIG_HEAD} fill={fill('head')} />
       <g fill={fill('body')}>
-        <path d={BODY_ARM_TORSO} />
-        <path d={BODY_ARM_TORSO} transform={MIRROR} />
+        <polygon points={FIG_BODY} />
+        <polygon points={FIG_BODY} transform={FIG_MIRROR} />
       </g>
       <g fill={fill('legs')}>
-        <path d={BODY_LEG} />
-        <path d={BODY_LEG} transform={MIRROR} />
+        <polygon points={FIG_LEG} />
+        <polygon points={FIG_LEG} transform={FIG_MIRROR} />
       </g>
     </svg>
   );
