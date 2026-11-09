@@ -29,16 +29,18 @@ function daysLeft(endsAt: string | null): string | null {
   return days >= 1 ? `${days} day${days === 1 ? '' : 's'} left` : 'Ends today';
 }
 
-// Rough average XP earned per game in each mode (estimates, not official numbers).
+// Approximate XP per game, from community guides (valorant.fandom.com/wiki/Experience,
+// esports.net, bo3.gg) that disagree slightly and may lag behind patches. Round-based modes
+// (Competitive, Unrated, Swiftplay) pay ~100 XP per round played + ~200 per round won, so they
+// vary with the match; the values here are mid-range totals.
 const MODE_XP = [
   { name: 'Competitive', xp: 3000 },
   { name: 'Unrated', xp: 3000 },
   { name: 'Swiftplay', xp: 2000 },
-  { name: 'Spike Rush', xp: 1500 },
-  { name: 'Escalation', xp: 1500 },
-  { name: 'Replication', xp: 1500 },
+  { name: 'Spike Rush', xp: 1000 },
+  { name: 'Escalation', xp: 900 },
   { name: 'Team Deathmatch', xp: 1000 },
-  { name: 'Deathmatch', xp: 1000 },
+  { name: 'Deathmatch', xp: 900 },
 ];
 
 export default function BattlePassPage() {
@@ -155,7 +157,7 @@ function PassView({ pass }: { pass: BattlePassResponse }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[11px] text-text-secondary">Rough average XP per game; real values vary with result, rounds and bonuses.</p>
+            <p className="mt-2 text-[11px] text-text-secondary">Approximate XP per game from community guides; real values vary with result, rounds and bonuses.</p>
           </div>
         )}
 
