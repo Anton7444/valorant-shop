@@ -361,16 +361,16 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
 }
 
 /* Body figure with one zone lit up (head, body or legs) in place of a text label */
-const BODY_ARM_TORSO = 'M28 22 L22 24 C14 26 10 28 8 34 C6 40 5 48 4 56 L2 70 C2 74 7 74 8 70 L11 58 C12 52 13 46 15 42 L17 54 C18 60 19 66 20 71 L30 71 L30 22 Z';
-const BODY_LEG = 'M20 71 L30 71 L30 84 L29 84 L29 146 L24 148 C21 148 20 146 21 144 L23 120 C23 106 22 96 21 88 C20 80 19 75 20 71 Z';
+const BODY_ARM_TORSO = 'M30 15 L25 15.5 C20 17 14 19 10.5 22 C7.5 24.5 6.5 29 6 35 C5.5 41 6.5 46 6 51 L4.5 60 C4 63.5 8.5 64 9.5 60.5 L12 52 C13 47 12.5 42 13.5 37 C14 34 15 32 16.5 31 C17 38 19 44 20 50 C20.5 54 20 57 20 60 L30 60 Z';
+const BODY_LEG = 'M20 60 L30 60 L30 67 C29.5 67 29.2 67.5 29 69 C28.8 75 28.5 80 28.5 85 C28.5 90 28 94 27.5 98 C28 101 28 103 26.5 104 L18.5 104 C17.5 103 18.5 101 20.5 100 C21 96 21 92 20.5 88 C19.5 82 19 78 19.5 72 C20 67 19.5 63 20 60 Z';
 const MIRROR = 'translate(60 0) scale(-1 1)';
 
 function BodyFigure({ zone }: { zone: 'head' | 'body' | 'legs' }) {
   const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : 'rgba(255,255,255,0.25)');
   return (
-    <svg viewBox="0 0 60 150" className="h-20 w-8 shrink-0" role="img" aria-label={zone}>
+    <svg viewBox="0 0 60 110" className="h-16 w-9 shrink-0" role="img" aria-label={zone}>
       <title>{zone}</title>
-      <ellipse cx="30" cy="11" rx="8" ry="10" fill={fill('head')} />
+      <ellipse cx="30" cy="7.5" rx="6.3" ry="7.3" fill={fill('head')} />
       <g fill={fill('body')}>
         <path d={BODY_ARM_TORSO} />
         <path d={BODY_ARM_TORSO} transform={MIRROR} />
