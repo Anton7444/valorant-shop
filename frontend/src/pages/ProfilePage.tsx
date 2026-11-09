@@ -360,6 +360,19 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   );
 }
 
+/* Little body figure with one zone lit up (head, body or legs) in place of a text label */
+function BodyFigure({ zone }: { zone: 'head' | 'body' | 'legs' }) {
+  const fill = (z: string) => (z === zone ? 'var(--color-accent-red)' : 'rgba(255,255,255,0.22)');
+  return (
+    <svg viewBox="0 0 40 80" className="h-16 w-8 shrink-0" role="img" aria-label={zone}>
+      <title>{zone}</title>
+      <circle cx="20" cy="9" r="7" fill={fill('head')} />
+      <path d="M9 19h22l3 22h-6l-1-6h-14l-1 6h-6z" fill={fill('body')} />
+      <path d="M13 41h14l2 36h-7l-2-24l-2 24h-7z" fill={fill('legs')} />
+    </svg>
+  );
+}
+
 /* Performance: shot placement, per-role record and weapon kills, all from the loaded matches. */
 function PerformanceSection({
   matches,
@@ -414,18 +427,15 @@ function PerformanceSection({
       <SectionTitle hint={`From ${matches.length} loaded matches (follows the mode filter)`}>Performance</SectionTitle>
 
       <div className="grid grid-cols-3 gap-3 rounded-lg border border-border bg-bg-card p-4">
-        {([['Head', hits.head, 'var(--color-accent-red)'], ['Body', hits.body, 'var(--color-text-primary)'], ['Legs', hits.leg, 'var(--color-text-secondary)']] as const).map(
-          ([label, n, color]) => (
-            <div key={label}>
-              <div className="text-sm font-semibold text-text-primary">{label}</div>
-              <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color }}>{pct(n)}%</div>
-              <div className="text-xs tabular-nums text-text-secondary">{n.toLocaleString()} hits</div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-secondary">
-                <div className="h-full rounded-full" style={{ width: `${pct(n)}%`, backgroundColor: color }} />
-              </div>
+        {([['head', hits.head], ['body', hits.body], ['legs', hits.leg]] as const).map(([zone, n]) => (
+          <div key={zone} className="flex items-center gap-3">
+            <BodyFigure zone={zone} />
+            <div>
+              <div className="text-2xl font-bold tabular-nums text-text-primary">{pct(n)}%</div>
+              <div className="text-xs tabular-nums text-text-secondary">{n.toLocaleString()}</div>
             </div>
-          ),
-        )}
+          </div>
+        ))}
       </div>
 
       {roleStats.size > 0 && (
@@ -437,8 +447,9 @@ function PerformanceSection({
               return (
                 <div key={role} className="rounded-lg border border-border bg-bg-card p-3">
                   <div className="flex items-center gap-2">
-                    {r.icon && <img src={r.icon} alt="" className="h-6 w-6 object-contain" />}
-                    <span className="flex-1 text-sm font-semibold text-text-primary">{roleLabel(role)}</span>
+                    {r.icon && <img src={r.icon} alt={roleLabel(role)} title={roleLabel(role)} className="h-8 w-8 object-contain" />}
+                    {!r.icon && <span className="text-sm font-semibold text-text-primary">{roleLabel(role)}</span>}
+                    <span className="flex-1" />
                     <span className="text-xs text-text-secondary">{r.games} games</span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-secondary">
