@@ -29,6 +29,18 @@ function daysLeft(endsAt: string | null): string | null {
   return days >= 1 ? `${days} day${days === 1 ? '' : 's'} left` : 'Ends today';
 }
 
+// Rough average XP earned per game in each mode (estimates, not official numbers).
+const MODE_XP = [
+  { name: 'Competitive', xp: 3000 },
+  { name: 'Unrated', xp: 3000 },
+  { name: 'Swiftplay', xp: 2000 },
+  { name: 'Spike Rush', xp: 1500 },
+  { name: 'Escalation', xp: 1500 },
+  { name: 'Replication', xp: 1500 },
+  { name: 'Team Deathmatch', xp: 1000 },
+  { name: 'Deathmatch', xp: 1000 },
+];
+
 export default function BattlePassPage() {
   const { dispatch } = useAuth();
   const navigate = useNavigate();
@@ -131,6 +143,21 @@ function PassView({ pass }: { pass: BattlePassResponse }) {
           <Stat label="XP left to finish" value={pass.xp_remaining.toLocaleString()} />
           <Stat label="Pass complete" value={`${percentAll}%`} />
         </dl>
+
+        {!done && (
+          <div className="mt-5 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Games left to finish (estimate)</h3>
+            <ul className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+              {MODE_XP.map((mode) => (
+                <li key={mode.name} className="flex items-baseline justify-between gap-2 rounded-sm border border-border bg-bg-secondary/40 px-3 py-2">
+                  <span className="truncate text-text-primary" title={`about ${mode.xp.toLocaleString()} XP per game`}>{mode.name}</span>
+                  <span className="shrink-0 font-semibold tabular-nums text-text-primary">≈ {Math.ceil(pass.xp_remaining / mode.xp).toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[11px] text-text-secondary">Rough average XP per game; real values vary with result, rounds and bonuses.</p>
+          </div>
+        )}
 
         <p className="mt-5 border-t border-border pt-4 text-xs text-text-secondary">
           Premium pass:{' '}

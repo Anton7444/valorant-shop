@@ -54,3 +54,24 @@ export function filterSkins<T extends OwnedSkin>(
     return true;
   });
 }
+
+// Inventory order: rarity first, then knives, Vandal, Phantom, the rest of the weapons, then name.
+const TIER_ORDER = ['exclusive', 'ultra', 'premium', 'deluxe', 'select'];
+const WEAPON_ORDER = [
+  'melee', 'vandal', 'phantom', 'operator', 'sheriff', 'ghost', 'classic', 'guardian', 'spectre',
+  'bulldog', 'ares', 'odin', 'judge', 'bucky', 'marshal', 'outlaw', 'stinger', 'frenzy', 'shorty',
+];
+
+function rankIn(order: string[], value: string | undefined): number {
+  const i = order.indexOf((value ?? '').toLowerCase().replace(/ edition$/, ''));
+  return i === -1 ? order.length : i;
+}
+
+export function sortSkins<T extends OwnedSkin>(skins: T[]): T[] {
+  return [...skins].sort(
+    (a, b) =>
+      rankIn(TIER_ORDER, a.content_tier_name) - rankIn(TIER_ORDER, b.content_tier_name) ||
+      rankIn(WEAPON_ORDER, a.weapon) - rankIn(WEAPON_ORDER, b.weapon) ||
+      a.name.localeCompare(b.name),
+  );
+}
