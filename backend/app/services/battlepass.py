@@ -1,5 +1,6 @@
 """Battle pass progress: the player's XP from Riot, level thresholds and rewards from valorant-api.com."""
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from datetime import datetime, timezone
 import httpx
 
 from app.models.auth import SessionData
-from app.models.battlepass import BattlePassResponse, FreeReward, PassLevel, PassReward
+from app.models.battlepass import BattlePassResponse, FreeReward, ModeXp, PassLevel, PassReward
 from app.services import asset_cache, storefront
 from app.services.asset_cache import (
     ITEM_TYPE_AGENT,
@@ -146,6 +147,7 @@ async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
                 ))
 
     premium_owned = await _premium_owned(session, levels, raw_rewards)
+    xp_by_mode = await _xp_by_mode(session)
     reached = sum(1 for lv in levels if lv.reached)
     nxt = levels[reached] if reached < len(levels) else None
     previous_total = levels[reached - 1].cumulative_xp if reached else 0
@@ -162,7 +164,38 @@ async def get_battlepass(session: SessionData) -> BattlePassResponse | None:
         premium_owned=premium_owned,
         levels=levels,
         free_rewards=free_rewards,
+        xp_by_mode=xp_by_mode,
     )
+
+
+async def _xp_by_mode(session: SessionData) -> dict[str, ModeXp]:
+    """Average XP per game by queue, measured from the account's recent XP history.
+
+    Riot's account-xp history lists the XP each match gave (all sources included: completion, wins,
+    bonuses; weekly/daily missions are separate entries without a match). Joined with the match
+    history to learn each match's queue. Best effort: any failure just means no measured numbers.
+    """
+    headers = storefront._riot_headers(session.access_token, session.entitlements_token)
+    base = f"https://pd.{session.shard}.a.pvp.net"
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            xp_resp, hist_resp = await asyncio.gather(
+                client.get(f"{base}/account-xp/v1/players/{session.puuid}", headers=headers),
+                client.get(f"{base}/match-history/v1/history/{session.puuid}?startIndex=0&endIndex=60", headers=headers),
+            )
+            xp_resp.raise_for_status()
+            hist_resp.raise_for_status()
+        queues = {m["MatchID"].lower(): (m.get("QueueID") or "") for m in hist_resp.json().get("History", [])}
+        totals: dict[str, list[int]] = {}
+        for entry in xp_resp.json().get("History", []):
+            queue = queues.get(str(entry.get("ID", "")).lower())
+            delta = int(entry.get("XPDelta") or 0)
+            if queue and delta > 0:
+                totals.setdefault(queue, []).append(delta)
+        return {q: ModeXp(average=round(sum(v) / len(v)), games=len(v)) for q, v in totals.items()}
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+        logger.warning("XP history unavailable: %s", exc)
+        return {}
 
 
 async def _premium_owned(session: SessionData, levels: list[PassLevel], raw_rewards: dict[int, dict]) -> bool | None:

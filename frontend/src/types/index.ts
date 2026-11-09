@@ -270,4 +270,5 @@ export interface BattlePassResponse {
   premium_owned: boolean | null;
   levels: PassLevel[];
   free_rewards: FreeReward[];
+  xp_by_mode?: Record<string, { average: number; games: number }>;
 }

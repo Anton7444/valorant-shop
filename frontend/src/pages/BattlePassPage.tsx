@@ -34,13 +34,13 @@ function daysLeft(endsAt: string | null): string | null {
 // (Competitive, Unrated, Swiftplay) pay ~100 XP per round played + ~200 per round won, so they
 // vary with the match; the values here are mid-range totals.
 const MODE_XP = [
-  { name: 'Competitive', xp: 3000 },
-  { name: 'Unrated', xp: 3000 },
-  { name: 'Swiftplay', xp: 2000 },
-  { name: 'Spike Rush', xp: 1000 },
-  { name: 'Escalation', xp: 900 },
-  { name: 'Team Deathmatch', xp: 1000 },
-  { name: 'Deathmatch', xp: 900 },
+  { name: 'Competitive', queue: 'competitive', xp: 3000 },
+  { name: 'Unrated', queue: 'unrated', xp: 3000 },
+  { name: 'Swiftplay', queue: 'swiftplay', xp: 2000 },
+  { name: 'Spike Rush', queue: 'spikerush', xp: 1000 },
+  { name: 'Escalation', queue: 'ggteam', xp: 900 },
+  { name: 'Team Deathmatch', queue: 'hurm', xp: 1000 },
+  { name: 'Deathmatch', queue: 'deathmatch', xp: 900 },
 ];
 
 export default function BattlePassPage() {
@@ -150,14 +150,24 @@ function PassView({ pass }: { pass: BattlePassResponse }) {
           <div className="mt-5 border-t border-border pt-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Games left to finish (estimate)</h3>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-              {MODE_XP.map((mode) => (
-                <li key={mode.name} className="flex items-baseline justify-between gap-2 rounded-sm border border-border bg-bg-secondary/40 px-3 py-2">
-                  <span className="truncate text-text-primary" title={`about ${mode.xp.toLocaleString()} XP per game`}>{mode.name}</span>
-                  <span className="shrink-0 font-semibold tabular-nums text-text-primary">≈ {Math.ceil(pass.xp_remaining / mode.xp).toLocaleString()}</span>
-                </li>
-              ))}
+              {MODE_XP.map((mode) => {
+                const measured = pass.xp_by_mode?.[mode.queue];
+                const real = measured && measured.games >= 3 ? measured : null;
+                const perGame = real ? real.average : mode.xp;
+                return (
+                  <li key={mode.name} className="flex items-baseline justify-between gap-2 rounded-sm border border-border bg-bg-secondary/40 px-3 py-2">
+                    <span
+                      className="truncate text-text-primary"
+                      title={real ? `${perGame.toLocaleString()} XP per game, your average over ${real.games} games` : `about ${perGame.toLocaleString()} XP per game (estimate)`}
+                    >
+                      {mode.name}{real ? '' : ' *'}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums text-text-primary">≈ {Math.ceil(pass.xp_remaining / perGame).toLocaleString()}</span>
+                  </li>
+                );
+              })}
             </ul>
-            <p className="mt-2 text-[11px] text-text-secondary">Approximate XP per game from community guides; real values vary with result, rounds and bonuses.</p>
+            <p className="mt-2 text-[11px] text-text-secondary">Match XP only: daily and weekly missions are not counted, so you will need fewer games. Modes marked * use a community-guide estimate; the rest use your own recent games.</p>
           </div>
         )}
 
