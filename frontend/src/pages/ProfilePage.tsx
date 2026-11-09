@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { MatchSummary, PlayerRow, ProfileResponse } from '../types';
+import { useWeapons } from '../hooks/useWeapons';
 import { useRankIcons } from '../hooks/useRankIcons';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
@@ -359,6 +360,136 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
   );
 }
 
+/* Performance: shot placement, per-role record and weapon kills, all from the loaded matches. */
+function PerformanceSection({
+  matches,
+  agents,
+  roleLabel,
+  language,
+}: {
+  matches: MatchSummary[];
+  agents: ProfileResponse['agents'];
+  roleLabel: (role: string) => string;
+  language: string;
+}) {
+  const weapons = useWeapons(language);
+  const [showAllWeapons, setShowAllWeapons] = useState(false);
+
+  const hits = matches.reduce(
+    (acc, m) => ({ head: acc.head + (m.head_hits ?? 0), body: acc.body + (m.body_hits ?? 0), leg: acc.leg + (m.leg_hits ?? 0) }),
+    { head: 0, body: 0, leg: 0 },
+  );
+  const totalHits = hits.head + hits.body + hits.leg;
+
+  const roleOf = new Map(agents.map((a) => [a.uuid, a]));
+  const roleStats = new Map<string, { games: number; wins: number; losses: number; k: number; d: number; a: number; icon: string }>();
+  for (const m of matches) {
+    const agent = m.agent_uuid ? roleOf.get(m.agent_uuid) : undefined;
+    if (!agent?.role) continue;
+    const r = roleStats.get(agent.role) ?? { games: 0, wins: 0, losses: 0, k: 0, d: 0, a: 0, icon: agent.role_icon ?? '' };
+    r.games += 1;
+    if (m.won === true) r.wins += 1;
+    if (m.won === false) r.losses += 1;
+    r.k += m.kills;
+    r.d += m.deaths;
+    r.a += m.assists;
+    roleStats.set(agent.role, r);
+  }
+
+  const kills = new Map<string, number>();
+  for (const m of matches) {
+    for (const [id, n] of Object.entries(m.weapon_kills ?? {})) {
+      const key = weapons[id] ? id : 'ability';
+      kills.set(key, (kills.get(key) ?? 0) + n);
+    }
+  }
+  const weaponRows = [...kills].sort((a, b) => b[1] - a[1]);
+  const topKills = weaponRows[0]?.[1] ?? 1;
+  const shownWeapons = showAllWeapons ? weaponRows : weaponRows.slice(0, 5);
+  const pct = (n: number) => (totalHits ? ((100 * n) / totalHits).toFixed(1) : '0.0');
+
+  if (matches.length === 0) return null;
+  return (
+    <section>
+      <SectionTitle hint={`From ${matches.length} loaded matches (follows the mode filter)`}>Performance</SectionTitle>
+
+      <div className="grid grid-cols-3 gap-3 rounded-lg border border-border bg-bg-card p-4">
+        {([['Head', hits.head, 'var(--color-accent-red)'], ['Body', hits.body, 'var(--color-text-primary)'], ['Legs', hits.leg, 'var(--color-text-secondary)']] as const).map(
+          ([label, n, color]) => (
+            <div key={label}>
+              <div className="text-sm font-semibold text-text-primary">{label}</div>
+              <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color }}>{pct(n)}%</div>
+              <div className="text-xs tabular-nums text-text-secondary">{n.toLocaleString()} hits</div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-secondary">
+                <div className="h-full rounded-full" style={{ width: `${pct(n)}%`, backgroundColor: color }} />
+              </div>
+            </div>
+          ),
+        )}
+      </div>
+
+      {roleStats.size > 0 && (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[...roleStats]
+            .sort((a, b) => b[1].games - a[1].games)
+            .map(([role, r]) => {
+              const decided = r.wins + r.losses;
+              return (
+                <div key={role} className="rounded-lg border border-border bg-bg-card p-3">
+                  <div className="flex items-center gap-2">
+                    {r.icon && <img src={r.icon} alt="" className="h-6 w-6 object-contain" />}
+                    <span className="flex-1 text-sm font-semibold text-text-primary">{roleLabel(role)}</span>
+                    <span className="text-xs text-text-secondary">{r.games} games</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-secondary">
+                    <div className="h-full rounded-full bg-accent-red" style={{ width: `${decided ? (100 * r.wins) / decided : 0}%` }} />
+                  </div>
+                  <dl className="mt-3 grid grid-cols-3 text-center">
+                    <div><dd className="font-semibold tabular-nums text-text-primary">{decided ? Math.round((100 * r.wins) / decided) : 0}%</dd><dt className="text-[11px] text-text-secondary">Win rate</dt></div>
+                    <div><dd className="font-semibold tabular-nums text-text-primary">{r.wins}-{r.losses}</dd><dt className="text-[11px] text-text-secondary">W-L</dt></div>
+                    <div><dd className="font-semibold tabular-nums text-text-primary">{((r.k + r.a) / (r.d || 1)).toFixed(2)}</dd><dt className="text-[11px] text-text-secondary">KDA</dt></div>
+                  </dl>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {weaponRows.length > 0 && (
+        <div className="mt-4 rounded-lg border border-border bg-bg-card p-4">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">Kills by weapon</h3>
+          <ul className="space-y-2">
+            {shownWeapons.map(([id, n]) => {
+              const w = weapons[id];
+              return (
+                <li key={id} className="flex items-center gap-3">
+                  <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-sm bg-bg-secondary">
+                    {w?.icon && <img src={w.icon} alt="" loading="lazy" className="max-h-8 max-w-[4.5rem] object-contain" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2 text-sm">
+                      <span className="truncate text-text-primary">{w?.name ?? 'Abilities'}</span>
+                      <span className="font-semibold tabular-nums text-text-primary">{n}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-secondary">
+                      <div className="h-full rounded-full bg-accent-red" style={{ width: `${(100 * n) / topKills}%` }} />
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {weaponRows.length > 5 && (
+            <button type="button" onClick={() => setShowAllWeapons((v) => !v)} className="mt-3 w-full rounded-sm bg-bg-secondary py-2 text-xs text-text-secondary transition-colors hover:text-text-primary">
+              {showAllWeapons ? 'Show less' : 'All weapons'}
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function ProfilePage() {
   const { dispatch } = useAuth();
   const navigate = useNavigate();
@@ -535,6 +666,10 @@ export default function ProfilePage() {
                 </>
               )}
             </section>
+
+            {!unavailable.has('matches') && (
+              <PerformanceSection matches={visibleMatches} agents={profile.agents} roleLabel={roleLabel} language={language} />
+            )}
 
             <section>
               <SectionTitle hint="Click a match for the full scoreboard">Match history</SectionTitle>

@@ -26,6 +26,11 @@ class FreeReward(BaseModel):
     reward: PassReward
 
 
+class ModeXp(BaseModel):
+    average: int  # measured average XP per game
+    games: int  # how many recent games it is based on
+
+
 class BattlePassResponse(BaseModel):
     name: str
     icon: str = ""
@@ -39,3 +44,4 @@ class BattlePassResponse(BaseModel):
     premium_owned: bool | None = None  # None when it could not be worked out
     levels: list[PassLevel]
     free_rewards: list[FreeReward] = []
+    xp_by_mode: dict[str, ModeXp] = {}  # queue id (e.g. 'competitive') -> measured XP per game

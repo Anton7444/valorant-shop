@@ -9,6 +9,7 @@ class AgentInfo(BaseModel):
     icon: str
     owned: bool
     role: str = ""
+    role_icon: str = ""
 
 
 class PlayerRow(BaseModel):
@@ -47,6 +48,10 @@ class MatchSummary(BaseModel):
     map_uuid: str | None = None
     map_name: str
     queue: str
+    head_hits: int = 0
+    body_hits: int = 0
+    leg_hits: int = 0
+    weapon_kills: dict[str, int] = {}  # weapon uuid (or ability slot) -> my kills
     started_at: int  # epoch milliseconds
     length_secs: int
     agent_uuid: str | None = None
