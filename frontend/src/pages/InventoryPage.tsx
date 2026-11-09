@@ -8,7 +8,7 @@ import AppHeader from '../components/AppHeader';
 import SearchInput from '../components/SearchInput';
 import { CardGridSkeleton, FiltersSkeleton } from '../components/Skeletons';
 import SkinFilters from '../components/SkinFilters';
-import { filterSkins, tiersOf, toggle } from '../utils/skinFilters';
+import { filterSkins, sortSkins, tiersOf, toggle } from '../utils/skinFilters';
 import SkinCollectionCard from '../components/SkinCollectionCard';
 
 export default function InventoryPage() {
@@ -42,10 +42,11 @@ export default function InventoryPage() {
       .finally(() => setLoading(false));
   }, [dispatch, navigate]);
 
-  const tiers = useMemo(() => tiersOf(skins), [skins]);
+  const sorted = useMemo(() => sortSkins(skins), [skins]);
+  const tiers = useMemo(() => tiersOf(sorted), [sorted]);
   const filtered = useMemo(
-    () => filterSkins(skins, query, weaponFilter, tierFilter, localizedNames),
-    [skins, query, weaponFilter, tierFilter, localizedNames],
+    () => filterSkins(sorted, query, weaponFilter, tierFilter, localizedNames),
+    [sorted, query, weaponFilter, tierFilter, localizedNames],
   );
   const hasFilters = weaponFilter.size > 0 || tierFilter.size > 0 || query !== '';
 
