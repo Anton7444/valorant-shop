@@ -79,6 +79,7 @@ async def _fetch_agents(session: SessionData) -> list[AgentInfo]:
             # The starter agents are free for everyone and not always listed.
             owned=a["uuid"] in owned_ids or a.get("isBaseContent", False),
             role=a.get("role", ""),
+            role_icon=a.get("roleIcon", ""),
         )
         for a in asset_cache.all_agents()
     ]
@@ -104,7 +105,7 @@ def _round_stats(details: dict) -> dict[str, dict[str, int]]:
     def row(puuid: str) -> dict[str, int]:
         return stats.setdefault(
             puuid,
-            {"dealt": 0, "received": 0, "head": 0, "shots": 0, "fk": 0, "fd": 0},
+            {"dealt": 0, "received": 0, "head": 0, "body": 0, "leg": 0, "shots": 0, "fk": 0, "fd": 0},
         )
 
     for rnd in details.get("roundResults") or []:
@@ -118,6 +119,8 @@ def _round_stats(details: dict) -> dict[str, dict[str, int]]:
                 row(hit.get("receiver", ""))["received"] += dmg
                 head = hit.get("headshots", 0)
                 row(subject)["head"] += head
+                row(subject)["body"] += hit.get("bodyshots", 0)
+                row(subject)["leg"] += hit.get("legshots", 0)
                 row(subject)["shots"] += head + hit.get("bodyshots", 0) + hit.get("legshots", 0)
         if kills:
             first = min(kills, key=lambda k: k.get("timeSinceRoundStartMillis", 0))
@@ -158,6 +161,16 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
                 won = None  # draw
 
     round_stats = _round_stats(details)
+    my_hits = round_stats.get(puuid, {})
+    weapon_kills: dict[str, int] = {}
+    for rnd in details.get("roundResults") or []:
+        for player in rnd.get("playerStats") or []:
+            if player.get("subject") != puuid:
+                continue
+            for kill in player.get("kills") or []:
+                item = ((kill.get("finishingDamage") or {}).get("damageItem") or "").lower()
+                if item:
+                    weapon_kills[item] = weapon_kills.get(item, 0) + 1
     total_rounds = len(details.get("roundResults") or [])
     rows: list[PlayerRow] = []
     for p in raw_players:
@@ -200,6 +213,10 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
         map_uuid=game_map["uuid"] if game_map else None,
         map_name=game_map["displayName"] if game_map else "Unknown map",
         queue=info.get("queueID", ""),
+        head_hits=my_hits.get("head", 0),
+        body_hits=my_hits.get("body", 0),
+        leg_hits=my_hits.get("leg", 0),
+        weapon_kills=weapon_kills,
         started_at=int(info.get("gameStartMillis", 0)),
         length_secs=int(info.get("gameLengthMillis", 0) // 1000),
         agent_uuid=agent["uuid"] if agent else None,

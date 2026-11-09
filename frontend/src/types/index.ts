@@ -115,6 +115,7 @@ export interface AgentInfo {
   icon: string;
   owned: boolean;
   role: string;
+  role_icon?: string;
 }
 
 export interface PlayerRow {
@@ -153,6 +154,10 @@ export interface MatchSummary {
   map_uuid: string | null;
   map_name: string;
   queue: string;
+  head_hits?: number;
+  body_hits?: number;
+  leg_hits?: number;
+  weapon_kills?: Record<string, number>;
   started_at: number;
   length_secs: number;
   agent_uuid: string | null;
