@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import type { MatchSummary, PlayerRow, ProfileResponse } from '../types';
+import { useRankIcons } from '../hooks/useRankIcons';
 import { useLanguage } from '../context/useLanguage';
 import { localizedName } from '../context/languageNames';
 import AppHeader from '../components/AppHeader';
@@ -132,6 +133,7 @@ function teamLabel(teamId: string): string {
 
 function Scoreboard({ match }: { match: MatchSummary }) {
   const { localizedNames } = useLanguage();
+  const rankIcons = useRankIcons();
   // Group players by team (a mode without teams is one group), best team first:
   // winners, then rounds won, then the team's combined score.
   const grouped = match.teams.length
@@ -227,7 +229,13 @@ function Scoreboard({ match }: { match: MatchSummary }) {
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-1.5 text-xs text-text-secondary">{player.rank}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-xs text-text-secondary">
+                      {rankIcons[player.rank.toLowerCase()] ? (
+                        <img src={rankIcons[player.rank.toLowerCase()]} alt={player.rank} title={player.rank} className="h-8 w-8 object-contain" />
+                      ) : (
+                        player.rank
+                      )}
+                    </td>
                     {COLUMNS.map((c) => (
                       <td key={c.key} className="px-2 py-1.5 text-right font-semibold tabular-nums text-text-primary">
                         {c.render(player)}
