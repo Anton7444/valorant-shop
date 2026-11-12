@@ -150,14 +150,28 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
 
     won = rounds_won = rounds_lost = None
     teams = details.get("teams") or []
+    # After an early surrender Riot credits the winners a full score (e.g. 13) although fewer
+    # rounds were played, so count the rounds actually won from the round results instead.
+    round_results = details.get("roundResults") or []
+    played_wins: dict[str, int] = {}
+    for rnd in round_results:
+        winner = rnd.get("winningTeam")
+        if winner:
+            played_wins[winner] = played_wins.get(winner, 0) + 1
+
+    def team_rounds(team: dict) -> int | None:
+        if round_results:
+            return played_wins.get(team.get("teamId", ""), 0)
+        return team.get("roundsWon")
+
     mine = next((t for t in teams if t.get("teamId") == me.get("teamId")), None)
     other = next((t for t in teams if t.get("teamId") != me.get("teamId")), None)
     if mine is not None:
         won = mine.get("won")
-        rounds_won = mine.get("roundsWon")
+        rounds_won = team_rounds(mine)
         if other is not None:
-            rounds_lost = other.get("roundsWon")
-            if rounds_won == rounds_lost:
+            rounds_lost = team_rounds(other)
+            if mine.get("roundsWon") == other.get("roundsWon"):
                 won = None  # draw
 
     round_stats = _round_stats(details)
@@ -230,7 +244,7 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
         rounds_won=rounds_won,
         rounds_lost=rounds_lost,
         teams=[
-            TeamSummary(team_id=t.get("teamId", ""), won=t.get("won"), rounds_won=t.get("roundsWon"))
+            TeamSummary(team_id=t.get("teamId", ""), won=t.get("won"), rounds_won=team_rounds(t))
             for t in teams
         ],
         players=rows,
