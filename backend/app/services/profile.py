@@ -164,12 +164,6 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
             "surrender" in str(real[-1].get(k, "")).lower() for k in ("roundResult", "roundResultCode")
         ):
             real = real[:-1]
-        logger.info(
-            "surrendered match %s: my_played=%s results=%s",
-            info.get("matchId"),
-            my_played,
-            [(r.get("roundNum"), r.get("roundResult"), r.get("roundResultCode"), r.get("winningTeam")) for r in round_results[:my_played + 2]],
-        )
         round_results = real
     played = len(round_results) or max(
         (int((p.get("stats") or {}).get("roundsPlayed") or 0) for p in raw_players), default=0
@@ -192,17 +186,6 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
             return min(reported[team_id], played)
         return team.get("roundsWon")
 
-    logger.info(
-        "match %s queue=%s completion=%s round_results=%d played=%d played_wins=%s reported=%s my_rounds_played=%s",
-        info.get("matchId"),
-        info.get("queueID"),
-        info.get("completionState"),
-        len(round_results),
-        played,
-        played_wins,
-        reported,
-        (me.get("stats") or {}).get("roundsPlayed"),
-    )
     mine = next((t for t in teams if t.get("teamId") == me.get("teamId")), None)
     other = next((t for t in teams if t.get("teamId") != me.get("teamId")), None)
     if mine is not None:
