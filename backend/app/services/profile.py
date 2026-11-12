@@ -151,17 +151,28 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
     won = rounds_won = rounds_lost = None
     teams = details.get("teams") or []
     # After an early surrender Riot credits the winners a full score (e.g. 13) although fewer
-    # rounds were played, so count the rounds actually won from the round results instead.
+    # rounds were played. Work out the real score: from the round results when they are there,
+    # otherwise from how many rounds the players' stats say were played.
     round_results = details.get("roundResults") or []
+    played = len(round_results) or max(
+        (int((p.get("stats") or {}).get("roundsPlayed") or 0) for p in raw_players), default=0
+    )
     played_wins: dict[str, int] = {}
     for rnd in round_results:
         winner = rnd.get("winningTeam")
         if winner:
             played_wins[winner] = played_wins.get(winner, 0) + 1
+    reported = {t.get("teamId", ""): int(t.get("roundsWon") or 0) for t in teams}
 
     def team_rounds(team: dict) -> int | None:
-        if round_results:
-            return played_wins.get(team.get("teamId", ""), 0)
+        team_id = team.get("teamId", "")
+        if played and sum(played_wins.values()) == played:
+            return played_wins.get(team_id, 0)
+        if played and len(reported) == 2 and sum(reported.values()) > played:
+            # Surrender: the losers' count is real, the winners are credited the rest of the game.
+            if reported[team_id] == max(reported.values()):
+                return max(0, played - min(reported.values()))
+            return min(reported[team_id], played)
         return team.get("roundsWon")
 
     mine = next((t for t in teams if t.get("teamId") == me.get("teamId")), None)
