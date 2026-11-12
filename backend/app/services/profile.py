@@ -175,6 +175,17 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
             return min(reported[team_id], played)
         return team.get("roundsWon")
 
+    logger.info(
+        "match %s queue=%s completion=%s round_results=%d played=%d played_wins=%s reported=%s my_rounds_played=%s",
+        info.get("matchId"),
+        info.get("queueID"),
+        info.get("completionState"),
+        len(round_results),
+        played,
+        played_wins,
+        reported,
+        (me.get("stats") or {}).get("roundsPlayed"),
+    )
     mine = next((t for t in teams if t.get("teamId") == me.get("teamId")), None)
     other = next((t for t in teams if t.get("teamId") != me.get("teamId")), None)
     if mine is not None:
