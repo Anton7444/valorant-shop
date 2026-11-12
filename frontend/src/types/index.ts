@@ -154,7 +154,6 @@ export interface MatchSummary {
   map_uuid: string | null;
   map_name: string;
   queue: string;
-  surrendered?: boolean;
   head_hits?: number;
   body_hits?: number;
   leg_hits?: number;

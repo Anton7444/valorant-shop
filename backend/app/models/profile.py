@@ -48,7 +48,6 @@ class MatchSummary(BaseModel):
     map_uuid: str | None = None
     map_name: str
     queue: str
-    surrendered: bool = False  # ended early by a surrender (FF)
     head_hits: int = 0
     body_hits: int = 0
     leg_hits: int = 0
