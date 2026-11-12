@@ -154,6 +154,23 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
     # rounds were played. Work out the real score: from the round results when they are there,
     # otherwise from how many rounds the players' stats say were played.
     round_results = details.get("roundResults") or []
+    if str(info.get("completionState", "")).lower() == "surrendered":
+        # Riot pads a surrendered match with fake round results up to the winners' credited score
+        # (13). Real play ends at the player's roundsPlayed; the last of those is the round the
+        # surrender cut short and carries a surrender result instead of a normal one.
+        my_played = int((me.get("stats") or {}).get("roundsPlayed") or 0)
+        real = round_results[:my_played] if my_played else round_results
+        while real and any(
+            "surrender" in str(real[-1].get(k, "")).lower() for k in ("roundResult", "roundResultCode")
+        ):
+            real = real[:-1]
+        logger.info(
+            "surrendered match %s: my_played=%s results=%s",
+            info.get("matchId"),
+            my_played,
+            [(r.get("roundNum"), r.get("roundResult"), r.get("roundResultCode"), r.get("winningTeam")) for r in round_results[:my_played + 2]],
+        )
+        round_results = real
     played = len(round_results) or max(
         (int((p.get("stats") or {}).get("roundsPlayed") or 0) for p in raw_players), default=0
     )
