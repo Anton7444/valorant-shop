@@ -172,6 +172,20 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
                 if item:
                     weapon_kills[item] = weapon_kills.get(item, 0) + 1
     total_rounds = len(details.get("roundResults") or [])
+    # An early surrender: Riot says so in completionState / the last round's result, and the
+    # winners are credited a full score (e.g. 13) although fewer rounds were actually played.
+    last_round = ((details.get("roundResults") or [None])[-1]) or {}
+    surrendered = (
+        "surrender" in str(info.get("completionState", "")).lower()
+        or "surrender" in str(last_round.get("roundResult", "")).lower()
+        or "surrender" in str(last_round.get("roundResultCode", "")).lower()
+        or (
+            won is not None
+            and rounds_won is not None
+            and rounds_lost is not None
+            and 0 < total_rounds < rounds_won + rounds_lost
+        )
+    )
     rows: list[PlayerRow] = []
     for p in raw_players:
         st = p.get("stats") or {}
@@ -213,6 +227,7 @@ def _parse_match(details: dict, puuid: str) -> MatchSummary | None:
         map_uuid=game_map["uuid"] if game_map else None,
         map_name=game_map["displayName"] if game_map else "Unknown map",
         queue=info.get("queueID", ""),
+        surrendered=surrendered,
         head_hits=my_hits.get("head", 0),
         body_hits=my_hits.get("body", 0),
         leg_hits=my_hits.get("leg", 0),

@@ -316,6 +316,14 @@ function MatchRow({ match, index }: { match: MatchSummary; index: number }) {
                 {match.rounds_won} : {match.rounds_lost}
               </span>
             )}
+            {match.surrendered && (
+              <span
+                title="Ended early by a surrender"
+                className="rounded-sm border border-border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
+              >
+                FF
+              </span>
+            )}
           </div>
           <div className="truncate text-xs text-text-secondary">
             {[mapName, match.agent_uuid ? agent : null, queueLabel(match.queue)].filter(Boolean).join(' · ')}
