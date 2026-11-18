@@ -12,7 +12,8 @@ const STORE_SEEN_KEY = 'valshop:lastSeenStoreKey';
 const NIGHT_SEEN_KEY = 'valshop:lastSeenNightKey';
 
 export default function ShopPage() {
-  const { dispatch } = useAuth();
+  const { state, dispatch } = useAuth();
+  const puuid = state.puuid ?? 'default';
   const navigate = useNavigate();
 
   const [offers, setOffers] = useState<SkinOffer[]>([]);
@@ -40,16 +41,18 @@ export default function ShopPage() {
       ]);
 
       const storeKey = dailyRes.offers.map((offer) => offer.uuid).sort().join(',');
-      const lastSeenKey = localStorage.getItem(STORE_SEEN_KEY);
+      const seenKey = `${STORE_SEEN_KEY}:${puuid}`;
+      const lastSeenKey = localStorage.getItem(seenKey);
       setIsNewStore(storeKey !== lastSeenKey);
       if (storeKey) {
-        localStorage.setItem(STORE_SEEN_KEY, storeKey);
+        localStorage.setItem(seenKey, storeKey);
       }
 
       const nightKey = (nightRes?.offers ?? []).map((offer) => offer.uuid).sort().join(',');
-      setIsNewNight(nightKey !== localStorage.getItem(NIGHT_SEEN_KEY));
+      const nightSeenKey = `${NIGHT_SEEN_KEY}:${puuid}`;
+      setIsNewNight(nightKey !== localStorage.getItem(nightSeenKey));
       if (nightKey) {
-        localStorage.setItem(NIGHT_SEEN_KEY, nightKey);
+        localStorage.setItem(nightSeenKey, nightKey);
       }
 
       setOffers(dailyRes.offers);
@@ -69,7 +72,7 @@ export default function ShopPage() {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, navigate]);
+  }, [dispatch, navigate, puuid]);
 
   useEffect(() => {
     fetchStoreData();
