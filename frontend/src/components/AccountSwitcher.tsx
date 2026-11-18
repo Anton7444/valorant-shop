@@ -5,7 +5,20 @@ import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import { listAccounts, removeAccount, type SavedAccount } from '../utils/savedAccounts';
 
-function Badge({ kind }: { kind: SavedAccount['kind'] }) {
+function Badge({ kind, picture }: { kind: SavedAccount['kind']; picture?: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (picture && !failed) {
+    return (
+      <img
+        src={picture}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+        className="h-7 w-7 shrink-0 rounded-full border border-border object-cover"
+        title="Google account"
+      />
+    );
+  }
   return (
     <span
       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-bg-secondary text-[11px] font-bold text-text-primary"
@@ -107,7 +120,7 @@ export default function AccountSwitcher() {
         title="Switch account"
         className="font-display inline-flex items-center gap-2 rounded-sm border border-border px-2.5 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97]"
       >
-        <Badge kind={active?.kind ?? (state.account ? 'google' : 'riot')} />
+        <Badge kind={active?.kind ?? (state.account ? 'google' : 'riot')} picture={state.account?.picture ?? active?.picture} />
         <span className="hidden max-w-[8rem] truncate normal-case tracking-normal @[1000px]/header:inline">{label}</span>
       </button>
       {open &&
@@ -132,7 +145,7 @@ export default function AccountSwitcher() {
                       onClick={() => void switchTo(a)}
                       className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-sm px-2.5 py-2 text-left transition-colors hover:bg-white/5 ${isCurrent ? 'bg-accent-red/10' : ''}`}
                     >
-                      <Badge kind={a.kind} />
+                      <Badge kind={a.kind} picture={a.picture} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-text-primary">{a.label}</span>
                         <span className="block truncate text-[11px] text-text-secondary">

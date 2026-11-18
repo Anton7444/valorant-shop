@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!state.sessionValid || !token) return;
     const { account, puuid } = state;
     if (account) {
-      saveAccount({ token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email, detail: account.email });
+      saveAccount({ token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email, detail: account.email, picture: account.picture ?? undefined });
     } else if (puuid) {
       saveAccount({ token, kind: 'riot', key: `r:${puuid}`, label: `Riot ${puuid.slice(0, 8)}`, detail: puuid.slice(0, 8) });
     }
