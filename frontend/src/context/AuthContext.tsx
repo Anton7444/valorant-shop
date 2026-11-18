@@ -9,6 +9,7 @@ import {
 import type { AuthAction, AuthState } from '../types';
 import * as api from '../api/client';
 import { applyAccountSettings } from '../utils/accountSettings';
+import { removeAccount, saveAccount } from '../utils/savedAccounts';
 
 const initialState: AuthState = {
   status: 'idle',
@@ -33,6 +34,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case 'LOGIN_ERROR':
       return { ...state, status: 'error', error: action.error };
     case 'LOGOUT':
+      removeAccount(api.getStoredToken());
       api.clearToken();
       return { ...initialState };
     case 'SESSION_RESTORED':
@@ -82,11 +84,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Remember every signed-in account so the header can switch between them.
+  useEffect(() => {
+    const token = api.getStoredToken();
+    if (!state.sessionValid || !token) return;
+    const { account, puuid } = state;
+    if (account) {
+      saveAccount({ token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email, detail: account.email });
+    } else if (puuid) {
+      saveAccount({ token, kind: 'riot', key: `r:${puuid}`, label: `Riot ${puuid.slice(0, 8)}`, detail: puuid.slice(0, 8) });
+    }
+  }, [state]);
+
   // Logging in from another tab (the Riot login helper finishes in a new tab)
   // stores the token here too; pick it up so this tab signs in as well.
   useEffect(() => {
     function onStorage(event: StorageEvent) {
       if (event.key !== 'session_token' || !event.newValue) return;
+      // Another tab switched to a different account: this tab's data belongs to the old one.
+      if (event.oldValue && event.oldValue !== event.newValue) {
+        window.location.reload();
+        return;
+      }
       api.checkSession().then((res) => {
         if (res.valid && (res.puuid || res.account)) {
           dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid ?? null, account: res.account });
