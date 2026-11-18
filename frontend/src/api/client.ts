@@ -113,6 +113,11 @@ export function logout(): Promise<{ status: string }> {
   return request('/api/auth/logout', { method: 'POST' });
 }
 
+/** Sign out one specific saved session (not the active one). */
+export async function logoutToken(token: string): Promise<void> {
+  await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+}
+
 export function getBackendVersion(): Promise<{ commit: string | null; date: string | null; subject: string | null }> {
   return request('/api/version');
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
 import { applyAccountSettings } from '../utils/accountSettings';
@@ -20,6 +20,9 @@ function playPromo(video: HTMLVideoElement | null) {
 export default function LoginPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // "Add account" from the header comes here while still signed in.
+  const adding = searchParams.get('add') === '1';
 
   const [stage, setStage] = useState<Stage>(
     () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
@@ -74,7 +77,7 @@ export default function LoginPage() {
     );
   }
 
-  if (state.status === 'authenticated') {
+  if (state.status === 'authenticated' && !adding) {
     return <Navigate to="/shop" replace />;
   }
 
@@ -173,6 +176,12 @@ export default function LoginPage() {
         <div className="absolute left-1/3 top-16 h-px w-48 -rotate-[15deg] bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="absolute bottom-20 right-1/4 h-px w-56 rotate-[65deg] bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
+
+      {adding && (
+        <Link to="/shop" className="absolute left-4 top-4 z-10 text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-accent-red">
+          ← Back
+        </Link>
+      )}
 
       <div className="relative w-full max-w-md">
         <div className="rounded-md border border-border/70 bg-bg-secondary/90 p-8 shadow-[0_24px_60px_-20px_rgba(4,10,18,0.8)] backdrop-blur">

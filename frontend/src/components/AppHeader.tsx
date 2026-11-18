@@ -8,6 +8,7 @@ import WalletDisplay from './WalletDisplay';
 import LanguageSwitch from './LanguageSwitch';
 import ScrollFade from './ScrollFade';
 import NavMore from './NavMore';
+import AccountSwitcher from './AccountSwitcher';
 import { useRovingArrows } from '../hooks/useRovingArrows';
 
 const NAV_ITEMS = [
@@ -145,6 +146,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               { value: 'zh-CN', label: '简中' },
             ]}
           />
+          {loggedIn && <AccountSwitcher />}
           <NavLink
             to="/settings"
             aria-label="Settings"
