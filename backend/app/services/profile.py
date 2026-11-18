@@ -61,9 +61,21 @@ async def _fetch_identity(session: SessionData) -> tuple[str | None, str | None]
 
 
 async def _fetch_card_icon(session: SessionData) -> str | None:
+    """The player card the account used in its latest match.
+
+    Riot's loadout endpoint answers 404 for this login, but every match's details list each player's
+    card, so read it from the newest match.
+    """
     async with httpx.AsyncClient(timeout=30.0) as client:
-        loadout = await _get_json(client, session, f"{_pd(session)}/personalization/v2/players/{session.puuid}/playerloadout")
-    card = asset_cache.get_player_card((loadout.get("Identity") or {}).get("PlayerCardID", "") or "")
+        history = await _get_json(
+            client, session, f"{_pd(session)}/match-history/v1/history/{session.puuid}?startIndex=0&endIndex=1"
+        )
+        matches = history.get("History") or []
+        if not matches:
+            return None
+        details = await _get_json(client, session, f"{_pd(session)}/match-details/v1/matches/{matches[0]['MatchID']}")
+    me = next((p for p in details.get("players", []) if p.get("subject") == session.puuid), None)
+    card = asset_cache.get_player_card((me or {}).get("playerCard", "") or "")
     return (card or {}).get("displayIcon") or None
 
 
