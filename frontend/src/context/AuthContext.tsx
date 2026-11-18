@@ -9,7 +9,7 @@ import {
 import type { AuthAction, AuthState } from '../types';
 import * as api from '../api/client';
 import { applyAccountSettings } from '../utils/accountSettings';
-import { removeAccount, saveAccount } from '../utils/savedAccounts';
+import { getSaved, removeAccount, saveAccount } from '../utils/savedAccounts';
 
 const initialState: AuthState = {
   status: 'idle',
@@ -84,16 +84,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Remember every signed-in account so the header can switch between them.
+  // Remember every signed-in account so the header can switch between them. Riot logins are named
+  // after the player (and show their equipped card) once the profile service has answered.
   useEffect(() => {
     const token = api.getStoredToken();
     if (!state.sessionValid || !token) return;
     const { account, puuid } = state;
+    const known = getSaved(token);
     if (account) {
-      saveAccount({ token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email, detail: account.email, picture: account.picture ?? undefined });
+      saveAccount({
+        token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email,
+        detail: known?.detail?.includes('#') ? known.detail : account.email, picture: account.picture ?? undefined,
+      });
     } else if (puuid) {
-      saveAccount({ token, kind: 'riot', key: `r:${puuid}`, label: `Riot ${puuid.slice(0, 8)}`, detail: puuid.slice(0, 8) });
+      saveAccount({
+        token, kind: 'riot', key: `r:${puuid}`, label: known?.label.startsWith('Riot ') === false ? known.label : `Riot ${puuid.slice(0, 8)}`,
+        detail: known?.detail ?? puuid.slice(0, 8), picture: known?.picture,
+      });
     }
+    const named = known && (known.detail.includes('#') || (known.kind === 'riot' && !known.label.startsWith('Riot ')));
+    if (named || (account && account.riot.state !== 'linked')) return;
+    api.getIdentity().then((id) => {
+      if (api.getStoredToken() !== token || !id.game_name) return;
+      const riotName = `${id.game_name}${id.tag_line ? `#${id.tag_line}` : ''}`;
+      if (account) {
+        saveAccount({
+          token, kind: 'google', key: `g:${account.email}`, label: account.name || account.email,
+          detail: `${account.email} · ${riotName}`, picture: account.picture ?? undefined,
+        });
+      } else if (puuid) {
+        saveAccount({ token, kind: 'riot', key: `r:${puuid}`, label: riotName, detail: 'Riot login', picture: id.card_icon ?? undefined });
+      }
+    }).catch(() => {});
   }, [state]);
 
   // Logging in from another tab (the Riot login helper finishes in a new tab)

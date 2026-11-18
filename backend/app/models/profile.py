@@ -3,6 +3,12 @@ from pydantic import BaseModel
 from app.models.store import Wallet
 
 
+class IdentityResponse(BaseModel):
+    game_name: str | None = None
+    tag_line: str | None = None
+    card_icon: str | None = None  # the equipped player card's small picture
+
+
 class AgentInfo(BaseModel):
     uuid: str
     name: str

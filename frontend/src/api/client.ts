@@ -164,6 +164,16 @@ export function getProfile(): Promise<ProfileResponse> {
   return request('/api/profile');
 }
 
+export interface IdentityResponse {
+  game_name: string | null;
+  tag_line: string | null;
+  card_icon: string | null;
+}
+
+export function getIdentity(): Promise<IdentityResponse> {
+  return request('/api/profile/identity');
+}
+
 export function getBattlePass(): Promise<BattlePassResponse> {
   return request('/api/profile/battlepass');
 }

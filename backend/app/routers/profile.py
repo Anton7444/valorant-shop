@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.models.auth import SessionData
 from app.models.battlepass import BattlePassResponse
-from app.models.profile import MatchesResponse, ProfileResponse
+from app.models.profile import IdentityResponse, MatchesResponse, ProfileResponse
 from app.routers.store import _handle_riot_error, get_session
 from app.services import battlepass, profile
 
@@ -16,6 +16,11 @@ async def get_profile(session: SessionData = Depends(get_session)) -> ProfileRes
         return await profile.get_profile(session)
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
+
+
+@router.get("/identity", response_model=IdentityResponse)
+async def get_identity(session: SessionData = Depends(get_session)) -> IdentityResponse:
+    return await profile.get_identity(session)
 
 
 @router.get("/matches", response_model=MatchesResponse)

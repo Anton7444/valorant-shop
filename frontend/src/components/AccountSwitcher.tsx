@@ -15,7 +15,7 @@ function Badge({ kind, picture }: { kind: SavedAccount['kind']; picture?: string
         referrerPolicy="no-referrer"
         onError={() => setFailed(true)}
         className="h-7 w-7 shrink-0 rounded-full border border-border object-cover"
-        title="Google account"
+        title={kind === 'google' ? 'Google account' : 'Riot login'}
       />
     );
   }
@@ -34,10 +34,16 @@ export default function AccountSwitcher() {
   const { state } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [accounts, setAccounts] = useState<SavedAccount[]>([]);
+  const [accounts, setAccounts] = useState<SavedAccount[]>(listAccounts);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pos, setPos] = useState({ right: 0, top: 0 });
+  // Names and pictures arrive a moment after sign-in; keep the button in step with the saved list.
+  useEffect(() => {
+    const refresh = () => setAccounts(listAccounts());
+    window.addEventListener('saved-accounts-changed', refresh);
+    return () => window.removeEventListener('saved-accounts-changed', refresh);
+  }, []);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const current = api.getStoredToken();

@@ -26,6 +26,7 @@ export function listAccounts(): SavedAccount[] {
 function write(list: SavedAccount[]): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(list));
+    window.dispatchEvent(new Event('saved-accounts-changed'));
   } catch {
     /* storage unavailable: switching just will not be offered */
   }
@@ -34,6 +35,10 @@ function write(list: SavedAccount[]): void {
 export function saveAccount(entry: Omit<SavedAccount, 'added'>): void {
   const rest = listAccounts().filter((a) => a.token !== entry.token && a.key !== entry.key);
   write([...rest, { ...entry, added: Date.now() }].sort((a, b) => a.added - b.added));
+}
+
+export function getSaved(token: string): SavedAccount | undefined {
+  return listAccounts().find((a) => a.token === token);
 }
 
 export function removeAccount(token: string | null): void {
