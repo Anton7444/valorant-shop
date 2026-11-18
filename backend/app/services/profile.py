@@ -10,6 +10,7 @@ from app.models.profile import (
     MatchSummary,
     PlayerRow,
     ProfileResponse,
+    IdentityResponse,
     TeamSummary,
 )
 from app.services import asset_cache, storefront
@@ -57,6 +58,20 @@ async def _fetch_identity(session: SessionData) -> tuple[str | None, str | None]
     async with httpx.AsyncClient(timeout=30.0) as client:
         names = await _lookup_names(client, session, [session.puuid])
     return names.get(session.puuid, (None, None))
+
+
+async def _fetch_card_icon(session: SessionData) -> str | None:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        loadout = await _get_json(client, session, f"{_pd(session)}/personalization/v2/players/{session.puuid}/playerloadout")
+    card = asset_cache.get_player_card((loadout.get("Identity") or {}).get("PlayerCardID", "") or "")
+    return (card or {}).get("displayIcon") or None
+
+
+async def get_identity(session: SessionData) -> IdentityResponse:
+    """Riot name and equipped player card, for the account menu. Either part may be missing."""
+    name, card = await asyncio.gather(_fetch_identity(session), _fetch_card_icon(session), return_exceptions=True)
+    game_name, tag_line = (None, None) if isinstance(name, Exception) else name
+    return IdentityResponse(game_name=game_name, tag_line=tag_line, card_icon=None if isinstance(card, Exception) else card)
 
 
 async def _fetch_level(session: SessionData) -> int | None:
