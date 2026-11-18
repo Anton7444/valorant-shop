@@ -9,6 +9,7 @@ export interface AccountSettings {
 export interface AccountInfo {
   email: string;
   name: string;
+  picture?: string | null;
   riot: { state: 'none' | 'linked' | 'expired'; puuid: string | null };
   settings: AccountSettings;
 }

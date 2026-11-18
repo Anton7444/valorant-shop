@@ -126,6 +126,9 @@ class AccountStore:
             CREATE INDEX IF NOT EXISTS devices_sub ON devices(sub);
             """
         )
+        cols = {r["name"] for r in self._db.execute("PRAGMA table_info(accounts)")}
+        if "picture" not in cols:
+            self._db.execute("ALTER TABLE accounts ADD COLUMN picture TEXT NOT NULL DEFAULT ''")
         self._db.commit()
         try:
             os.chmod(settings.ACCOUNT_DB, 0o600)
@@ -135,32 +138,34 @@ class AccountStore:
 
     # -- accounts ----------------------------------------------------------------------------
 
-    def upsert(self, sub: str, email: str, name: str) -> None:
+    def upsert(self, sub: str, email: str, name: str, picture: str = "") -> None:
         now = time.time()
         with self._lock:
             row = self._db.execute("SELECT 1 FROM accounts WHERE sub=?", (sub,)).fetchone()
             if row:
-                self._db.execute("UPDATE accounts SET email=?, name=?, last_seen=? WHERE sub=?", (email, name, now, sub))
+                self._db.execute(
+                    "UPDATE accounts SET email=?, name=?, picture=?, last_seen=? WHERE sub=?", (email, name, picture, now, sub)
+                )
             else:
                 n = self._db.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
                 if n >= settings.MAX_ACCOUNTS:
                     raise AccountsFull()
                 self._db.execute(
-                    "INSERT INTO accounts (sub,email,name,created,last_seen,settings) VALUES (?,?,?,?,?,?)",
-                    (sub, email, name, now, now, json.dumps(DEFAULT_SETTINGS)),
+                    "INSERT INTO accounts (sub,email,name,picture,created,last_seen,settings) VALUES (?,?,?,?,?,?,?)",
+                    (sub, email, name, picture, now, now, json.dumps(DEFAULT_SETTINGS)),
                 )
             self._db.commit()
 
     def get(self, sub: str) -> dict | None:
         with self._lock:
             r = self._db.execute(
-                "SELECT sub,email,name,created,settings,riot_state,riot_puuid FROM accounts WHERE sub=?", (sub,)
+                "SELECT sub,email,name,picture,created,settings,riot_state,riot_puuid FROM accounts WHERE sub=?", (sub,)
             ).fetchone()
         if not r:
             return None
         s = {**DEFAULT_SETTINGS, **json.loads(r["settings"] or "{}")}
         return {
-            "sub": r["sub"], "email": r["email"], "name": r["name"], "created": r["created"],
+            "sub": r["sub"], "email": r["email"], "name": r["name"], "picture": r["picture"], "created": r["created"],
             "settings": s, "riot_state": r["riot_state"], "puuid": r["riot_puuid"],
         }
 

@@ -8,6 +8,7 @@ export type SavedAccount = {
   key: string;
   label: string;
   detail: string;
+  picture?: string;
   added: number;
 };
 

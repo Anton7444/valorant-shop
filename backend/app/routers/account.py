@@ -34,6 +34,7 @@ def summary(sub: str) -> dict:
     return {
         "email": a["email"],
         "name": a["name"],
+        "picture": a["picture"] or None,
         "riot": {"state": a["riot_state"], "puuid": a["puuid"]},  # state: none | linked | expired
         "settings": a["settings"],
     }
@@ -62,7 +63,7 @@ async def google_login(body: GoogleLogin, request: Request) -> dict:
     except httpx.HTTPError:
         return {"status": "error", "error": "Could not reach Google. Try again."}
     try:
-        accounts.upsert(claims["sub"], claims["email"], claims.get("name", ""))
+        accounts.upsert(claims["sub"], claims["email"], claims.get("name", ""), claims.get("picture", "") or "")
     except AccountsFull:
         return {"status": "error", "error": "This server has reached its account limit."}
     token = accounts.new_device(claims["sub"])
