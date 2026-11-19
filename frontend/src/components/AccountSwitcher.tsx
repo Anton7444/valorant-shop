@@ -123,11 +123,11 @@ export default function AccountSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={toggle}
-        title="Switch account"
+        title={`Switch account (${label})`}
+        aria-label={`Switch account, signed in as ${label}`}
         className="font-display inline-flex items-center gap-2 rounded-sm border border-border px-2.5 py-1.5 text-xs uppercase tracking-widest text-text-secondary transition-all duration-200 hover:border-accent-red hover:text-accent-red active:scale-[0.97]"
       >
         <Badge kind={active?.kind ?? (state.account ? 'google' : 'riot')} picture={state.account?.picture ?? active?.picture} />
-        <span className="hidden max-w-[8rem] truncate normal-case tracking-normal @[1000px]/header:inline">{label}</span>
       </button>
       {open &&
         createPortal(
