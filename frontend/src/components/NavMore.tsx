@@ -87,7 +87,7 @@ export default function NavMore({ items }: NavMoreProps) {
         }}
         onPointerEnter={hoverShow}
         onPointerLeave={hoverHide}
-        className={`font-display relative z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
+        className={`font-display relative z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-2.5 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
           active || open ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary'
         }`}
       >

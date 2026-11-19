@@ -90,7 +90,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
     <header className="@container/header sticky top-0 z-40 border-b border-border/60 bg-bg-primary/80 backdrop-blur-md">
       {/* Sizes below follow the header's own width (container queries), not the window's:
           narrow headers drop the wallet and put the tabs on their own scrollable row. */}
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 @max-[460px]/header:gap-x-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 @max-[460px]/header:gap-x-3">
         <h1 className="font-display text-lg tracking-wider text-text-primary @max-[460px]/header:text-base">
           VAL<span className="text-accent-red">SHOP</span>
         </h1>
@@ -113,7 +113,7 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `font-display relative z-10 whitespace-nowrap rounded-sm px-3 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
+                  `font-display relative z-10 whitespace-nowrap rounded-sm px-2.5 py-1.5 text-xs uppercase tracking-widest transition-colors duration-300 ${
                     isActive ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary'
                   }`
                 }
@@ -125,16 +125,11 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
           </nav>
         </ScrollFade>
 
-        <div className="ml-auto flex items-center gap-4 @max-[460px]/header:gap-1.5">
+        <div className="ml-auto flex items-center gap-3 @max-[460px]/header:gap-1.5">
           {wallet && (
             <div className="@max-[1140px]/header:hidden">
               <WalletDisplay wallet={wallet} />
             </div>
-          )}
-          {state.puuid && (
-            <span className="hidden font-mono text-[11px] text-text-secondary/70 @[1400px]/header:block">
-              {state.puuid.slice(0, 8)}
-            </span>
           )}
           <LanguageSwitch
             label="Skin and bundle language"
@@ -159,9 +154,9 @@ export default function AppHeader({ wallet }: { wallet?: Wallet | null }) {
               }`
             }
           >
-            <span className="@max-[460px]/header:hidden">Settings</span>
+            <span className="sr-only">Settings</span>
             <svg
-              className="hidden h-4 w-4 @max-[460px]/header:block"
+              className="block h-4 w-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
